@@ -250,10 +250,34 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elit
     
     return pools
 
-def generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost):
-    """Generate optimized lineups"""
+def generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, player_selections=None):
+    """Generate optimized lineups with optional player selection constraints"""
     stacked_lineups = []
     salary_cap = 60000
+    
+    # Apply player selection filters if enabled
+    if player_selections:
+        filtered_pools = {}
+        
+        for pos in ['QB', 'RB', 'WR', 'TE']:
+            pos_pool = weighted_pools[pos].copy()
+            
+            # Remove excluded players
+            if player_selections[pos]['exclude']:
+                pos_pool = pos_pool[~pos_pool['Nickname'].isin(player_selections[pos]['exclude'])]
+            
+            filtered_pools[pos] = pos_pool
+        
+        # Handle defense separately (position is 'D' not 'DEF')
+        def_pool = df[df['Position'] == 'D'].copy()
+        if player_selections['D']['exclude']:
+            def_pool = def_pool[~def_pool['Nickname'].isin(player_selections['D']['exclude'])]
+        
+        # Update weighted_pools with filtered data
+        weighted_pools = filtered_pools
+        def_players = def_pool
+    else:
+        def_players = df[df['Position'] == 'D']
     
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -266,97 +290,156 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
             attempts += 1
             
             try:
-                # Select QB
-                qb_pool = weighted_pools['QB']
-                qb = qb_pool.sample(1, weights=qb_pool['Selection_Weight'])
-                qb_team = qb['Team'].iloc[0]
+                lineup_players = []
                 
-                # Select WR/TE with stacking
+                # Handle must-include players first
+                if player_selections:
+                    # Must include QB
+                    if player_selections['QB']['must_include']:
+                        must_qb_name = player_selections['QB']['must_include'][0]  # Take first if multiple
+                        qb = weighted_pools['QB'][weighted_pools['QB']['Nickname'] == must_qb_name]
+                        if len(qb) == 0:
+                            continue  # Skip if player not found
+                    else:
+                        qb_pool = weighted_pools['QB']
+                        qb = qb_pool.sample(1, weights=qb_pool['Selection_Weight'])
+                else:
+                    # Regular QB selection
+                    qb_pool = weighted_pools['QB']
+                    qb = qb_pool.sample(1, weights=qb_pool['Selection_Weight'])
+                
+                qb_team = qb['Team'].iloc[0]
+                lineup_players.append(qb)
+                
+                # Handle must-include RBs
+                selected_rbs = pd.DataFrame()
+                if player_selections and player_selections['RB']['must_include']:
+                    for must_rb_name in player_selections['RB']['must_include'][:2]:  # Max 2 RBs
+                        must_rb = weighted_pools['RB'][weighted_pools['RB']['Nickname'] == must_rb_name]
+                        if len(must_rb) > 0:
+                            selected_rbs = pd.concat([selected_rbs, must_rb])
+                
+                # Fill remaining RB spots
+                remaining_rb_spots = 2 - len(selected_rbs)
+                if remaining_rb_spots > 0:
+                    available_rbs = weighted_pools['RB']
+                    if len(selected_rbs) > 0:
+                        used_rb_names = set(selected_rbs['Nickname'])
+                        available_rbs = available_rbs[~available_rbs['Nickname'].isin(used_rb_names)]
+                    
+                    if len(available_rbs) >= remaining_rb_spots:
+                        additional_rbs = available_rbs.sample(remaining_rb_spots, weights=available_rbs['Selection_Weight'])
+                        rb = pd.concat([selected_rbs, additional_rbs])
+                    else:
+                        continue
+                else:
+                    rb = selected_rbs
+                
+                lineup_players.append(rb)
+                
+                # WR/TE selection with stacking (modified for must-include)
                 wr_pool = weighted_pools['WR']
                 te_pool = weighted_pools['TE']
                 
-                attempt_stack = random.random() < stack_probability
+                # Handle must-include WRs
+                selected_wrs = pd.DataFrame()
+                if player_selections and player_selections['WR']['must_include']:
+                    for must_wr_name in player_selections['WR']['must_include'][:3]:  # Max 3 WRs
+                        must_wr = wr_pool[wr_pool['Nickname'] == must_wr_name]
+                        if len(must_wr) > 0:
+                            selected_wrs = pd.concat([selected_wrs, must_wr])
                 
-                if attempt_stack:
-                    same_team_wrs = wr_pool[wr_pool['Team'] == qb_team]
-                    same_team_tes = te_pool[te_pool['Team'] == qb_team]
-                    total_same_team_receivers = len(same_team_wrs) + len(same_team_tes)
+                # Handle must-include TEs
+                selected_te = pd.DataFrame()
+                if player_selections and player_selections['TE']['must_include']:
+                    must_te_name = player_selections['TE']['must_include'][0]  # Max 1 TE
+                    must_te = te_pool[te_pool['Nickname'] == must_te_name]
+                    if len(must_te) > 0:
+                        selected_te = must_te
+                
+                # Fill remaining WR/TE spots with stacking logic
+                remaining_wr_spots = 3 - len(selected_wrs)
+                need_te = len(selected_te) == 0
+                
+                if remaining_wr_spots > 0 or need_te:
+                    # Simplified stacking for must-include constraints
+                    attempt_stack = random.random() < stack_probability and remaining_wr_spots > 0
                     
-                    if total_same_team_receivers >= 1:
-                        # Stacking logic
-                        stack_wr_count = 0
-                        stack_te_count = 0
+                    if attempt_stack:
+                        same_team_wrs = wr_pool[wr_pool['Team'] == qb_team]
+                        # Remove already selected WRs
+                        if len(selected_wrs) > 0:
+                            used_wr_names = set(selected_wrs['Nickname'])
+                            same_team_wrs = same_team_wrs[~same_team_wrs['Nickname'].isin(used_wr_names)]
                         
-                        if len(same_team_wrs) >= 2 and random.random() < 0.65:
-                            stack_wr_count = min(random.randint(2, min(3, len(same_team_wrs))), 3)
-                        elif len(same_team_wrs) >= 1 and random.random() < 0.85:
-                            stack_wr_count = min(random.randint(1, min(2, len(same_team_wrs))), 2)
+                        if len(same_team_wrs) >= 1:
+                            stack_count = min(remaining_wr_spots, len(same_team_wrs), 2)
+                            stacked_wrs = same_team_wrs.sample(stack_count, weights=same_team_wrs['Selection_Weight'])
+                            selected_wrs = pd.concat([selected_wrs, stacked_wrs])
+                            remaining_wr_spots -= stack_count
+                    
+                    # Fill remaining WR spots
+                    if remaining_wr_spots > 0:
+                        available_wrs = wr_pool
+                        if len(selected_wrs) > 0:
+                            used_wr_names = set(selected_wrs['Nickname'])
+                            available_wrs = available_wrs[~available_wrs['Nickname'].isin(used_wr_names)]
                         
-                        if stack_wr_count < 3 and len(same_team_tes) >= 1 and random.random() < 0.75:
-                            stack_te_count = 1
-                        
-                        # Execute stacking
-                        stacked_wrs = pd.DataFrame()
-                        stacked_te = pd.DataFrame()
-                        
-                        if stack_wr_count > 0:
-                            stacked_wrs = same_team_wrs.sample(stack_wr_count, weights=same_team_wrs['Selection_Weight'])
-                        
-                        if stack_te_count > 0:
-                            stacked_te = same_team_tes.sample(1, weights=same_team_tes['Selection_Weight'])
-                        
-                        # Fill remaining WR spots
-                        remaining_wr_spots = 3 - stack_wr_count
-                        if remaining_wr_spots > 0:
-                            other_wrs = wr_pool[wr_pool['Team'] != qb_team]
-                            if len(other_wrs) >= remaining_wr_spots:
-                                other_wrs_selected = other_wrs.sample(remaining_wr_spots, weights=other_wrs['Selection_Weight'])
-                                wr = pd.concat([stacked_wrs, other_wrs_selected]) if len(stacked_wrs) > 0 else other_wrs_selected
-                            else:
-                                wr = wr_pool.sample(3, weights=wr_pool['Selection_Weight'])
+                        if len(available_wrs) >= remaining_wr_spots:
+                            additional_wrs = available_wrs.sample(remaining_wr_spots, weights=available_wrs['Selection_Weight'])
+                            wr = pd.concat([selected_wrs, additional_wrs])
                         else:
-                            wr = stacked_wrs
-                        
-                        # Handle TE
-                        if stack_te_count > 0:
-                            te = stacked_te
-                        else:
-                            other_tes = te_pool[te_pool['Team'] != qb_team] if len(te_pool[te_pool['Team'] != qb_team]) > 0 else te_pool
-                            te = other_tes.sample(1, weights=other_tes['Selection_Weight'])
+                            continue
                     else:
-                        wr = wr_pool.sample(3, weights=wr_pool['Selection_Weight'])
-                        te = te_pool.sample(1, weights=te_pool['Selection_Weight'])
+                        wr = selected_wrs
+                    
+                    # Handle TE
+                    if need_te:
+                        available_tes = te_pool
+                        te = available_tes.sample(1, weights=available_tes['Selection_Weight'])
+                    else:
+                        te = selected_te
                 else:
-                    wr = wr_pool.sample(3, weights=wr_pool['Selection_Weight'])
-                    te = te_pool.sample(1, weights=te_pool['Selection_Weight'])
+                    wr = selected_wrs
+                    te = selected_te
                 
-                # Select RB
-                rb_pool = weighted_pools['RB']
-                rb = rb_pool.sample(2, weights=rb_pool['Selection_Weight'])
+                lineup_players.extend([wr, te])
                 
-                # Select Defense
-                def_players = df[df['Position'] == 'D']
-                if random.random() < 0.8:
-                    cheap_def = def_players[def_players['Salary'] <= 4000]
-                    if len(cheap_def) > 0:
-                        def_ = cheap_def.sample(1)
+                # Defense selection
+                if player_selections and player_selections['D']['must_include']:
+                    must_def_name = player_selections['D']['must_include'][0]
+                    def_ = def_players[def_players['Nickname'] == must_def_name]
+                    if len(def_) == 0:
+                        continue
+                else:
+                    # Regular defense selection
+                    if random.random() < 0.8:
+                        cheap_def = def_players[def_players['Salary'] <= 4000]
+                        if len(cheap_def) > 0:
+                            def_ = cheap_def.sample(1)
+                        else:
+                            def_ = def_players.sample(1)
                     else:
                         def_ = def_players.sample(1)
-                else:
-                    def_ = def_players.sample(1)
                 
-                # Select FLEX
+                lineup_players.append(def_)
+                
+                # FLEX selection
                 flex_players = df[df['Position'].isin(['RB', 'WR', 'TE'])]
-                used_names = set(pd.concat([rb, wr, te])['Nickname'])
+                used_names = set()
+                for player_group in lineup_players[1:4]:  # RB, WR, TE
+                    used_names.update(player_group['Nickname'])
+                
                 flex_pool = flex_players[~flex_players['Nickname'].isin(used_names)]
                 
                 if len(flex_pool) == 0:
                     continue
                 
                 flex = flex_pool.sample(1)
+                lineup_players.append(flex)
                 
-                # Build lineup
-                lineup = pd.concat([qb, rb, wr, te, flex, def_])
+                # Build final lineup
+                lineup = pd.concat(lineup_players)
                 
                 # Validate lineup
                 if (len(lineup) == 9 and 
@@ -413,7 +496,10 @@ def main():
         elite_target_boost = st.slider("Elite Target Boost", 0.0, 1.0, 0.45, step=0.05)
         great_target_boost = st.slider("Great Target Boost", 0.0, 1.0, 0.25, step=0.05)
         
-        st.header("📊 Display Settings")
+        st.header("� Player Selection")
+        enable_player_selection = st.checkbox("Enable Player Include/Exclude", value=False)
+        
+        st.header("�📊 Display Settings")
         num_lineups_display = st.slider("Number of Top Lineups to Show", 5, 50, 20, step=5)
         
         generate_button = st.button("🚀 Generate Lineups", type="primary")
@@ -450,9 +536,162 @@ def main():
         with col4:
             st.metric("RB Performance Boosts", len(rb_performance_boosts))
         
+        # Player Selection Interface
+        if enable_player_selection:
+            st.markdown('<h2 class="sub-header">👥 Player Selection</h2>', unsafe_allow_html=True)
+            
+            # Create tabs for different positions
+            tab1, tab2, tab3, tab4, tab5 = st.tabs(["QB", "RB", "WR", "TE", "DEF"])
+            
+            player_selections = {}
+            
+            with tab1:
+                st.subheader("Quarterbacks")
+                qb_players = df[df['Position'] == 'QB'].sort_values(['Team', 'Salary'], ascending=[True, False])
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write("**Must Include:**")
+                    must_include_qb = st.multiselect(
+                        "Force these QBs in lineups",
+                        options=qb_players['Nickname'].tolist(),
+                        key="must_qb"
+                    )
+                
+                with col2:
+                    st.write("**Exclude:**")
+                    exclude_qb = st.multiselect(
+                        "Remove these QBs from consideration",
+                        options=qb_players['Nickname'].tolist(),
+                        key="exclude_qb"
+                    )
+                
+                player_selections['QB'] = {'must_include': must_include_qb, 'exclude': exclude_qb}
+                
+                # Show QB options with salary/matchup info
+                with st.expander("View All QB Options"):
+                    qb_display = qb_players[['Nickname', 'Team', 'Salary', 'FPPG', 'Matchup_Quality']].copy()
+                    qb_display['Salary'] = qb_display['Salary'].apply(lambda x: f"${x:,}")
+                    st.dataframe(qb_display, use_container_width=True)
+            
+            with tab2:
+                st.subheader("Running Backs")
+                rb_players = df[df['Position'] == 'RB'].sort_values(['Team', 'Salary'], ascending=[True, False])
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write("**Must Include:**")
+                    must_include_rb = st.multiselect(
+                        "Force these RBs in lineups",
+                        options=rb_players['Nickname'].tolist(),
+                        key="must_rb"
+                    )
+                
+                with col2:
+                    st.write("**Exclude:**")
+                    exclude_rb = st.multiselect(
+                        "Remove these RBs from consideration",
+                        options=rb_players['Nickname'].tolist(),
+                        key="exclude_rb"
+                    )
+                
+                player_selections['RB'] = {'must_include': must_include_rb, 'exclude': exclude_rb}
+                
+                with st.expander("View All RB Options"):
+                    rb_display = rb_players[['Nickname', 'Team', 'Salary', 'FPPG', 'Matchup_Quality']].copy()
+                    rb_display['Salary'] = rb_display['Salary'].apply(lambda x: f"${x:,}")
+                    st.dataframe(rb_display, use_container_width=True)
+            
+            with tab3:
+                st.subheader("Wide Receivers")
+                wr_players = df[df['Position'] == 'WR'].sort_values(['Team', 'Salary'], ascending=[True, False])
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write("**Must Include:**")
+                    must_include_wr = st.multiselect(
+                        "Force these WRs in lineups",
+                        options=wr_players['Nickname'].tolist(),
+                        key="must_wr"
+                    )
+                
+                with col2:
+                    st.write("**Exclude:**")
+                    exclude_wr = st.multiselect(
+                        "Remove these WRs from consideration",
+                        options=wr_players['Nickname'].tolist(),
+                        key="exclude_wr"
+                    )
+                
+                player_selections['WR'] = {'must_include': must_include_wr, 'exclude': exclude_wr}
+                
+                with st.expander("View All WR Options"):
+                    wr_display = wr_players[['Nickname', 'Team', 'Salary', 'FPPG', 'Matchup_Quality']].copy()
+                    wr_display['Salary'] = wr_display['Salary'].apply(lambda x: f"${x:,}")
+                    st.dataframe(wr_display, use_container_width=True)
+            
+            with tab4:
+                st.subheader("Tight Ends")
+                te_players = df[df['Position'] == 'TE'].sort_values(['Team', 'Salary'], ascending=[True, False])
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write("**Must Include:**")
+                    must_include_te = st.multiselect(
+                        "Force these TEs in lineups",
+                        options=te_players['Nickname'].tolist(),
+                        key="must_te"
+                    )
+                
+                with col2:
+                    st.write("**Exclude:**")
+                    exclude_te = st.multiselect(
+                        "Remove these TEs from consideration",
+                        options=te_players['Nickname'].tolist(),
+                        key="exclude_te"
+                    )
+                
+                player_selections['TE'] = {'must_include': must_include_te, 'exclude': exclude_te}
+                
+                with st.expander("View All TE Options"):
+                    te_display = te_players[['Nickname', 'Team', 'Salary', 'FPPG', 'Matchup_Quality']].copy()
+                    te_display['Salary'] = te_display['Salary'].apply(lambda x: f"${x:,}")
+                    st.dataframe(te_display, use_container_width=True)
+            
+            with tab5:
+                st.subheader("Defense/Special Teams")
+                def_players_tab = df[df['Position'] == 'D'].sort_values(['Team', 'Salary'], ascending=[True, False])
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write("**Must Include:**")
+                    must_include_def = st.multiselect(
+                        "Force these DEF in lineups",
+                        options=def_players_tab['Nickname'].tolist(),
+                        key="must_def"
+                    )
+                
+                with col2:
+                    st.write("**Exclude:**")
+                    exclude_def = st.multiselect(
+                        "Remove these DEF from consideration",
+                        options=def_players_tab['Nickname'].tolist(),
+                        key="exclude_def"
+                    )
+                
+                player_selections['D'] = {'must_include': must_include_def, 'exclude': exclude_def}
+                
+                with st.expander("View All DEF Options"):
+                    def_display = def_players_tab[['Nickname', 'Team', 'Salary', 'FPPG', 'Matchup_Quality']].copy()
+                    def_display['Salary'] = def_display['Salary'].apply(lambda x: f"${x:,}")
+                    st.dataframe(def_display, use_container_width=True)
+        
+        else:
+            player_selections = None
+        
         if generate_button:
             with st.spinner(f"Generating {num_simulations:,} optimized lineups..."):
-                stacked_lineups = generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost)
+                stacked_lineups = generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, player_selections)
                 st.session_state.stacked_lineups = stacked_lineups
                 st.session_state.lineups_generated = True
         
