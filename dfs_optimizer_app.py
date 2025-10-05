@@ -1034,15 +1034,15 @@ def main():
         else:
             player_selections = None
         
+        # Collect all forced players for boost calculation and display
+        all_forced_players = []
+        if enable_player_selection and player_selections:
+            for pos_data in player_selections.values():
+                if pos_data and 'must_include' in pos_data:
+                    all_forced_players.extend(pos_data['must_include'])
+        
         if generate_button:
             with st.spinner("Creating weighted player pools..."):
-                # Collect all forced players for boost calculation
-                all_forced_players = []
-                if enable_player_selection and player_selections:
-                    for pos_data in player_selections.values():
-                        if pos_data and 'must_include' in pos_data:
-                            all_forced_players.extend(pos_data['must_include'])
-                
                 weighted_pools = create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost, all_forced_players, forced_player_boost)
             
             with st.spinner(f"Generating {num_simulations:,} optimized lineups..."):
