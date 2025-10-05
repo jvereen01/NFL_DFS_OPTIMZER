@@ -215,9 +215,19 @@ def create_performance_boosts(fantasy_data, wr_boost_multiplier=1.0, rb_boost_mu
     
     return wr_performance_boosts, rb_performance_boosts
 
-def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost, high_salary_boost=0.0, value_play_boost=0.0, forced_players=None, forced_player_boost=0.0):
+def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost, high_salary_boost=0.0, value_play_boost=0.0, forced_players=None, forced_player_boost=0.0, qb_salary_priority=0.0):
     """Create weighted player pools"""
     pools = {}
+    
+    # For QB position, identify highest salary QB per team
+    highest_salary_qbs = set()
+    if qb_salary_priority > 0:
+        qb_players = df[df['Position'] == 'QB']
+        for team in qb_players['Team'].unique():
+            team_qbs = qb_players[qb_players['Team'] == team]
+            if len(team_qbs) > 0:
+                highest_salary_qb = team_qbs.loc[team_qbs['Salary'].idxmax(), 'Nickname']
+                highest_salary_qbs.add(highest_salary_qb)
     
     for pos in ['QB', 'RB', 'WR', 'TE']:
         pos_players = df[df['Position'] == pos].copy()
@@ -255,6 +265,11 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elit
             if forced_players and forced_player_boost > 0:
                 if player_name in forced_players:
                     weight = weight * (1 + forced_player_boost)
+            
+            # Apply QB highest salary boost
+            if pos == 'QB' and qb_salary_priority > 0:
+                if player_name in highest_salary_qbs:
+                    weight = weight * (1 + qb_salary_priority)
             
             weights.append(weight)
         
@@ -685,6 +700,10 @@ def main():
         forced_player_boost = st.slider("Forced Player Extra Boost", 0.0, 1.0, 0.3, step=0.05)
         st.caption("Extra boost for players you manually include")
         
+        st.subheader("🏈 QB Priority Settings")
+        qb_salary_priority = st.slider("QB Highest Salary Boost", 0.0, 1.0, 0.4, step=0.05)
+        st.caption("Boosts the highest salary QB on each team")
+        
         st.header("� Player Selection")
         enable_player_selection = st.checkbox("Enable Player Include/Exclude", value=False)
         
@@ -765,11 +784,36 @@ def main():
                 for i, (tab, pos, emoji) in enumerate(zip(pos_tabs, positions, emojis)):
                     with tab:
                         if pos in position_matchups and len(position_matchups[pos]) > 0:
+                            # Special handling for QB position to show salary priority
+                            if pos == 'QB' and qb_salary_priority > 0:
+                                # Get highest salary QBs
+                                qb_data = df[df['Position'] == 'QB']
+                                highest_salary_qbs_list = []
+                                for team in qb_data['Team'].unique():
+                                    team_qbs = qb_data[qb_data['Team'] == team]
+                                    if len(team_qbs) > 0:
+                                        highest_qb = team_qbs.loc[team_qbs['Salary'].idxmax(), 'Nickname']
+                                        highest_salary_qbs_list.append(highest_qb)
+                                
+                                st.caption(f"🏈 QB Priority: +{qb_salary_priority:.0%} boost to highest salary QB per team")
+                            
                             for j, (_, matchup) in enumerate(position_matchups[pos].iterrows()):
                                 if j < 6:  # Show top 6 in each tab
                                     quality_icon = "🔥" if matchup['Matchup_Quality'] == 'ELITE TARGET' else ("⭐" if matchup['Matchup_Quality'] == 'Great Target' else "")
+                                    
+                                    # Add salary boost indicator for QBs
+                                    salary_boost_icon = ""
+                                    if pos == 'QB' and qb_salary_priority > 0:
+                                        qb_data = df[df['Position'] == 'QB']
+                                        for team in qb_data['Team'].unique():
+                                            team_qbs = qb_data[qb_data['Team'] == team]
+                                            if len(team_qbs) > 0:
+                                                highest_qb = team_qbs.loc[team_qbs['Salary'].idxmax(), 'Nickname']
+                                                if matchup['Player'] == highest_qb:
+                                                    salary_boost_icon = " 💰"
+                                    
                                     st.markdown(
-                                        f"**{emoji} {matchup['Player']}** vs {matchup['vs']} {quality_icon}  \n"
+                                        f"**{emoji} {matchup['Player']}** vs {matchup['vs']} {quality_icon}{salary_boost_icon}  \n"
                                         f"${matchup['Salary']:,} | {matchup['FPPG']:.1f} pts", 
                                         help=f"Defense Rank: #{matchup['Defense_Rank']} ({matchup['YPG_Allowed']:.1f} YPG allowed)"
                                     )
@@ -1020,7 +1064,7 @@ def main():
                         if pos_data and 'must_include' in pos_data:
                             all_forced_players.extend(pos_data['must_include'])
                 
-                weighted_pools = create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost, high_salary_boost, value_play_boost, all_forced_players, forced_player_boost)
+                weighted_pools = create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost, high_salary_boost, value_play_boost, all_forced_players, forced_player_boost, qb_salary_priority)
             
             with st.spinner(f"Generating {num_simulations:,} optimized lineups..."):
                 stacked_lineups = generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, player_selections)
