@@ -374,6 +374,23 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
     stacked_lineups = []
     salary_cap = 60000
     
+    # Pre-validate constraints and adjust simulation count if needed
+    original_simulations = num_simulations
+    if player_selections:
+        # Count total forced players
+        total_forced = sum(len(player_selections[pos]['must_include']) for pos in ['QB', 'RB', 'WR', 'TE', 'D'] if pos in player_selections)
+        
+        # More aggressive reduction for faster generation
+        if total_forced > 15:
+            num_simulations = min(num_simulations, 2000)
+            st.info(f"ℹ️ Reduced simulations to {num_simulations:,} due to {total_forced} forced players for faster generation")
+        elif total_forced > 10:
+            num_simulations = min(num_simulations, 3000)
+            st.info(f"ℹ️ Reduced simulations to {num_simulations:,} due to {total_forced} forced players for faster generation")
+        elif total_forced > 5:
+            num_simulations = min(num_simulations, 5000)
+            st.info(f"ℹ️ Reduced simulations to {num_simulations:,} due to {total_forced} forced players for faster generation")
+    
     # Apply player selection filters if enabled
     if player_selections:
         filtered_pools = {}
@@ -401,21 +418,32 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
     progress_bar = st.progress(0)
     status_text = st.empty()
     
+    successful_lineups = 0
+    total_attempts = 0
+    
     for simulation in range(num_simulations):
         attempts = 0
-        max_attempts = 20
+        max_attempts = 50 if player_selections else 20  # More attempts when forcing players
         
         while attempts < max_attempts:
             attempts += 1
+            total_attempts += 1
+            
+            # Early exit if too many failed attempts
+            if total_attempts > num_simulations * 100:
+                st.warning(f"⚠️ Stopping early due to constraint conflicts. Generated {successful_lineups:,} lineups.")
+                break
             
             try:
                 lineup_players = []
                 
                 # Handle must-include players first
                 if player_selections:
-                    # Must include QB
+                    # Must include QB - rotate through forced QBs for variety
                     if player_selections['QB']['must_include']:
-                        must_qb_name = player_selections['QB']['must_include'][0]  # Take first if multiple
+                        available_forced_qbs = player_selections['QB']['must_include']
+                        # Randomly select from forced QBs to create variety
+                        must_qb_name = random.choice(available_forced_qbs)
                         qb = weighted_pools['QB'][weighted_pools['QB']['Nickname'] == must_qb_name]
                         if len(qb) == 0:
                             continue  # Skip if player not found
@@ -430,13 +458,18 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                 qb_team = qb['Team'].iloc[0]
                 lineup_players.append(qb)
                 
-                # Handle must-include RBs
+                # Handle must-include RBs - rotate for variety
                 selected_rbs = pd.DataFrame()
                 if player_selections and player_selections['RB']['must_include']:
-                    for must_rb_name in player_selections['RB']['must_include'][:2]:  # Max 2 RBs
-                        must_rb = weighted_pools['RB'][weighted_pools['RB']['Nickname'] == must_rb_name]
-                        if len(must_rb) > 0:
-                            selected_rbs = pd.concat([selected_rbs, must_rb])
+                    available_forced_rbs = player_selections['RB']['must_include']
+                    # Randomly select from forced RBs, up to 2
+                    num_forced_rbs = min(len(available_forced_rbs), 2)
+                    if num_forced_rbs > 0:
+                        selected_rb_names = random.sample(available_forced_rbs, num_forced_rbs)
+                        for must_rb_name in selected_rb_names:
+                            must_rb = weighted_pools['RB'][weighted_pools['RB']['Nickname'] == must_rb_name]
+                            if len(must_rb) > 0:
+                                selected_rbs = pd.concat([selected_rbs, must_rb])
                 
                 # Fill remaining RB spots
                 remaining_rb_spots = 2 - len(selected_rbs)
@@ -560,13 +593,16 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                 # Build final lineup
                 lineup = pd.concat(lineup_players)
                 
+                # Validate lineup with early salary check
+                total_salary = lineup['Salary'].sum()
+                if total_salary > salary_cap:
+                    continue
+                
                 # Validate lineup
                 if (len(lineup) == 9 and 
-                    len(lineup['Nickname'].unique()) == 9 and 
-                    lineup['Salary'].sum() <= salary_cap):
+                    len(lineup['Nickname'].unique()) == 9):
                     
                     total_points = lineup['Adjusted_FPPG'].sum()
-                    total_salary = lineup['Salary'].sum()
                     
                     # Check stacking
                     qb_team = lineup[lineup['Position'] == 'QB']['Team'].iloc[0]
@@ -578,19 +614,28 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                     qb_wr_te_count = stacked_wrs_count + stacked_tes_count
                     
                     stacked_lineups.append((total_points, lineup, total_salary, stacked_wrs_count, stacked_tes_count, qb_wr_te_count))
+                    successful_lineups += 1
                     break
                     
             except Exception as e:
                 continue
         
-        # Update progress
+        # Break outer loop if too many failed attempts
+        if total_attempts > num_simulations * 100:
+            break
+        
+        # Update progress with better info
         progress = (simulation + 1) / num_simulations
         progress_bar.progress(progress)
-        if (simulation + 1) % 100 == 0:
-            status_text.text(f"Generated {simulation + 1:,} / {num_simulations:,} lineups...")
+        if (simulation + 1) % 50 == 0 or simulation < 100:
+            status_text.text(f"Generated {successful_lineups:,} / {num_simulations:,} lineups... (Success rate: {(successful_lineups/(simulation+1)*100):.1f}%)")
     
     progress_bar.empty()
     status_text.empty()
+    
+    # Show final stats
+    if player_selections and successful_lineups < num_simulations * 0.5:
+        st.warning(f"⚠️ Low success rate ({(successful_lineups/num_simulations*100):.1f}%). Consider reducing forced players or adjusting salary constraints.")
     
     return stacked_lineups
 
@@ -617,6 +662,22 @@ def main():
         
         st.header("� Player Selection")
         enable_player_selection = st.checkbox("Enable Player Include/Exclude", value=False)
+        
+        # Add guidance for forced players
+        if enable_player_selection:
+            with st.expander("💡 Tips for Forcing Players"):
+                st.markdown("""
+                **Performance Guidelines:**
+                - **1-5 forced players**: Normal speed
+                - **6-10 forced players**: Slightly slower, auto-reduces to 5,000 simulations
+                - **11-15 forced players**: Moderate speed, auto-reduces to 3,000 simulations  
+                - **16+ forced players**: Slower, auto-reduces to 2,000 simulations
+                
+                **For Best Results:**
+                - Use "🎯 Force Top 6 Matchups" button for optimal constraint balance
+                - Consider forcing fewer players if timeouts occur
+                - Focus on 1-2 positions rather than all positions
+                """)
         
         st.header("�📊 Display Settings")
         num_lineups_display = st.slider("Number of Top Lineups to Show", 5, 50, 20, step=5)
@@ -688,31 +749,57 @@ def main():
             st.markdown('<h2 class="sub-header">👥 Player Selection</h2>', unsafe_allow_html=True)
             
             # Add button to auto-select top matchups
-            col1, col2, col3, col4 = st.columns([2, 1.2, 1, 2])
+            col1, col2, col3, col4, col5 = st.columns([1.5, 1.3, 1.3, 1, 1.5])
             with col2:
-                if st.button("🎯 Force Top 6 Matchups", type="secondary", help="Automatically select the top 6 matchup players from each position"):
+                if st.button("🎯 Force QB/RB/WR Only", type="secondary", help="Auto-select top 6 matchups for QB, RB, WR only (you can add more manually)"):
                     # Get top matchups and auto-populate selections
                     top_matchups = get_top_matchups(df, pass_defense, rush_defense, num_per_position=6)
                     
-                    # Store in session state to trigger multiselect updates
+                    # Only auto-select QB, RB, WR (not TE or DEF)
                     if 'QB' in top_matchups and len(top_matchups['QB']) > 0:
-                        st.session_state.auto_qb = top_matchups['QB']['Player'].head(6).tolist()  # Top 6 QBs
-                    if 'RB' in top_matchups and len(top_matchups['RB']) > 0:
-                        st.session_state.auto_rb = top_matchups['RB']['Player'].head(6).tolist()  # Top 6 RBs
-                    if 'WR' in top_matchups and len(top_matchups['WR']) > 0:
-                        st.session_state.auto_wr = top_matchups['WR']['Player'].head(6).tolist()  # Top 6 WRs
-                    if 'TE' in top_matchups and len(top_matchups['TE']) > 0:
-                        st.session_state.auto_te = top_matchups['TE']['Player'].head(6).tolist()  # Top 6 TEs
+                        existing_qb = st.session_state.get('auto_qb', [])
+                        new_qb = top_matchups['QB']['Player'].head(6).tolist()
+                        # Combine existing with new, remove duplicates while preserving order
+                        combined_qb = existing_qb + [qb for qb in new_qb if qb not in existing_qb]
+                        st.session_state.auto_qb = combined_qb
                     
-                    st.success("✅ Top 6 matchup players selected for each position! Check the tabs below.")
+                    if 'RB' in top_matchups and len(top_matchups['RB']) > 0:
+                        existing_rb = st.session_state.get('auto_rb', [])
+                        new_rb = top_matchups['RB']['Player'].head(6).tolist()
+                        combined_rb = existing_rb + [rb for rb in new_rb if rb not in existing_rb]
+                        st.session_state.auto_rb = combined_rb
+                    
+                    if 'WR' in top_matchups and len(top_matchups['WR']) > 0:
+                        existing_wr = st.session_state.get('auto_wr', [])
+                        new_wr = top_matchups['WR']['Player'].head(6).tolist()
+                        combined_wr = existing_wr + [wr for wr in new_wr if wr not in existing_wr]
+                        st.session_state.auto_wr = combined_wr
+                    
+                    # Don't auto-populate TE or DEF - user can add manually
+                    st.success("✅ Top 6 QB, RB, and WR matchups added! Add TE/DEF manually if desired.")
             
             with col3:
-                if st.button("🗑️ Clear All", help="Clear all player selections"):
+                if st.button("🎯 Force All Positions", type="secondary", help="Auto-select top 6 matchups for all positions"):
+                    # Get top matchups and auto-populate ALL positions
+                    top_matchups = get_top_matchups(df, pass_defense, rush_defense, num_per_position=6)
+                    
+                    # Auto-select all positions
+                    for pos in ['QB', 'RB', 'WR', 'TE']:
+                        if pos in top_matchups and len(top_matchups[pos]) > 0:
+                            existing = st.session_state.get(f'auto_{pos.lower()}', [])
+                            new_players = top_matchups[pos]['Player'].head(6).tolist()
+                            combined = existing + [p for p in new_players if p not in existing]
+                            st.session_state[f'auto_{pos.lower()}'] = combined
+                    
+                    st.success("✅ Top 6 matchups added for all positions!")
+            
+            with col4:
+                if st.button("🗑️ Clear", help="Clear all player selections"):
                     # Clear all auto-selections
                     for key in ['auto_qb', 'auto_rb', 'auto_wr', 'auto_te']:
                         if key in st.session_state:
                             del st.session_state[key]
-                    st.success("✅ All selections cleared!")
+                    st.success("✅ Cleared!")
             
             # Create tabs for different positions
             tab1, tab2, tab3, tab4, tab5 = st.tabs(["QB", "RB", "WR", "TE", "DEF"])
