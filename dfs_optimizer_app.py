@@ -48,7 +48,7 @@ def load_player_data():
     """Load and process player data"""
     try:
         # Load player CSV
-        df = pd.read_csv('FanDuel-NFL-2025 EDT-10 EDT-05 EDT-121036-players-list (1).csv')
+        df = pd.read_csv('FanDuel-NFL-2025 EDT-10 EDT-05 EDT-121036-players-list (2).csv')
         df.columns = [col.strip() for col in df.columns]
         
         # Apply filters
@@ -187,9 +187,9 @@ def create_performance_boosts(fantasy_data, wr_boost_multiplier=1.0, rb_boost_mu
             wr_fantasy['FDPt_Percentile'] = wr_fantasy['FDPt'].rank(pct=True, na_option='bottom')
             
             wr_fantasy['WR_Performance_Score'] = (
-                wr_fantasy['Tgt_Percentile'] * 0.33 +
-                wr_fantasy['Rec_Percentile'] * 0.33 +
-                wr_fantasy['FDPt_Percentile'] * 0.34
+                wr_fantasy['Tgt_Percentile'] * 0.25 +
+                wr_fantasy['Rec_Percentile'] * 0.25 +
+                wr_fantasy['FDPt_Percentile'] * 0.5
             )
             wr_fantasy['WR_Performance_Boost'] = wr_fantasy['WR_Performance_Score'] * 0.4 * wr_boost_multiplier
             
@@ -231,6 +231,11 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elit
     
     for pos in ['QB', 'RB', 'WR', 'TE']:
         pos_players = df[df['Position'] == pos].copy()
+        
+        # Apply TE salary filter (automatic $4,300 minimum)
+        if pos == 'TE':
+            pos_players = pos_players[pos_players['Salary'] >= 4300]
+        
         weights = []
         
         for _, player in pos_players.iterrows():
@@ -737,7 +742,10 @@ def main():
         with col2:
             st.metric("Elite Targets", len(df[df['Matchup_Quality'] == 'ELITE TARGET']))
         with col3:
-            st.metric("WR Performance Boosts", len(wr_performance_boosts))
+            # Show TE filter info (automatic $4,300 minimum)
+            total_tes = len(df[df['Position'] == 'TE'])
+            eligible_tes = len(df[(df['Position'] == 'TE') & (df['Salary'] >= 4300)])
+            st.metric("Eligible TEs", eligible_tes, delta="≥$4,300")
         with col4:
             # Show forced player count if any are selected
             forced_count = 0
@@ -1089,7 +1097,73 @@ def main():
                 with col3:
                     st.metric("Best Projected Points", f"{best_points:.2f}")
             
+            # CSV Download Section
+            st.markdown("---")
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                st.subheader("📥 Export Lineups")
+                num_export = st.slider("Number of lineups to export", 1, min(len(stacked_lineups), 150), min(20, len(stacked_lineups)))
+                st.caption(f"Export top {num_export} lineups for FanDuel upload")
+            
+            with col2:
+                if st.button("📋 Prepare CSV Download", type="primary"):
+                    # Prepare CSV data for FanDuel format
+                    export_lineups = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:num_export]
+                    csv_data = []
+                    
+                    for i, (points, lineup, salary, _, _, _) in enumerate(export_lineups, 1):
+                        # Create FanDuel format: QB, RB, RB, WR, WR, WR, TE, FLEX, D
+                        positions = {'QB': [], 'RB': [], 'WR': [], 'TE': [], 'D': []}
+                        
+                        for _, player in lineup.iterrows():
+                            pos = player['Position']
+                            if pos == 'DEF':
+                                pos = 'D'
+                            if pos in positions:
+                                positions[pos].append(player['Nickname'])
+                        
+                        # Fill FanDuel roster format
+                        row = {
+                            'Lineup': i,
+                            'QB': positions['QB'][0] if positions['QB'] else '',
+                            'RB1': positions['RB'][0] if len(positions['RB']) > 0 else '',
+                            'RB2': positions['RB'][1] if len(positions['RB']) > 1 else '',
+                            'WR1': positions['WR'][0] if len(positions['WR']) > 0 else '',
+                            'WR2': positions['WR'][1] if len(positions['WR']) > 1 else '',
+                            'WR3': positions['WR'][2] if len(positions['WR']) > 2 else '',
+                            'TE': positions['TE'][0] if positions['TE'] else '',
+                            'FLEX': '',  # Determine flex position
+                            'D': positions['D'][0] if positions['D'] else '',
+                            'Projected_Points': f"{points:.2f}",
+                            'Salary': salary
+                        }
+                        
+                        # Determine FLEX (extra RB or WR)
+                        if len(positions['RB']) > 2:
+                            row['FLEX'] = positions['RB'][2]
+                        elif len(positions['WR']) > 3:
+                            row['FLEX'] = positions['WR'][3]
+                        
+                        csv_data.append(row)
+                    
+                    # Convert to DataFrame and then CSV
+                    import pandas as pd
+                    df_export = pd.DataFrame(csv_data)
+                    csv_string = df_export.to_csv(index=False)
+                    
+                    st.success(f"✅ {num_export} lineups prepared for download!")
+                    st.download_button(
+                        label="💾 Download CSV for FanDuel",
+                        data=csv_string,
+                        file_name=f"fanduel_lineups_{num_export}lineups.csv",
+                        mime="text/csv",
+                        type="secondary"
+                    )
+            
+            st.markdown("---")
+            
             # Display lineups
+            st.subheader("📋 Generated Lineups")
             for i, (points, lineup, salary, stacked_wrs_count, stacked_tes_count, qb_wr_te_count) in enumerate(top_lineups, 1):
                 with st.expander(f"Lineup #{i}: {points:.2f} points | ${salary:,} | {'QB+' + str(qb_wr_te_count) + ' receivers' if qb_wr_te_count > 0 else 'No stack'}"):
                     
