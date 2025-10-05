@@ -430,7 +430,7 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
             total_attempts += 1
             
             # Early exit if too many failed attempts
-            if total_attempts > num_simulations * 100:
+            if total_attempts > num_simulations * 200:  # More generous attempt limit
                 st.warning(f"⚠️ Stopping early due to constraint conflicts. Generated {successful_lineups:,} lineups.")
                 break
             
@@ -621,7 +621,7 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                 continue
         
         # Break outer loop if too many failed attempts
-        if total_attempts > num_simulations * 100:
+        if total_attempts > num_simulations * 200:  # Match the inner condition
             break
         
         # Update progress with better info
@@ -982,12 +982,37 @@ def main():
                 stacked_lineups = generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, player_selections)
                 st.session_state.stacked_lineups = stacked_lineups
                 st.session_state.lineups_generated = True
+                
+                # Debug info
+                if len(stacked_lineups) == 0:
+                    st.error("⚠️ No lineups were generated! This could be due to:")
+                    st.write("- Too many forced players creating impossible constraints")
+                    st.write("- Salary cap issues with forced players")
+                    st.write("- Try reducing forced players or using the 'Clear' button")
+                else:
+                    st.success(f"✅ Successfully generated {len(stacked_lineups):,} lineups!")
         
         # Display results
         if st.session_state.lineups_generated and st.session_state.stacked_lineups:
             stacked_lineups = st.session_state.stacked_lineups
             
             st.markdown('<h2 class="sub-header">🏆 Optimized Lineups</h2>', unsafe_allow_html=True)
+            
+            # Sort and display top lineups
+            top_lineups = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:num_lineups_display]
+        
+        elif st.session_state.lineups_generated and not st.session_state.stacked_lineups:
+            st.warning("⚠️ Lineups were generated but none met the constraints. Try:")
+            st.write("- Reducing the number of forced players")
+            st.write("- Using the 'Clear' button and trying again")
+            st.write("- Increasing simulation count")
+        
+        elif not st.session_state.lineups_generated:
+            st.info("👆 Click 'Generate Lineups' to create optimized lineups!")
+        
+        # Only show lineup details if we have valid lineups
+        if st.session_state.lineups_generated and st.session_state.stacked_lineups:
+            stacked_lineups = st.session_state.stacked_lineups
             
             # Sort and display top lineups
             top_lineups = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:num_lineups_display]
