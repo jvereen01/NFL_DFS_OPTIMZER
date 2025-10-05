@@ -173,7 +173,7 @@ def apply_matchup_analysis(df, pass_defense, rush_defense):
     df['Adjusted_FPPG'] = df['FPPG'] * df['Overall_Matchup_Multiplier']
     return df
 
-def create_performance_boosts(fantasy_data):
+def create_performance_boosts(fantasy_data, wr_boost_multiplier=1.0, rb_boost_multiplier=1.0):
     """Create fantasy performance boosts"""
     wr_performance_boosts = {}
     rb_performance_boosts = {}
@@ -191,7 +191,7 @@ def create_performance_boosts(fantasy_data):
                 wr_fantasy['Rec_Percentile'] * 0.33 +
                 wr_fantasy['FDPt_Percentile'] * 0.34
             )
-            wr_fantasy['WR_Performance_Boost'] = wr_fantasy['WR_Performance_Score'] * 0.4
+            wr_fantasy['WR_Performance_Boost'] = wr_fantasy['WR_Performance_Score'] * 0.4 * wr_boost_multiplier
             
             for _, wr in wr_fantasy.iterrows():
                 wr_performance_boosts[wr['Player']] = wr['WR_Performance_Boost']
@@ -208,14 +208,14 @@ def create_performance_boosts(fantasy_data):
                 rb_fantasy['Att_Percentile'] * 0.3 +
                 rb_fantasy['Rec_Percentile'] * 0.2
             )
-            rb_fantasy['RB_Performance_Boost'] = rb_fantasy['RB_Performance_Score'] * 0.4
+            rb_fantasy['RB_Performance_Boost'] = rb_fantasy['RB_Performance_Score'] * 0.4 * rb_boost_multiplier
             
             for _, rb in rb_fantasy.iterrows():
                 rb_performance_boosts[rb['Player']] = rb['RB_Performance_Boost']
     
     return wr_performance_boosts, rb_performance_boosts
 
-def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost):
+def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost, high_salary_boost=0.0, value_play_boost=0.0, forced_players=None, forced_player_boost=0.0):
     """Create weighted player pools"""
     pools = {}
     
@@ -242,6 +242,19 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elit
                 weight = weight * (1 + wr_performance_boosts[player_name])
             elif pos == 'RB' and player_name in rb_performance_boosts:
                 weight = weight * (1 + rb_performance_boosts[player_name])
+            
+            # Apply salary-based boosts
+            salary = player['Salary']
+            if salary > 8000 and high_salary_boost > 0:
+                weight = weight * (1 + high_salary_boost)
+            elif salary < 5000 and value_play_boost > 0:
+                weight = weight * (1 + value_play_boost)
+            
+            # Apply forced player boost
+            player_name = player['Nickname']
+            if forced_players and forced_player_boost > 0:
+                if player_name in forced_players:
+                    weight = weight * (1 + forced_player_boost)
             
             weights.append(weight)
         
@@ -660,6 +673,18 @@ def main():
         elite_target_boost = st.slider("Elite Target Boost", 0.0, 1.0, 0.45, step=0.05)
         great_target_boost = st.slider("Great Target Boost", 0.0, 1.0, 0.25, step=0.05)
         
+        st.subheader("🚀 Performance Boost Multipliers")
+        wr_boost_multiplier = st.slider("WR Performance Boost Multiplier", 0.5, 2.0, 1.0, step=0.1)
+        rb_boost_multiplier = st.slider("RB Performance Boost Multiplier", 0.5, 2.0, 1.0, step=0.1)
+        
+        st.subheader("💰 Salary-Based Boosts")
+        high_salary_boost = st.slider("High Salary Player Boost (>$8k)", 0.0, 0.5, 0.0, step=0.05)
+        value_play_boost = st.slider("Value Play Boost (<$5k)", 0.0, 0.3, 0.0, step=0.05)
+        
+        st.subheader("🎯 Forced Player Boost")
+        forced_player_boost = st.slider("Forced Player Extra Boost", 0.0, 1.0, 0.3, step=0.05)
+        st.caption("Extra boost for players you manually include")
+        
         st.header("� Player Selection")
         enable_player_selection = st.checkbox("Enable Player Include/Exclude", value=False)
         
@@ -700,10 +725,7 @@ def main():
             df = apply_matchup_analysis(df, pass_defense, rush_defense)
             
         with st.spinner("Creating performance boosts..."):
-            wr_performance_boosts, rb_performance_boosts = create_performance_boosts(fantasy_data)
-            
-        with st.spinner("Creating weighted player pools..."):
-            weighted_pools = create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost)
+            wr_performance_boosts, rb_performance_boosts = create_performance_boosts(fantasy_data, wr_boost_multiplier, rb_boost_multiplier)
         
         # Display data summary and top matchups
         col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 2])
@@ -714,7 +736,19 @@ def main():
         with col3:
             st.metric("WR Performance Boosts", len(wr_performance_boosts))
         with col4:
-            st.metric("RB Performance Boosts", len(rb_performance_boosts))
+            # Show forced player count if any are selected
+            forced_count = 0
+            if enable_player_selection:
+                # Count forced players from session state
+                for pos in ['qb', 'rb', 'wr', 'te', 'def']:
+                    auto_key = f'auto_{pos}'
+                    if auto_key in st.session_state:
+                        forced_count += len(st.session_state[auto_key])
+            
+            if forced_count > 0:
+                st.metric("⚡ Forced Players", forced_count, delta=f"+{forced_player_boost:.0%} boost")
+            else:
+                st.metric("RB Performance Boosts", len(rb_performance_boosts))
         with col5:
             st.markdown("### 🎯 Top 6 Matchups by Position")
             
@@ -978,6 +1012,16 @@ def main():
             player_selections = None
         
         if generate_button:
+            with st.spinner("Creating weighted player pools..."):
+                # Collect all forced players for boost calculation
+                all_forced_players = []
+                if enable_player_selection and player_selections:
+                    for pos_data in player_selections.values():
+                        if pos_data and 'must_include' in pos_data:
+                            all_forced_players.extend(pos_data['must_include'])
+                
+                weighted_pools = create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost, high_salary_boost, value_play_boost, all_forced_players, forced_player_boost)
+            
             with st.spinner(f"Generating {num_simulations:,} optimized lineups..."):
                 stacked_lineups = generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, player_selections)
                 st.session_state.stacked_lineups = stacked_lineups
@@ -1044,6 +1088,7 @@ def main():
                     # Show boosts
                     fantasy_boosted = 0
                     elite_targets = 0
+                    forced_boosted = 0
                     qb_team = lineup[lineup['Position'] == 'QB']['Team'].iloc[0]
                     
                     for _, player in lineup.iterrows():
@@ -1054,12 +1099,22 @@ def main():
                         
                         if player['Matchup_Quality'] == 'ELITE TARGET':
                             elite_targets += 1
+                        
+                        # Check if player was forced and got boost
+                        if enable_player_selection and player_selections and all_forced_players:
+                            if player['Nickname'] in all_forced_players:
+                                forced_boosted += 1
                     
-                    col1, col2 = st.columns(2)
+                    col1, col2, col3 = st.columns(3)
                     with col1:
                         st.write(f"🏈 Fantasy-boosted players: {fantasy_boosted}")
                     with col2:
                         st.write(f"🎯 Elite targets: {elite_targets}")
+                    with col3:
+                        if forced_boosted > 0:
+                            st.write(f"⚡ Forced player boosts: {forced_boosted}")
+                        else:
+                            st.write("⚡ Forced player boosts: 0")
             
             # Stacking analysis
             if len(stacked_lineups) > 0:
