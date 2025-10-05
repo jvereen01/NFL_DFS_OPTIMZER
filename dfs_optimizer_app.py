@@ -250,7 +250,7 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elit
     
     return pools
 
-def get_top_matchups(df, pass_defense, rush_defense, num_per_position=5):
+def get_top_matchups(df, pass_defense, rush_defense, num_per_position=6):
     """Get top matchup analysis by position for display"""
     if pass_defense is None or rush_defense is None:
         return {}
@@ -650,10 +650,10 @@ def main():
         with col4:
             st.metric("RB Performance Boosts", len(rb_performance_boosts))
         with col5:
-            st.markdown("### 🎯 Top 5 Matchups by Position")
+            st.markdown("### 🎯 Top 6 Matchups by Position")
             
             # Get top matchups by position
-            position_matchups = get_top_matchups(df, pass_defense, rush_defense, num_per_position=5)
+            position_matchups = get_top_matchups(df, pass_defense, rush_defense, num_per_position=6)
             
             if position_matchups:
                 # Create tabs for each position
@@ -666,7 +666,7 @@ def main():
                     with tab:
                         if pos in position_matchups and len(position_matchups[pos]) > 0:
                             for j, (_, matchup) in enumerate(position_matchups[pos].iterrows()):
-                                if j < 3:  # Show top 3 in each tab to save space
+                                if j < 6:  # Show top 6 in each tab
                                     quality_icon = "🔥" if matchup['Matchup_Quality'] == 'ELITE TARGET' else ("⭐" if matchup['Matchup_Quality'] == 'Great Target' else "")
                                     st.markdown(
                                         f"**{emoji} {matchup['Player']}** vs {matchup['vs']} {quality_icon}  \n"
