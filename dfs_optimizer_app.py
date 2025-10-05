@@ -496,21 +496,30 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                             if len(must_rb) > 0:
                                 selected_rbs = pd.concat([selected_rbs, must_rb])
                 
-                # Fill remaining RB spots
+                # Fill remaining RB spots (with team constraint)
                 remaining_rb_spots = 2 - len(selected_rbs)
                 if remaining_rb_spots > 0:
                     available_rbs = weighted_pools['RB']
                     if len(selected_rbs) > 0:
                         used_rb_names = set(selected_rbs['Nickname'])
+                        used_rb_teams = set(selected_rbs['Team'])  # Track teams already used
                         available_rbs = available_rbs[~available_rbs['Nickname'].isin(used_rb_names)]
+                        # Exclude RBs from teams already selected
+                        available_rbs = available_rbs[~available_rbs['Team'].isin(used_rb_teams)]
                     
                     if len(available_rbs) >= remaining_rb_spots:
                         additional_rbs = available_rbs.sample(remaining_rb_spots, weights=available_rbs['Selection_Weight'])
                         rb = pd.concat([selected_rbs, additional_rbs])
                     else:
-                        continue
+                        continue  # Skip this lineup if can't find RBs from different teams
                 else:
                     rb = selected_rbs
+                
+                # Additional check: Ensure no duplicate RB teams in final selection
+                if len(rb) == 2:
+                    rb_teams = rb['Team'].tolist()
+                    if rb_teams[0] == rb_teams[1]:
+                        continue  # Skip this lineup if RBs are from same team
                 
                 lineup_players.append(rb)
                 
