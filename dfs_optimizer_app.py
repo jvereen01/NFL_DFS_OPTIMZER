@@ -768,10 +768,6 @@ def main():
                 for i, (tab, pos, emoji) in enumerate(zip(pos_tabs, positions, emojis)):
                     with tab:
                         if pos in position_matchups and len(position_matchups[pos]) > 0:
-                            # Special handling for QB position to show salary priority
-                            if pos == 'QB':
-                                st.caption(f"🏈 QB Priority: +100% boost to highest salary QB per team")
-                            
                             for j, (_, matchup) in enumerate(position_matchups[pos].iterrows()):
                                 if j < 6:  # Show top 6 in each tab
                                     quality_icon = "🔥" if matchup['Matchup_Quality'] == 'ELITE TARGET' else ("⭐" if matchup['Matchup_Quality'] == 'Great Target' else "")
