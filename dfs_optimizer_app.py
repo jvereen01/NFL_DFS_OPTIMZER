@@ -700,7 +700,7 @@ def main():
         rb_boost_multiplier = st.slider("RB Performance Boost Multiplier", 0.5, 2.0, 1.0, step=0.1)
         
         st.subheader("🎯 Forced Player Boost")
-        forced_player_boost = st.slider("Forced Player Extra Boost", 0.0, 1.0, 0.15, step=0.05)
+        forced_player_boost = st.slider("Forced Player Extra Boost", 0.0, 1.0, 0.05, step=0.05)
         force_mode = st.radio("Force Mode", 
                              ["Hard Force (Always Include)", "Soft Force (Boost Only)"], 
                              index=1,
