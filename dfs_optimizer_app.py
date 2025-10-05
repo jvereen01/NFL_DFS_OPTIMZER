@@ -394,7 +394,7 @@ def get_top_matchups(df, pass_defense, rush_defense, num_per_position=6):
     except Exception as e:
         return {}
 
-def generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, player_selections=None):
+def generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, player_selections=None, force_mode="Soft Force (Boost Only)"):
     """Generate optimized lineups with optional player selection constraints"""
     stacked_lineups = []
     salary_cap = 60000
@@ -462,8 +462,8 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
             try:
                 lineup_players = []
                 
-                # Handle must-include players first
-                if player_selections:
+                # Handle must-include players first (only if Hard Force mode)
+                if player_selections and force_mode == "Hard Force (Always Include)":
                     # Must include QB - rotate through forced QBs for variety
                     if player_selections['QB']['must_include']:
                         available_forced_qbs = player_selections['QB']['must_include']
@@ -476,16 +476,17 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                         qb_pool = weighted_pools['QB']
                         qb = qb_pool.sample(1, weights=qb_pool['Selection_Weight'])
                 else:
-                    # Regular QB selection
+                    # Regular QB selection (includes soft forcing via weights)
                     qb_pool = weighted_pools['QB']
+                    qb = qb_pool.sample(1, weights=qb_pool['Selection_Weight'])
                     qb = qb_pool.sample(1, weights=qb_pool['Selection_Weight'])
                 
                 qb_team = qb['Team'].iloc[0]
                 lineup_players.append(qb)
                 
-                # Handle must-include RBs - rotate for variety
+                # Handle must-include RBs - rotate for variety (only if Hard Force mode)
                 selected_rbs = pd.DataFrame()
-                if player_selections and player_selections['RB']['must_include']:
+                if player_selections and player_selections['RB']['must_include'] and force_mode == "Hard Force (Always Include)":
                     available_forced_rbs = player_selections['RB']['must_include']
                     # Randomly select from forced RBs, up to 2
                     num_forced_rbs = min(len(available_forced_rbs), 2)
@@ -527,17 +528,17 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                 wr_pool = weighted_pools['WR']
                 te_pool = weighted_pools['TE']
                 
-                # Handle must-include WRs
+                # Handle must-include WRs (only if Hard Force mode)
                 selected_wrs = pd.DataFrame()
-                if player_selections and player_selections['WR']['must_include']:
+                if player_selections and player_selections['WR']['must_include'] and force_mode == "Hard Force (Always Include)":
                     for must_wr_name in player_selections['WR']['must_include'][:3]:  # Max 3 WRs
                         must_wr = wr_pool[wr_pool['Nickname'] == must_wr_name]
                         if len(must_wr) > 0:
                             selected_wrs = pd.concat([selected_wrs, must_wr])
                 
-                # Handle must-include TEs
+                # Handle must-include TEs (only if Hard Force mode)
                 selected_te = pd.DataFrame()
-                if player_selections and player_selections['TE']['must_include']:
+                if player_selections and player_selections['TE']['must_include'] and force_mode == "Hard Force (Always Include)":
                     must_te_name = player_selections['TE']['must_include'][0]  # Max 1 TE
                     must_te = te_pool[te_pool['Nickname'] == must_te_name]
                     if len(must_te) > 0:
@@ -700,6 +701,30 @@ def main():
         
         st.subheader("🎯 Forced Player Boost")
         forced_player_boost = st.slider("Forced Player Extra Boost", 0.0, 1.0, 0.15, step=0.05)
+        force_mode = st.radio("Force Mode", 
+                             ["Hard Force (Always Include)", "Soft Force (Boost Only)"], 
+                             index=1,
+                             help="Hard Force: Forced players appear in every lineup. Soft Force: Forced players get boost but may not appear in all lineups")
+        
+        with st.expander("💡 Force Mode Explained"):
+            st.markdown("""
+            **🔒 Hard Force (Always Include):**
+            - Forced players appear in **100% of generated lineups**
+            - Best for: Cash games, high-confidence plays
+            - Example: If you force Davante Adams, he's in all 20 lineups
+            
+            **🎯 Soft Force (Boost Only) - Recommended:**
+            - Forced players get extra selection weight but **variety is maintained**
+            - Best for: Tournaments, exposure plays, lineup diversity
+            
+            **Soft Force Exposure Guide:**
+            - **5% Boost** = ~30-40% of lineups (6-8 out of 20)
+            - **15% Boost** = ~60-70% of lineups (12-14 out of 20)  
+            - **30% Boost** = ~80-90% of lineups (16-18 out of 20)
+            - **50%+ Boost** = ~95%+ of lineups (19-20 out of 20)
+            
+            **💡 Pro Tip:** Use Soft Force with 10-20% boost for optimal tournament lineup variety!
+            """)
         st.caption("Extra boost for players you manually include")
         
         st.header("� Player Selection")
@@ -1055,7 +1080,7 @@ def main():
                 weighted_pools = create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost, all_forced_players, forced_player_boost)
             
             with st.spinner(f"Generating {num_simulations:,} optimized lineups..."):
-                stacked_lineups = generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, player_selections)
+                stacked_lineups = generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, player_selections, force_mode)
                 st.session_state.stacked_lineups = stacked_lineups
                 st.session_state.lineups_generated = True
                 
