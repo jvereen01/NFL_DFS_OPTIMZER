@@ -1209,32 +1209,39 @@ def main():
             if len(stacked_lineups) > 0:
                 st.markdown('<h2 class="sub-header">📊 Stacking Analysis</h2>', unsafe_allow_html=True)
                 
-                no_stack = [lineup for lineup in stacked_lineups if lineup[5] == 0]
-                single_stack = [lineup for lineup in stacked_lineups if lineup[5] == 1]
-                double_stack = [lineup for lineup in stacked_lineups if lineup[5] == 2]
-                triple_stack = [lineup for lineup in stacked_lineups if lineup[5] >= 3]
+                try:
+                    no_stack = [lineup for lineup in stacked_lineups if lineup[5] == 0]
+                    single_stack = [lineup for lineup in stacked_lineups if lineup[5] == 1]
+                    double_stack = [lineup for lineup in stacked_lineups if lineup[5] == 2]
+                    triple_stack = [lineup for lineup in stacked_lineups if lineup[5] >= 3]
+                    
+                    stack_data = {
+                        'Stack Type': ['No Stack', '1 Receiver', '2 Receivers', '3+ Receivers'],
+                        'Count': [len(no_stack), len(single_stack), len(double_stack), len(triple_stack)],
+                        'Avg Points': [
+                            np.mean([lineup[0] for lineup in no_stack]) if no_stack else 0,
+                            np.mean([lineup[0] for lineup in single_stack]) if single_stack else 0,
+                            np.mean([lineup[0] for lineup in double_stack]) if double_stack else 0,
+                            np.mean([lineup[0] for lineup in triple_stack]) if triple_stack else 0
+                        ]
+                    }
+                    
+                    stack_df = pd.DataFrame(stack_data)
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        fig = px.bar(stack_df, x='Stack Type', y='Count', title='Stacking Distribution')
+                        st.plotly_chart(fig, use_container_width=True)
+                    
+                    with col2:
+                        fig = px.bar(stack_df, x='Stack Type', y='Avg Points', title='Average Points by Stack Type')
+                        st.plotly_chart(fig, use_container_width=True)
                 
-                stack_data = {
-                    'Stack Type': ['No Stack', '1 Receiver', '2 Receivers', '3+ Receivers'],
-                    'Count': [len(no_stack), len(single_stack), len(double_stack), len(triple_stack)],
-                    'Avg Points': [
-                        np.mean([lineup[0] for lineup in no_stack]) if no_stack else 0,
-                        np.mean([lineup[0] for lineup in single_stack]) if single_stack else 0,
-                        np.mean([lineup[0] for lineup in double_stack]) if double_stack else 0,
-                        np.mean([lineup[0] for lineup in triple_stack]) if triple_stack else 0
-                    ]
-                }
-                
-                stack_df = pd.DataFrame(stack_data)
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    fig = px.bar(stack_df, x='Stack Type', y='Count', title='Stacking Distribution')
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                with col2:
-                    fig = px.bar(stack_df, x='Stack Type', y='Avg Points', title='Average Points by Stack Type')
-                    st.plotly_chart(fig, use_container_width=True)
+                except (IndexError, KeyError) as e:
+                    st.info("📊 Stacking analysis will be available after generating lineups")
+                except Exception as e:
+                    st.error(f"Error in stacking analysis: {str(e)}")
+                    st.info("📊 Stacking analysis temporarily unavailable")
 
 if __name__ == "__main__":
     main()
