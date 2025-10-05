@@ -215,7 +215,7 @@ def create_performance_boosts(fantasy_data, wr_boost_multiplier=1.0, rb_boost_mu
     
     return wr_performance_boosts, rb_performance_boosts
 
-def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost, forced_players=None, forced_player_boost=0.0):
+def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost, forced_players=None, forced_player_boost=0.0, diversity_mode=False):
     """Create weighted player pools"""
     pools = {}
     
@@ -261,7 +261,12 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elit
             # Apply forced player boost
             if forced_players and forced_player_boost > 0:
                 if player_name in forced_players:
-                    weight = weight * (1 + forced_player_boost)
+                    # Apply diversity mode - sometimes reduce the boost for variety
+                    if diversity_mode and random.random() < 0.3:  # 30% chance to reduce boost
+                        reduced_boost = forced_player_boost * random.uniform(0.3, 0.7)
+                        weight = weight * (1 + reduced_boost)
+                    else:
+                        weight = weight * (1 + forced_player_boost)
             
             # Apply QB highest salary boost (automatic 100% boost)
             if pos == 'QB':
@@ -690,8 +695,12 @@ def main():
         rb_boost_multiplier = st.slider("RB Performance Boost Multiplier", 0.5, 2.0, 1.0, step=0.1)
         
         st.subheader("🎯 Forced Player Boost")
-        forced_player_boost = st.slider("Forced Player Extra Boost", 0.0, 1.0, 0.3, step=0.05)
+        forced_player_boost = st.slider("Forced Player Extra Boost", 0.0, 1.0, 0.15, step=0.05)
         st.caption("Extra boost for players you manually include")
+        
+        st.subheader("🎲 Lineup Diversity")
+        diversity_mode = st.checkbox("Enable Lineup Diversity", value=False)
+        st.caption("Reduces forced player boost randomly for more variety")
         
         st.header("� Player Selection")
         enable_player_selection = st.checkbox("Enable Player Include/Exclude", value=False)
@@ -1043,7 +1052,7 @@ def main():
                         if pos_data and 'must_include' in pos_data:
                             all_forced_players.extend(pos_data['must_include'])
                 
-                weighted_pools = create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost, all_forced_players, forced_player_boost)
+                weighted_pools = create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost, all_forced_players, forced_player_boost, diversity_mode)
             
             with st.spinner(f"Generating {num_simulations:,} optimized lineups..."):
                 stacked_lineups = generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, player_selections)
