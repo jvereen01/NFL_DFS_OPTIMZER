@@ -341,19 +341,24 @@ def get_top_matchups(df, pass_defense, rush_defense, num_per_position=6):
         
         # TE Matchups (vs worst pass defenses)
         te_matchups = []
-        for _, defense in worst_pass_def.iterrows():
-            players_vs_def = df[(df['Opponent'] == defense['Team']) & (df['Position'] == 'TE')]
-            for _, player in players_vs_def.iterrows():
-                te_matchups.append({
-                    'Player': player['Nickname'],
-                    'Team': player['Team'],
-                    'vs': defense['Team'],
-                    'FPPG': player['FPPG'],
-                    'Salary': player['Salary'],
-                    'Defense_Rank': defense['Pass_Defense_Rank'],
-                    'YPG_Allowed': defense['Pass_YPG_Allowed'],
-                    'Matchup_Quality': player['Matchup_Quality']
-                })
+        # For TEs, include all available TEs since there are fewer of them
+        all_tes = df[df['Position'] == 'TE']
+        for _, player in all_tes.iterrows():
+            # Check if opponent is in pass defense data
+            opponent_defense = None
+            if player['Opponent'] in pass_def_mapped['Team'].values:
+                opponent_defense = pass_def_mapped[pass_def_mapped['Team'] == player['Opponent']].iloc[0]
+            
+            te_matchups.append({
+                'Player': player['Nickname'],
+                'Team': player['Team'],
+                'vs': player['Opponent'],
+                'FPPG': player['FPPG'],
+                'Salary': player['Salary'],
+                'Defense_Rank': opponent_defense['Pass_Defense_Rank'] if opponent_defense is not None else 16,
+                'YPG_Allowed': opponent_defense['Pass_YPG_Allowed'] if opponent_defense is not None else 250.0,
+                'Matchup_Quality': player['Matchup_Quality']
+            })
         
         if te_matchups:
             te_df = pd.DataFrame(te_matchups).sort_values('FPPG', ascending=False).head(num_per_position)
@@ -682,6 +687,33 @@ def main():
         if enable_player_selection:
             st.markdown('<h2 class="sub-header">👥 Player Selection</h2>', unsafe_allow_html=True)
             
+            # Add button to auto-select top matchups
+            col1, col2, col3, col4 = st.columns([2, 1.2, 1, 2])
+            with col2:
+                if st.button("🎯 Force Top 6 Matchups", type="secondary", help="Automatically select the top 6 matchup players from each position"):
+                    # Get top matchups and auto-populate selections
+                    top_matchups = get_top_matchups(df, pass_defense, rush_defense, num_per_position=6)
+                    
+                    # Store in session state to trigger multiselect updates
+                    if 'QB' in top_matchups and len(top_matchups['QB']) > 0:
+                        st.session_state.auto_qb = top_matchups['QB']['Player'].head(6).tolist()  # Top 6 QBs
+                    if 'RB' in top_matchups and len(top_matchups['RB']) > 0:
+                        st.session_state.auto_rb = top_matchups['RB']['Player'].head(6).tolist()  # Top 6 RBs
+                    if 'WR' in top_matchups and len(top_matchups['WR']) > 0:
+                        st.session_state.auto_wr = top_matchups['WR']['Player'].head(6).tolist()  # Top 6 WRs
+                    if 'TE' in top_matchups and len(top_matchups['TE']) > 0:
+                        st.session_state.auto_te = top_matchups['TE']['Player'].head(6).tolist()  # Top 6 TEs
+                    
+                    st.success("✅ Top 6 matchup players selected for each position! Check the tabs below.")
+            
+            with col3:
+                if st.button("🗑️ Clear All", help="Clear all player selections"):
+                    # Clear all auto-selections
+                    for key in ['auto_qb', 'auto_rb', 'auto_wr', 'auto_te']:
+                        if key in st.session_state:
+                            del st.session_state[key]
+                    st.success("✅ All selections cleared!")
+            
             # Create tabs for different positions
             tab1, tab2, tab3, tab4, tab5 = st.tabs(["QB", "RB", "WR", "TE", "DEF"])
             
@@ -690,22 +722,28 @@ def main():
             with tab1:
                 st.subheader("Quarterbacks")
                 qb_players = df[df['Position'] == 'QB'].sort_values(['Team', 'Salary'], ascending=[True, False])
+                qb_options = qb_players.sort_values('Salary', ascending=False)['Nickname'].tolist()
                 
                 col1, col2 = st.columns(2)
                 with col1:
                     st.write("**Must Include:**")
+                    # Check for auto-selected values
+                    default_qb = st.session_state.get('auto_qb', [])
                     must_include_qb = st.multiselect(
                         "Force these QBs in lineups",
-                        options=qb_players['Nickname'].tolist(),
-                        key="must_qb"
+                        options=qb_options,
+                        default=default_qb,
+                        key="must_qb",
+                        help="Players sorted by salary (highest to lowest)"
                     )
                 
                 with col2:
                     st.write("**Exclude:**")
                     exclude_qb = st.multiselect(
                         "Remove these QBs from consideration",
-                        options=qb_players['Nickname'].tolist(),
-                        key="exclude_qb"
+                        options=qb_options,
+                        key="exclude_qb",
+                        help="Players sorted by salary (highest to lowest)"
                     )
                 
                 player_selections['QB'] = {'must_include': must_include_qb, 'exclude': exclude_qb}
@@ -719,22 +757,28 @@ def main():
             with tab2:
                 st.subheader("Running Backs")
                 rb_players = df[df['Position'] == 'RB'].sort_values(['Team', 'Salary'], ascending=[True, False])
+                rb_options = rb_players.sort_values('Salary', ascending=False)['Nickname'].tolist()
                 
                 col1, col2 = st.columns(2)
                 with col1:
                     st.write("**Must Include:**")
+                    # Check for auto-selected values
+                    default_rb = st.session_state.get('auto_rb', [])
                     must_include_rb = st.multiselect(
                         "Force these RBs in lineups",
-                        options=rb_players['Nickname'].tolist(),
-                        key="must_rb"
+                        options=rb_options,
+                        default=default_rb,
+                        key="must_rb",
+                        help="Players sorted by salary (highest to lowest)"
                     )
                 
                 with col2:
                     st.write("**Exclude:**")
                     exclude_rb = st.multiselect(
                         "Remove these RBs from consideration",
-                        options=rb_players['Nickname'].tolist(),
-                        key="exclude_rb"
+                        options=rb_options,
+                        key="exclude_rb",
+                        help="Players sorted by salary (highest to lowest)"
                     )
                 
                 player_selections['RB'] = {'must_include': must_include_rb, 'exclude': exclude_rb}
@@ -747,22 +791,28 @@ def main():
             with tab3:
                 st.subheader("Wide Receivers")
                 wr_players = df[df['Position'] == 'WR'].sort_values(['Team', 'Salary'], ascending=[True, False])
+                wr_options = wr_players.sort_values('Salary', ascending=False)['Nickname'].tolist()
                 
                 col1, col2 = st.columns(2)
                 with col1:
                     st.write("**Must Include:**")
+                    # Check for auto-selected values
+                    default_wr = st.session_state.get('auto_wr', [])
                     must_include_wr = st.multiselect(
                         "Force these WRs in lineups",
-                        options=wr_players['Nickname'].tolist(),
-                        key="must_wr"
+                        options=wr_options,
+                        default=default_wr,
+                        key="must_wr",
+                        help="Players sorted by salary (highest to lowest)"
                     )
                 
                 with col2:
                     st.write("**Exclude:**")
                     exclude_wr = st.multiselect(
                         "Remove these WRs from consideration",
-                        options=wr_players['Nickname'].tolist(),
-                        key="exclude_wr"
+                        options=wr_options,
+                        key="exclude_wr",
+                        help="Players sorted by salary (highest to lowest)"
                     )
                 
                 player_selections['WR'] = {'must_include': must_include_wr, 'exclude': exclude_wr}
@@ -775,22 +825,28 @@ def main():
             with tab4:
                 st.subheader("Tight Ends")
                 te_players = df[df['Position'] == 'TE'].sort_values(['Team', 'Salary'], ascending=[True, False])
+                te_options = te_players.sort_values('Salary', ascending=False)['Nickname'].tolist()
                 
                 col1, col2 = st.columns(2)
                 with col1:
                     st.write("**Must Include:**")
+                    # Check for auto-selected values
+                    default_te = st.session_state.get('auto_te', [])
                     must_include_te = st.multiselect(
                         "Force these TEs in lineups",
-                        options=te_players['Nickname'].tolist(),
-                        key="must_te"
+                        options=te_options,
+                        default=default_te,
+                        key="must_te",
+                        help="Players sorted by salary (highest to lowest)"
                     )
                 
                 with col2:
                     st.write("**Exclude:**")
                     exclude_te = st.multiselect(
                         "Remove these TEs from consideration",
-                        options=te_players['Nickname'].tolist(),
-                        key="exclude_te"
+                        options=te_options,
+                        key="exclude_te",
+                        help="Players sorted by salary (highest to lowest)"
                     )
                 
                 player_selections['TE'] = {'must_include': must_include_te, 'exclude': exclude_te}
@@ -803,22 +859,25 @@ def main():
             with tab5:
                 st.subheader("Defense/Special Teams")
                 def_players_tab = df[df['Position'] == 'D'].sort_values(['Team', 'Salary'], ascending=[True, False])
+                def_options = def_players_tab.sort_values('Salary', ascending=False)['Nickname'].tolist()
                 
                 col1, col2 = st.columns(2)
                 with col1:
                     st.write("**Must Include:**")
                     must_include_def = st.multiselect(
                         "Force these DEF in lineups",
-                        options=def_players_tab['Nickname'].tolist(),
-                        key="must_def"
+                        options=def_options,
+                        key="must_def",
+                        help="Players sorted by salary (highest to lowest)"
                     )
                 
                 with col2:
                     st.write("**Exclude:**")
                     exclude_def = st.multiselect(
                         "Remove these DEF from consideration",
-                        options=def_players_tab['Nickname'].tolist(),
-                        key="exclude_def"
+                        options=def_options,
+                        key="exclude_def",
+                        help="Players sorted by salary (highest to lowest)"
                     )
                 
                 player_selections['D'] = {'must_include': must_include_def, 'exclude': exclude_def}
