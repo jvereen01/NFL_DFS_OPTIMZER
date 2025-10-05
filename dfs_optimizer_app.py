@@ -215,7 +215,7 @@ def create_performance_boosts(fantasy_data, wr_boost_multiplier=1.0, rb_boost_mu
     
     return wr_performance_boosts, rb_performance_boosts
 
-def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost, high_salary_boost=0.0, value_play_boost=0.0, forced_players=None, forced_player_boost=0.0):
+def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost, forced_players=None, forced_player_boost=0.0):
     """Create weighted player pools"""
     pools = {}
     
@@ -253,15 +253,7 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elit
             elif pos == 'RB' and player_name in rb_performance_boosts:
                 weight = weight * (1 + rb_performance_boosts[player_name])
             
-            # Apply salary-based boosts
-            salary = player['Salary']
-            if salary > 8000 and high_salary_boost > 0:
-                weight = weight * (1 + high_salary_boost)
-            elif salary < 5000 and value_play_boost > 0:
-                weight = weight * (1 + value_play_boost)
-            
             # Apply forced player boost
-            player_name = player['Nickname']
             if forced_players and forced_player_boost > 0:
                 if player_name in forced_players:
                     weight = weight * (1 + forced_player_boost)
@@ -692,16 +684,9 @@ def main():
         wr_boost_multiplier = st.slider("WR Performance Boost Multiplier", 0.5, 2.0, 1.0, step=0.1)
         rb_boost_multiplier = st.slider("RB Performance Boost Multiplier", 0.5, 2.0, 1.0, step=0.1)
         
-        st.subheader("💰 Salary-Based Boosts")
-        high_salary_boost = st.slider("High Salary Player Boost (>$8k)", 0.0, 0.5, 0.0, step=0.05)
-        value_play_boost = st.slider("Value Play Boost (<$5k)", 0.0, 0.3, 0.0, step=0.05)
-        
         st.subheader("🎯 Forced Player Boost")
         forced_player_boost = st.slider("Forced Player Extra Boost", 0.0, 1.0, 0.3, step=0.05)
         st.caption("Extra boost for players you manually include")
-        
-        st.subheader("🏈 QB Settings")
-        st.info("✅ Automatically prioritizes highest salary QB from each team")
         
         st.header("� Player Selection")
         enable_player_selection = st.checkbox("Enable Player Include/Exclude", value=False)
@@ -1054,7 +1039,7 @@ def main():
                         if pos_data and 'must_include' in pos_data:
                             all_forced_players.extend(pos_data['must_include'])
                 
-                weighted_pools = create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost, high_salary_boost, value_play_boost, all_forced_players, forced_player_boost)
+                weighted_pools = create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, elite_target_boost, great_target_boost, all_forced_players, forced_player_boost)
             
             with st.spinner(f"Generating {num_simulations:,} optimized lineups..."):
                 stacked_lineups = generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, player_selections)
