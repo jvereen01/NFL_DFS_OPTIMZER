@@ -1146,43 +1146,38 @@ def main():
                     csv_data = []
                     
                     for i, (points, lineup, salary, _, _, _) in enumerate(export_lineups, 1):
-                        # Create FanDuel format: QB, RB, RB, WR, WR, WR, TE, FLEX, D
-                        positions = {'QB': [], 'RB': [], 'WR': [], 'TE': [], 'D': []}
+                        # Create FanDuel format: QB, RB, RB, WR, WR, WR, TE, FLEX, DEF
+                        positions = {'QB': [], 'RB': [], 'WR': [], 'TE': [], 'DEF': []}
                         
                         for _, player in lineup.iterrows():
                             pos = player['Position']
-                            if pos == 'DEF':
-                                pos = 'D'
                             if pos in positions:
-                                positions[pos].append(player['Nickname'])
+                                positions[pos].append(player['Id'])  # Use player ID instead of Nickname
                         
-                        # Fill FanDuel roster format
-                        row = {
-                            'Lineup': i,
-                            'QB': positions['QB'][0] if positions['QB'] else '',
-                            'RB1': positions['RB'][0] if len(positions['RB']) > 0 else '',
-                            'RB2': positions['RB'][1] if len(positions['RB']) > 1 else '',
-                            'WR1': positions['WR'][0] if len(positions['WR']) > 0 else '',
-                            'WR2': positions['WR'][1] if len(positions['WR']) > 1 else '',
-                            'WR3': positions['WR'][2] if len(positions['WR']) > 2 else '',
-                            'TE': positions['TE'][0] if positions['TE'] else '',
-                            'FLEX': '',  # Determine flex position
-                            'D': positions['D'][0] if positions['D'] else '',
-                            'Projected_Points': f"{points:.2f}",
-                            'Salary': salary
-                        }
+                        # Fill FanDuel roster format with exact column order: QB, RB, RB, WR, WR, WR, TE, FLEX, DEF
+                        row = [
+                            positions['QB'][0] if positions['QB'] else '',           # QB
+                            positions['RB'][0] if len(positions['RB']) > 0 else '',  # RB
+                            positions['RB'][1] if len(positions['RB']) > 1 else '',  # RB  
+                            positions['WR'][0] if len(positions['WR']) > 0 else '',  # WR
+                            positions['WR'][1] if len(positions['WR']) > 1 else '',  # WR
+                            positions['WR'][2] if len(positions['WR']) > 2 else '',  # WR
+                            positions['TE'][0] if positions['TE'] else '',           # TE
+                            '',  # FLEX - will be determined below
+                            positions['DEF'][0] if positions['DEF'] else ''         # DEF
+                        ]
                         
-                        # Determine FLEX (extra RB or WR)
+                        # Determine FLEX (extra RB or WR) - use ID
                         if len(positions['RB']) > 2:
-                            row['FLEX'] = positions['RB'][2]
+                            row[7] = positions['RB'][2]  # FLEX position (index 7)
                         elif len(positions['WR']) > 3:
-                            row['FLEX'] = positions['WR'][3]
+                            row[7] = positions['WR'][3]  # FLEX position (index 7)
                         
                         csv_data.append(row)
                     
                     # Convert to DataFrame and then CSV
                     import pandas as pd
-                    df_export = pd.DataFrame(csv_data)
+                    df_export = pd.DataFrame(csv_data, columns=['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DEF'])
                     csv_string = df_export.to_csv(index=False)
                     
                     st.success(f"✅ {num_export} lineups prepared for download!")
