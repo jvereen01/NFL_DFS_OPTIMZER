@@ -1146,10 +1146,6 @@ def main():
                     csv_data = []
                     
                     for i, (points, lineup, salary, _, _, _) in enumerate(export_lineups, 1):
-                        # Debug: Print lineup columns on first iteration
-                        if i == 1:
-                            st.write(f"Debug - Lineup DataFrame columns: {list(lineup.columns)}")
-                        
                         # Create FanDuel format: QB, RB, RB, WR, WR, WR, TE, FLEX, DEF
                         positions = {'QB': [], 'RB': [], 'WR': [], 'TE': [], 'DEF': []}
                         
