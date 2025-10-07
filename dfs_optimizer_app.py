@@ -111,6 +111,7 @@ def load_fantasy_data():
         fantasy_data['Rec'] = pd.to_numeric(fantasy_data['Rec'], errors='coerce')
         fantasy_data['FDPt'] = pd.to_numeric(fantasy_data['FDPt'], errors='coerce')
         fantasy_data['Att_1'] = pd.to_numeric(fantasy_data['Att_1'], errors='coerce')
+        fantasy_data['PosRank'] = pd.to_numeric(fantasy_data['PosRank'], errors='coerce')
         
         fantasy_clean = fantasy_data.dropna(subset=['FDPt']).copy()
         return fantasy_clean
@@ -678,7 +679,7 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                 lineup_players.append(flex)
                 
                 # Build final lineup
-                lineup = pd.concat(lineup_players)
+                lineup = pd.concat(lineup_players).reset_index(drop=True)
                 
                 # Validate lineup with early salary check
                 total_salary = lineup['Salary'].sum()
@@ -804,6 +805,18 @@ def main():
             
         with st.spinner("Loading fantasy performance data..."):
             fantasy_data = load_fantasy_data()
+        
+        # Merge PosRank data from fantasy data
+        if fantasy_data is not None:
+            with st.spinner("Adding position rankings..."):
+                # Create a mapping of player names to PosRank
+                posrank_mapping = fantasy_data.set_index('Player')['PosRank'].to_dict()
+                df['PosRank'] = df['Nickname'].map(posrank_mapping)
+                # Fill missing PosRank with 999 for players not in fantasy data
+                df['PosRank'] = df['PosRank'].fillna(999).astype(int)
+        else:
+            # If no fantasy data, use default ranking
+            df['PosRank'] = 999
         
         # Apply analysis
         with st.spinner("Applying matchup analysis..."):
@@ -1215,9 +1228,13 @@ def main():
                 with st.expander(f"Lineup #{i}: {points:.2f} points | ${salary:,} | {'QB+' + str(qb_wr_te_count) + ' receivers' if qb_wr_te_count > 0 else 'No stack'}"):
                     
                     # Create lineup display
-                    lineup_display = lineup[['Nickname', 'Position', 'Team', 'Salary', 'FPPG', 'Matchup_Quality']].copy()
+                    lineup_display = lineup[['Nickname', 'Position', 'Team', 'Salary', 'FPPG', 'Matchup_Quality', 'PosRank']].copy()
                     lineup_display['Salary'] = lineup_display['Salary'].apply(lambda x: f"${x:,}")
                     lineup_display['FPPG'] = lineup_display['FPPG'].apply(lambda x: f"{x:.1f}")
+                    
+                    # Set PosRank as the index for display
+                    lineup_display.set_index('PosRank', inplace=True)
+                    lineup_display = lineup_display.drop('PosRank', axis=1, errors='ignore')  # Remove if accidentally included twice
                     
                     st.dataframe(lineup_display, use_container_width=True)
                     
