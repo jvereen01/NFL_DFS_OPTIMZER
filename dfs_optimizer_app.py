@@ -416,12 +416,32 @@ def get_top_matchups(df, pass_defense, rush_defense, num_per_position=6):
                 # Sort by matchup quality first, then by FPPG
                 pos_players = pos_players.sort_values(['sort_key', 'FPPG'], ascending=[False, False])
                 
-                # Create display dataframe with current week opponents
+                # Create display dataframe with actual defensive rankings
                 display_df = pos_players.head(num_per_position).copy()
                 display_df['Player'] = display_df['Nickname']
                 display_df['vs'] = display_df['Opponent']
-                display_df['Defense_Rank'] = range(1, len(display_df) + 1)  # Simple ranking
-                display_df['YPG_Allowed'] = 250.0  # Default value for display
+                
+                # Get actual defensive rankings based on position
+                for idx, row in display_df.iterrows():
+                    opponent = row['Opponent']
+                    if pos in ['QB', 'WR', 'TE']:
+                        # Use pass defense rankings
+                        if opponent in pass_defense['Team'].values:
+                            def_data = pass_defense[pass_defense['Team'] == opponent].iloc[0]
+                            display_df.at[idx, 'Defense_Rank'] = def_data.get('Rank', 'N/A')
+                            display_df.at[idx, 'YPG_Allowed'] = def_data.get('Yds/G', 'N/A')
+                        else:
+                            display_df.at[idx, 'Defense_Rank'] = 'N/A'
+                            display_df.at[idx, 'YPG_Allowed'] = 'N/A'
+                    else:  # RB
+                        # Use rush defense rankings
+                        if opponent in rush_defense['Team'].values:
+                            def_data = rush_defense[rush_defense['Team'] == opponent].iloc[0]
+                            display_df.at[idx, 'Defense_Rank'] = def_data.get('Rank', 'N/A')
+                            display_df.at[idx, 'YPG_Allowed'] = def_data.get('Yds/G', 'N/A')
+                        else:
+                            display_df.at[idx, 'Defense_Rank'] = 'N/A'
+                            display_df.at[idx, 'YPG_Allowed'] = 'N/A'
                 
                 position_matchups[pos] = display_df
                 
@@ -909,12 +929,17 @@ def main():
             # Create tabs for different positions
             tab1, tab2, tab3, tab4, tab5 = st.tabs(["QB", "RB", "WR", "TE", "DEF"])
             
+            # Helper function to extract player name from "Name ($salary)" format
+            def extract_player_name(selection_list):
+                """Extract just the player name from 'Name ($salary)' format"""
+                return [name.split(' ($')[0] for name in selection_list]
+            
             player_selections = {}
             
             with tab1:
                 st.subheader("Quarterbacks")
                 qb_players = df[df['Position'] == 'QB'].sort_values(['Team', 'Salary'], ascending=[True, False])
-                qb_options = qb_players.sort_values('Salary', ascending=False)['Nickname'].tolist()
+                qb_options = [f"{row['Nickname']} (${row['Salary']:,})" for _, row in qb_players.sort_values('Salary', ascending=False).iterrows()]
                 
                 col1, col2 = st.columns(2)
                 with col1:
@@ -938,7 +963,10 @@ def main():
                         help="Players sorted by salary (highest to lowest)"
                     )
                 
-                player_selections['QB'] = {'must_include': must_include_qb, 'exclude': exclude_qb}
+                player_selections['QB'] = {
+                    'must_include': extract_player_name(must_include_qb), 
+                    'exclude': extract_player_name(exclude_qb)
+                }
                 
                 # Show QB options with salary/matchup info
                 with st.expander("View All QB Options"):
@@ -949,7 +977,7 @@ def main():
             with tab2:
                 st.subheader("Running Backs")
                 rb_players = df[df['Position'] == 'RB'].sort_values(['Team', 'Salary'], ascending=[True, False])
-                rb_options = rb_players.sort_values('Salary', ascending=False)['Nickname'].tolist()
+                rb_options = [f"{row['Nickname']} (${row['Salary']:,})" for _, row in rb_players.sort_values('Salary', ascending=False).iterrows()]
                 
                 col1, col2 = st.columns(2)
                 with col1:
@@ -973,7 +1001,10 @@ def main():
                         help="Players sorted by salary (highest to lowest)"
                     )
                 
-                player_selections['RB'] = {'must_include': must_include_rb, 'exclude': exclude_rb}
+                player_selections['RB'] = {
+                    'must_include': extract_player_name(must_include_rb), 
+                    'exclude': extract_player_name(exclude_rb)
+                }
                 
                 with st.expander("View All RB Options"):
                     rb_display = rb_players[['Nickname', 'Team', 'Salary', 'FPPG', 'Matchup_Quality']].copy()
@@ -983,7 +1014,7 @@ def main():
             with tab3:
                 st.subheader("Wide Receivers")
                 wr_players = df[df['Position'] == 'WR'].sort_values(['Team', 'Salary'], ascending=[True, False])
-                wr_options = wr_players.sort_values('Salary', ascending=False)['Nickname'].tolist()
+                wr_options = [f"{row['Nickname']} (${row['Salary']:,})" for _, row in wr_players.sort_values('Salary', ascending=False).iterrows()]
                 
                 col1, col2 = st.columns(2)
                 with col1:
@@ -1007,7 +1038,10 @@ def main():
                         help="Players sorted by salary (highest to lowest)"
                     )
                 
-                player_selections['WR'] = {'must_include': must_include_wr, 'exclude': exclude_wr}
+                player_selections['WR'] = {
+                    'must_include': extract_player_name(must_include_wr), 
+                    'exclude': extract_player_name(exclude_wr)
+                }
                 
                 with st.expander("View All WR Options"):
                     wr_display = wr_players[['Nickname', 'Team', 'Salary', 'FPPG', 'Matchup_Quality']].copy()
@@ -1017,7 +1051,7 @@ def main():
             with tab4:
                 st.subheader("Tight Ends")
                 te_players = df[df['Position'] == 'TE'].sort_values(['Team', 'Salary'], ascending=[True, False])
-                te_options = te_players.sort_values('Salary', ascending=False)['Nickname'].tolist()
+                te_options = [f"{row['Nickname']} (${row['Salary']:,})" for _, row in te_players.sort_values('Salary', ascending=False).iterrows()]
                 
                 col1, col2 = st.columns(2)
                 with col1:
@@ -1041,7 +1075,10 @@ def main():
                         help="Players sorted by salary (highest to lowest)"
                     )
                 
-                player_selections['TE'] = {'must_include': must_include_te, 'exclude': exclude_te}
+                player_selections['TE'] = {
+                    'must_include': extract_player_name(must_include_te), 
+                    'exclude': extract_player_name(exclude_te)
+                }
                 
                 with st.expander("View All TE Options"):
                     te_display = te_players[['Nickname', 'Team', 'Salary', 'FPPG', 'Matchup_Quality']].copy()
@@ -1051,7 +1088,7 @@ def main():
             with tab5:
                 st.subheader("Defense/Special Teams")
                 def_players_tab = df[df['Position'] == 'D'].sort_values(['Team', 'Salary'], ascending=[True, False])
-                def_options = def_players_tab.sort_values('Salary', ascending=False)['Nickname'].tolist()
+                def_options = [f"{row['Nickname']} (${row['Salary']:,})" for _, row in def_players_tab.sort_values('Salary', ascending=False).iterrows()]
                 
                 col1, col2 = st.columns(2)
                 with col1:
@@ -1072,7 +1109,10 @@ def main():
                         help="Players sorted by salary (highest to lowest)"
                     )
                 
-                player_selections['D'] = {'must_include': must_include_def, 'exclude': exclude_def}
+                player_selections['D'] = {
+                    'must_include': extract_player_name(must_include_def), 
+                    'exclude': extract_player_name(exclude_def)
+                }
                 
                 with st.expander("View All DEF Options"):
                     def_display = def_players_tab[['Nickname', 'Team', 'Salary', 'FPPG', 'Matchup_Quality']].copy()
