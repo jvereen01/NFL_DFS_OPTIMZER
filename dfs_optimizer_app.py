@@ -1338,21 +1338,34 @@ def main():
                         else:
                             continue  # Skip lineups without valid FLEX player
                         
-                        # Validate all player IDs are positive integers
+                        # Validate and clean player IDs
                         try:
                             validated_row = []
                             for player_id in row:
                                 if player_id == '' or player_id is None:
-                                    raise ValueError("Empty player ID found")
-                                # Convert to int and validate it's positive
-                                int_id = int(float(player_id))  # Handle both int and float strings
-                                if int_id <= 0:
-                                    raise ValueError("Non-positive player ID found")
-                                validated_row.append(int_id)
+                                    continue  # Skip empty IDs instead of failing completely
+                                # Convert to int, handling various formats
+                                try:
+                                    if isinstance(player_id, str):
+                                        # Remove any whitespace and handle float strings
+                                        clean_id = player_id.strip()
+                                        if '.' in clean_id:
+                                            int_id = int(float(clean_id))
+                                        else:
+                                            int_id = int(clean_id)
+                                    else:
+                                        int_id = int(player_id)
+                                    
+                                    validated_row.append(int_id)
+                                except (ValueError, TypeError):
+                                    # If we can't convert this ID, use the original value
+                                    validated_row.append(player_id)
                             
-                            csv_data.append(validated_row)
-                        except (ValueError, TypeError) as e:
-                            # Skip lineups with invalid player IDs
+                            # Only add lineup if we have 9 players (all positions filled)
+                            if len(validated_row) == 9:
+                                csv_data.append(validated_row)
+                        except Exception as e:
+                            # Skip this lineup if there's any major error
                             continue
                     
                     # Convert to DataFrame and then CSV
@@ -1360,14 +1373,18 @@ def main():
                     df_export = pd.DataFrame(csv_data, columns=['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DEF'])
                     csv_string = df_export.to_csv(index=False)
                     
-                    st.success(f"✅ {num_export} lineups prepared for download!")
-                    st.download_button(
-                        label="💾 Download CSV for FanDuel",
-                        data=csv_string,
-                        file_name=f"fanduel_lineups_{num_export}lineups.csv",
-                        mime="text/csv",
-                        type="secondary"
-                    )
+                    if len(csv_data) == 0:
+                        st.error(f"❌ No valid lineups found! Tried to process {len(export_lineups)} lineups.")
+                        st.info("This might be due to missing player IDs or incomplete lineups. Try regenerating lineups.")
+                    else:
+                        st.success(f"✅ {len(csv_data)} lineups prepared for download!")
+                        st.download_button(
+                            label="💾 Download CSV for FanDuel",
+                            data=csv_string,
+                            file_name=f"fanduel_lineups_{len(csv_data)}lineups.csv",
+                            mime="text/csv",
+                            type="secondary"
+                        )
             
             st.markdown("---")
             
