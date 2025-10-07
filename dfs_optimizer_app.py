@@ -1295,7 +1295,22 @@ def main():
                         else:
                             continue  # Skip lineups without valid FLEX player
                         
-                        csv_data.append(row)
+                        # Validate all player IDs are positive integers
+                        try:
+                            validated_row = []
+                            for player_id in row:
+                                if player_id == '' or player_id is None:
+                                    raise ValueError("Empty player ID found")
+                                # Convert to int and validate it's positive
+                                int_id = int(float(player_id))  # Handle both int and float strings
+                                if int_id <= 0:
+                                    raise ValueError("Non-positive player ID found")
+                                validated_row.append(int_id)
+                            
+                            csv_data.append(validated_row)
+                        except (ValueError, TypeError) as e:
+                            # Skip lineups with invalid player IDs
+                            continue
                     
                     # Convert to DataFrame and then CSV
                     import pandas as pd
