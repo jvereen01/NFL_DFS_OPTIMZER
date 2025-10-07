@@ -1365,14 +1365,31 @@ def main():
                                 if player_id == '' or player_id is None:
                                     continue  # Skip empty IDs instead of failing completely
                                 
-                                # FanDuel IDs are strings like "121309-6654", keep them as strings
-                                if isinstance(player_id, str):
-                                    # Clean whitespace but keep as string for FanDuel format
-                                    clean_id = str(player_id).strip()
-                                    validated_row.append(clean_id)
+                                # Extract numeric part from FanDuel IDs like "121309-6654" -> "6654"
+                                if isinstance(player_id, str) and '-' in player_id:
+                                    # Get the part after the dash
+                                    numeric_part = player_id.split('-')[-1]
+                                    try:
+                                        # Convert to integer to validate it's numeric
+                                        int_id = int(numeric_part)
+                                        validated_row.append(int_id)
+                                    except ValueError:
+                                        # If can't convert, skip this lineup
+                                        continue
+                                elif isinstance(player_id, str):
+                                    # Try to convert string directly to int
+                                    try:
+                                        int_id = int(player_id)
+                                        validated_row.append(int_id)
+                                    except ValueError:
+                                        continue
                                 else:
-                                    # Convert other formats to string
-                                    validated_row.append(str(player_id))
+                                    # Convert other formats to int
+                                    try:
+                                        int_id = int(player_id)
+                                        validated_row.append(int_id)
+                                    except ValueError:
+                                        continue
                             
                             # Only add lineup if we have 9 players (all positions filled)
                             if len(validated_row) == 9:
