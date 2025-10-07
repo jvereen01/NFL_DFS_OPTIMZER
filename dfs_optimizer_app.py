@@ -160,7 +160,7 @@ def apply_matchup_analysis(df, pass_defense, rush_defense):
     defensive_matchups = pd.merge(pass_defense, rush_defense, on='Team', how='outer')
     
     # Apply matchup analysis
-    df['Matchup_Quality'] = 'Unknown'
+    df['Matchup_Quality'] = 'Good Target'  # Default instead of Unknown
     df['Overall_Matchup_Multiplier'] = 1.0
     
     for idx, row in df.iterrows():
@@ -186,6 +186,18 @@ def apply_matchup_analysis(df, pass_defense, rush_defense):
                     df.loc[idx, 'Matchup_Quality'] = 'Great Target'
                 elif defense_rank >= 15:
                     df.loc[idx, 'Matchup_Quality'] = 'Good Target'
+        else:
+            # Fallback for teams not found in defensive data - use salary-based logic
+            pos_players = df[df['Position'] == position]
+            if len(pos_players) > 0:
+                elite_threshold = pos_players['Salary'].quantile(0.75)
+                great_threshold = pos_players['Salary'].quantile(0.5)
+                
+                if row['Salary'] >= elite_threshold:
+                    df.loc[idx, 'Matchup_Quality'] = 'ELITE TARGET'
+                elif row['Salary'] >= great_threshold:
+                    df.loc[idx, 'Matchup_Quality'] = 'Great Target'
+                # else keep the default 'Good Target'
     
     df['Adjusted_FPPG'] = df['FPPG'] * df['Overall_Matchup_Multiplier']
     return df
