@@ -1364,22 +1364,15 @@ def main():
                             for player_id in row:
                                 if player_id == '' or player_id is None:
                                     continue  # Skip empty IDs instead of failing completely
-                                # Convert to int, handling various formats
-                                try:
-                                    if isinstance(player_id, str):
-                                        # Remove any whitespace and handle float strings
-                                        clean_id = player_id.strip()
-                                        if '.' in clean_id:
-                                            int_id = int(float(clean_id))
-                                        else:
-                                            int_id = int(clean_id)
-                                    else:
-                                        int_id = int(player_id)
-                                    
-                                    validated_row.append(int_id)
-                                except (ValueError, TypeError):
-                                    # If we can't convert this ID, use the original value
-                                    validated_row.append(player_id)
+                                
+                                # FanDuel IDs are strings like "121309-6654", keep them as strings
+                                if isinstance(player_id, str):
+                                    # Clean whitespace but keep as string for FanDuel format
+                                    clean_id = str(player_id).strip()
+                                    validated_row.append(clean_id)
+                                else:
+                                    # Convert other formats to string
+                                    validated_row.append(str(player_id))
                             
                             # Only add lineup if we have 9 players (all positions filled)
                             if len(validated_row) == 9:
@@ -1411,6 +1404,15 @@ def main():
                         st.info("This might be due to missing player IDs or incomplete lineups. Try regenerating lineups.")
                     else:
                         st.success(f"✅ {len(csv_data)} lineups prepared for download!")
+                        
+                        # Show CSV preview
+                        st.write("**CSV Preview (first 3 rows):**")
+                        st.dataframe(df_export.head(3))
+                        
+                        # Show raw CSV string preview
+                        st.write("**Raw CSV content (first 500 characters):**")
+                        st.code(csv_string[:500])
+                        
                         st.download_button(
                             label="💾 Download CSV for FanDuel",
                             data=csv_string,
