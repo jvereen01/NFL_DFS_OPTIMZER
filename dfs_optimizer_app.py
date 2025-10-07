@@ -47,12 +47,40 @@ if 'stacked_lineups' not in st.session_state:
 def load_player_data():
     """Load and process player data"""
     import os
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_path = os.path.join(current_dir, 'FanDuel-NFL-2025 EDT-10 EDT-12 EDT-121309-players-list (1).csv')
+    import glob
+    
+    # Try multiple possible file locations and names
+    possible_paths = [
+        # Current directory
+        'FanDuel-NFL-2025 EDT-10 EDT-12 EDT-121309-players-list (1).csv',
+        # Script directory
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'FanDuel-NFL-2025 EDT-10 EDT-12 EDT-121309-players-list (1).csv'),
+        # Alternative file names that might exist
+        'FanDuel-NFL-2025 EDT-10 EDT-05 EDT-121036-players-list (1).csv',
+        'FanDuel-NFL-2025 EDT-10 EDT-05 EDT-121036-players-list (2).csv',
+        'FanDuel-NFL-2025 EDT-10 EDT-05 EDT-121036-players-list.csv'
+    ]
+    
+    # Also look for any FanDuel CSV files with glob pattern
+    csv_pattern = 'FanDuel-NFL-*.csv'
+    found_files = glob.glob(csv_pattern)
+    possible_paths.extend(found_files)
+    
+    csv_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            csv_path = path
+            break
+    
+    if csv_path is None:
+        st.error(f"No FanDuel player CSV file found. Looked in: {possible_paths[:5]}...")
+        st.info("Please ensure a FanDuel player list CSV file is in the same directory as the app.")
+        return None
     
     try:
-        # Load player CSV with absolute path
+        # Load player CSV
         df = pd.read_csv(csv_path)
+        st.success(f"✅ Loaded player data from: {os.path.basename(csv_path)}")
         df.columns = [col.strip() for col in df.columns]
         
         # Apply filters
@@ -66,10 +94,10 @@ def load_player_data():
         
         return df
     except FileNotFoundError:
-        st.error(f"Player CSV file not found at: {csv_path}. Please ensure the FanDuel player list file exists.")
+        st.error(f"File was found but couldn't be read: {csv_path}")
         return None
     except Exception as e:
-        st.error(f"Error loading player data: {str(e)}")
+        st.error(f"Error loading player data from {csv_path}: {str(e)}")
         return None
 
 @st.cache_data
