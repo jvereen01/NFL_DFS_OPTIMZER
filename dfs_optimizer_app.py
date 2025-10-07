@@ -1298,16 +1298,7 @@ def main():
                     export_lineups = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:num_export]
                     csv_data = []
                     
-                    st.info(f"🔍 Debug: Processing {len(export_lineups)} lineups for CSV export...")
-                    
-                    lineups_processed = 0
-                    lineups_skipped_incomplete = 0
-                    lineups_skipped_flex = 0
-                    lineups_skipped_validation = 0
-                    
                     for i, (points, lineup, salary, _, _, _) in enumerate(export_lineups, 1):
-                        lineups_processed += 1
-                        
                         # Create FanDuel format without contest entry columns
                         positions = {'QB': [], 'RB': [], 'WR': [], 'TE': [], 'DEF': []}
                         
@@ -1315,132 +1306,64 @@ def main():
                             pos = player['Position']
                             player_id = player['Id']
                             
-                            # Debug player ID format
-                            if i <= 2:  # Debug first 2 lineups
-                                st.write(f"Player {player.get('Nickname', 'Unknown')}: ID = '{player_id}' (type: {type(player_id)})")
-                            
                             if pos == 'D':  # Handle defense position mapping
                                 positions['DEF'].append(player_id)
                             elif pos in positions:
                                 positions[pos].append(player_id)
                         
-                        # Debug position counts
-                        pos_counts = {k: len(v) for k, v in positions.items()}
-                        if i <= 3:  # Show first 3 lineups for debugging
-                            st.write(f"Lineup {i} positions: {pos_counts}")
-                        
                         # Validate that we have all required positions filled
                         if (len(positions['QB']) < 1 or len(positions['RB']) < 2 or 
                             len(positions['WR']) < 3 or len(positions['TE']) < 1 or 
                             len(positions['DEF']) < 1):
-                            lineups_skipped_incomplete += 1
                             continue  # Skip incomplete lineups
                         
                         # Fill FanDuel roster format: QB, RB, RB, WR, WR, WR, TE, FLEX, DEF
                         row = [
-                            positions['QB'][0],    # QB - guaranteed to exist
-                            positions['RB'][0],    # RB - guaranteed to exist
-                            positions['RB'][1],    # RB - guaranteed to exist
-                            positions['WR'][0],    # WR - guaranteed to exist
-                            positions['WR'][1],    # WR - guaranteed to exist
-                            positions['WR'][2],    # WR - guaranteed to exist
-                            positions['TE'][0],    # TE - guaranteed to exist
+                            positions['QB'][0],    # QB
+                            positions['RB'][0],    # RB
+                            positions['RB'][1],    # RB
+                            positions['WR'][0],    # WR
+                            positions['WR'][1],    # WR
+                            positions['WR'][2],    # WR
+                            positions['TE'][0],    # TE
                             '',                    # FLEX - will be determined below
-                            positions['DEF'][0]    # DEF - guaranteed to exist
+                            positions['DEF'][0]    # DEF
                         ]
                         
-                        # Determine FLEX (extra RB, WR, or TE) - use ID  
+                        # Determine FLEX (extra RB, WR, or TE)
                         if len(positions['RB']) > 2:
-                            row[7] = positions['RB'][2]  # FLEX position (index 7 now)
+                            row[7] = positions['RB'][2]
                         elif len(positions['WR']) > 3:
-                            row[7] = positions['WR'][3]  # FLEX position (index 7 now)
+                            row[7] = positions['WR'][3]
                         elif len(positions['TE']) > 1:
-                            row[7] = positions['TE'][1]  # FLEX position (index 7 now)
+                            row[7] = positions['TE'][1]
                         else:
-                            lineups_skipped_flex += 1
                             continue  # Skip lineups without valid FLEX player
                         
-                        # Debug first few lineups
-                        if i <= 3:
-                            st.write(f"Lineup {i} row before validation: {row}")
-                            st.write(f"Lineup {i} raw player IDs: {[type(pid).__name__ + ':' + str(pid) for pid in row]}")
-                        
-                        # Validate and clean player IDs for FanDuel format
-                        try:
-                            validated_row = []
-                            for player_id in row:
-                                if player_id == '' or player_id is None:
-                                    continue  # Skip empty IDs
-                                
-                                # FanDuel accepts full IDs like "121309-6654"
-                                if isinstance(player_id, str):
-                                    clean_id = str(player_id).strip()
-                                    # Verify it has the correct contest prefix
-                                    if clean_id.startswith('121309-'):
-                                        validated_row.append(clean_id)
-                                    else:
-                                        st.warning(f"⚠️ Invalid ID format found: {clean_id} (expected 121309-XXXXX)")
-                                        continue
-                                else:
-                                    # Convert to string format
-                                    str_id = str(player_id)
-                                    if str_id.startswith('121309-'):
-                                        validated_row.append(str_id)
-                                    else:
-                                        st.warning(f"⚠️ Invalid ID format found: {str_id} (expected 121309-XXXXX)")
-                                        continue
-                            
-                            # Only add lineup if we have 9 players (all positions filled)
-                            if len(validated_row) == 9:
-                                csv_data.append(validated_row)
-                                if i <= 3:
-                                    st.write(f"Lineup {i} validated row: {validated_row}")
-                            else:
-                                lineups_skipped_validation += 1
-                                if i <= 3:
-                                    st.write(f"Lineup {i} skipped - only {len(validated_row)} valid IDs")
-                        except Exception as e:
-                            # Skip this lineup if there's any major error
-                            lineups_skipped_validation += 1
-                            if i <= 3:
-                                st.write(f"Lineup {i} error: {str(e)}")
-                            continue
+                        # Add completed lineup
+                        csv_data.append(row)
                     
-                    # Convert to DataFrame and then CSV
-                    import pandas as pd
-                    # Use unique column names for display but export with FanDuel format
-                    display_columns = ['QB', 'RB1', 'RB2', 'WR1', 'WR2', 'WR3', 'TE', 'FLEX', 'DEF']
-                    df_export = pd.DataFrame(csv_data, columns=display_columns)
+                    # Create CSV string with contest entry columns
+                    csv_lines = ['entry_id,contest_id,contest_name,entry_fee,QB,RB,RB,WR,WR,WR,TE,FLEX,DEF']
                     
-                    # Create CSV with FanDuel's expected column names (with duplicates)
-                    fanduel_columns = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DEF']
-                    csv_lines = [','.join(fanduel_columns)]  # Header
-                    for row in csv_data:
-                        csv_lines.append(','.join(map(str, row)))
+                    # Generate entry IDs starting from a base number
+                    base_entry_id = 3584175604  # Use the same format as your example
+                    contest_id = "121309-276916553"
+                    contest_name = "$60K Sun NFL Hail Mary (Only $0.25 to Enter)"
+                    entry_fee = "0.25"
+                    
+                    for i, row in enumerate(csv_data):
+                        entry_id = base_entry_id + i
+                        lineup_data = ','.join(map(str, row))
+                        csv_line = f"{entry_id},{contest_id},{contest_name},{entry_fee},{lineup_data}"
+                        csv_lines.append(csv_line)
+                    
                     csv_string = '\n'.join(csv_lines)
                     
-                    # Show debug summary
-                    st.write(f"📊 **Debug Summary:**")
-                    st.write(f"- Lineups processed: {lineups_processed}")
-                    st.write(f"- Skipped (incomplete positions): {lineups_skipped_incomplete}")
-                    st.write(f"- Skipped (no FLEX): {lineups_skipped_flex}")
-                    st.write(f"- Skipped (validation failed): {lineups_skipped_validation}")
-                    st.write(f"- Successfully added to CSV: {len(csv_data)}")
-                    
                     if len(csv_data) == 0:
-                        st.error(f"❌ No valid lineups found! Tried to process {len(export_lineups)} lineups.")
-                        st.info("This might be due to missing player IDs or incomplete lineups. Try regenerating lineups.")
+                        st.error(f"❌ No valid lineups found!")
                     else:
                         st.success(f"✅ {len(csv_data)} lineups prepared for download!")
-                        
-                        # Show CSV preview with unique column names
-                        st.write("**CSV Preview (first 3 rows):**")
-                        st.dataframe(df_export.head(3))
-                        
-                        # Show raw CSV string preview
-                        st.write("**Raw CSV content (first 500 characters):**")
-                        st.code(csv_string[:500])
-                        
                         st.download_button(
                             label="💾 Download CSV for FanDuel",
                             data=csv_string,
