@@ -1298,7 +1298,16 @@ def main():
                     export_lineups = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:num_export]
                     csv_data = []
                     
+                    st.info(f"🔍 Debug: Processing {len(export_lineups)} lineups for CSV export...")
+                    
+                    lineups_processed = 0
+                    lineups_skipped_incomplete = 0
+                    lineups_skipped_flex = 0
+                    lineups_skipped_validation = 0
+                    
                     for i, (points, lineup, salary, _, _, _) in enumerate(export_lineups, 1):
+                        lineups_processed += 1
+                        
                         # Create FanDuel format without contest entry columns
                         positions = {'QB': [], 'RB': [], 'WR': [], 'TE': [], 'DEF': []}
                         
@@ -1309,10 +1318,16 @@ def main():
                             elif pos in positions:
                                 positions[pos].append(player['Id'])
                         
+                        # Debug position counts
+                        pos_counts = {k: len(v) for k, v in positions.items()}
+                        if i <= 3:  # Show first 3 lineups for debugging
+                            st.write(f"Lineup {i} positions: {pos_counts}")
+                        
                         # Validate that we have all required positions filled
                         if (len(positions['QB']) < 1 or len(positions['RB']) < 2 or 
                             len(positions['WR']) < 3 or len(positions['TE']) < 1 or 
                             len(positions['DEF']) < 1):
+                            lineups_skipped_incomplete += 1
                             continue  # Skip incomplete lineups
                         
                         # Fill FanDuel roster format: QB, RB, RB, WR, WR, WR, TE, FLEX, DEF
@@ -1336,7 +1351,12 @@ def main():
                         elif len(positions['TE']) > 1:
                             row[7] = positions['TE'][1]  # FLEX position (index 7 now)
                         else:
+                            lineups_skipped_flex += 1
                             continue  # Skip lineups without valid FLEX player
+                        
+                        # Debug first few lineups
+                        if i <= 3:
+                            st.write(f"Lineup {i} row before validation: {row}")
                         
                         # Validate and clean player IDs
                         try:
@@ -1364,14 +1384,27 @@ def main():
                             # Only add lineup if we have 9 players (all positions filled)
                             if len(validated_row) == 9:
                                 csv_data.append(validated_row)
+                                if i <= 3:
+                                    st.write(f"Lineup {i} validated row: {validated_row}")
+                            else:
+                                lineups_skipped_validation += 1
                         except Exception as e:
                             # Skip this lineup if there's any major error
+                            lineups_skipped_validation += 1
                             continue
                     
                     # Convert to DataFrame and then CSV
                     import pandas as pd
                     df_export = pd.DataFrame(csv_data, columns=['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DEF'])
                     csv_string = df_export.to_csv(index=False)
+                    
+                    # Show debug summary
+                    st.write(f"📊 **Debug Summary:**")
+                    st.write(f"- Lineups processed: {lineups_processed}")
+                    st.write(f"- Skipped (incomplete positions): {lineups_skipped_incomplete}")
+                    st.write(f"- Skipped (no FLEX): {lineups_skipped_flex}")
+                    st.write(f"- Skipped (validation failed): {lineups_skipped_validation}")
+                    st.write(f"- Successfully added to CSV: {len(csv_data)}")
                     
                     if len(csv_data) == 0:
                         st.error(f"❌ No valid lineups found! Tried to process {len(export_lineups)} lineups.")
