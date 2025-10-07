@@ -1388,8 +1388,16 @@ def main():
                     
                     # Convert to DataFrame and then CSV
                     import pandas as pd
-                    df_export = pd.DataFrame(csv_data, columns=['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DEF'])
-                    csv_string = df_export.to_csv(index=False)
+                    # Use unique column names for display but export with FanDuel format
+                    display_columns = ['QB', 'RB1', 'RB2', 'WR1', 'WR2', 'WR3', 'TE', 'FLEX', 'DEF']
+                    df_export = pd.DataFrame(csv_data, columns=display_columns)
+                    
+                    # Create CSV with FanDuel's expected column names (with duplicates)
+                    fanduel_columns = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DEF']
+                    csv_lines = [','.join(fanduel_columns)]  # Header
+                    for row in csv_data:
+                        csv_lines.append(','.join(map(str, row)))
+                    csv_string = '\n'.join(csv_lines)
                     
                     # Show debug summary
                     st.write(f"📊 **Debug Summary:**")
@@ -1405,7 +1413,7 @@ def main():
                     else:
                         st.success(f"✅ {len(csv_data)} lineups prepared for download!")
                         
-                        # Show CSV preview
+                        # Show CSV preview with unique column names
                         st.write("**CSV Preview (first 3 rows):**")
                         st.dataframe(df_export.head(3))
                         
