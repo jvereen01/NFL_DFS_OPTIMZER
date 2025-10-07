@@ -165,6 +165,8 @@ def load_fantasy_data():
         fantasy_data['FDPt'] = pd.to_numeric(fantasy_data['FDPt'], errors='coerce')
         fantasy_data['Att_1'] = pd.to_numeric(fantasy_data['Att_1'], errors='coerce')
         fantasy_data['PosRank'] = pd.to_numeric(fantasy_data['PosRank'], errors='coerce')
+        fantasy_data['TD_3'] = pd.to_numeric(fantasy_data['TD_3'], errors='coerce')  # Rushing TDs
+        fantasy_data['Yds_2'] = pd.to_numeric(fantasy_data['Yds_2'], errors='coerce')  # Rushing Yards
         
         fantasy_clean = fantasy_data.dropna(subset=['FDPt']).copy()
         return fantasy_clean
@@ -328,6 +330,30 @@ def create_performance_boosts(fantasy_data, wr_boost_multiplier=1.0, rb_boost_mu
     
     return wr_performance_boosts, rb_performance_boosts, te_performance_boosts
 
+def get_top_rushing_qbs(fantasy_data, num_qbs=6):
+    """Get top rushing QBs based on TD_3 (60%) and Yds_2 (40%) for non-stack lineups"""
+    if fantasy_data is None:
+        return set()
+    
+    # Filter to QBs only
+    qb_fantasy = fantasy_data[fantasy_data['FantPos'] == 'QB'].copy()
+    if len(qb_fantasy) == 0:
+        return set()
+    
+    # Create percentile ranks for rushing stats
+    qb_fantasy['TD_3_Percentile'] = qb_fantasy['TD_3'].rank(pct=True, na_option='bottom')
+    qb_fantasy['Yds_2_Percentile'] = qb_fantasy['Yds_2'].rank(pct=True, na_option='bottom')
+    
+    # Calculate composite rushing score: 60% TDs + 40% Yards
+    qb_fantasy['Rushing_Score'] = (
+        qb_fantasy['TD_3_Percentile'] * 0.6 +
+        qb_fantasy['Yds_2_Percentile'] * 0.4
+    )
+    
+    # Get top 6 rushing QBs
+    top_rushing_qbs = qb_fantasy.nlargest(num_qbs, 'Rushing_Score')['Player'].tolist()
+    return set(top_rushing_qbs)
+
 def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_performance_boosts, elite_target_boost, great_target_boost, forced_players=None, forced_player_boost=0.0):
     """Create weighted player pools"""
     pools = {}
@@ -450,7 +476,7 @@ def get_top_matchups(df, pass_defense, rush_defense, num_per_position=6):
         st.warning(f"Could not generate current week matchups: {str(e)}")
         return {}
 
-def generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, player_selections=None, force_mode="Soft Force (Boost Only)"):
+def generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, fantasy_data=None, player_selections=None, force_mode="Soft Force (Boost Only)"):
     """Generate optimized lineups with optional player selection constraints"""
     stacked_lineups = []
     salary_cap = 60000
@@ -518,6 +544,12 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
             try:
                 lineup_players = []
                 
+                # Determine if this will be a stacked lineup early
+                will_attempt_stack = random.random() < stack_probability
+                
+                # Get top rushing QBs for non-stacked lineups
+                top_rushing_qbs = get_top_rushing_qbs(fantasy_data) if fantasy_data is not None else set()
+                
                 # Handle must-include players first (only if Hard Force mode)
                 if player_selections and force_mode == "Hard Force (Always Include)":
                     # Must include QB - rotate through forced QBs for variety
@@ -532,10 +564,21 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                         qb_pool = weighted_pools['QB']
                         qb = qb_pool.sample(1, weights=qb_pool['Selection_Weight'])
                 else:
-                    # Regular QB selection (includes soft forcing via weights)
+                    # Regular QB selection with special logic for non-stacked lineups
                     qb_pool = weighted_pools['QB']
-                    qb = qb_pool.sample(1, weights=qb_pool['Selection_Weight'])
-                    qb = qb_pool.sample(1, weights=qb_pool['Selection_Weight'])
+                    
+                    # For non-stacked lineups, prefer top rushing QBs
+                    if not will_attempt_stack and len(top_rushing_qbs) > 0:
+                        # Filter to top rushing QBs only
+                        rushing_qb_pool = qb_pool[qb_pool['Nickname'].isin(top_rushing_qbs)]
+                        if len(rushing_qb_pool) > 0:
+                            qb = rushing_qb_pool.sample(1, weights=rushing_qb_pool['Selection_Weight'])
+                        else:
+                            # Fallback to regular QB pool if no rushing QBs available
+                            qb = qb_pool.sample(1, weights=qb_pool['Selection_Weight'])
+                    else:
+                        # Regular QB selection for stacked lineups
+                        qb = qb_pool.sample(1, weights=qb_pool['Selection_Weight'])
                 
                 qb_team = qb['Team'].iloc[0]
                 lineup_players.append(qb)
@@ -605,8 +648,8 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                 need_te = len(selected_te) == 0
                 
                 if remaining_wr_spots > 0 or need_te:
-                    # Simplified stacking for must-include constraints
-                    attempt_stack = random.random() < stack_probability and remaining_wr_spots > 0
+                    # Use the pre-determined stacking decision
+                    attempt_stack = will_attempt_stack and remaining_wr_spots > 0
                     
                     if attempt_stack:
                         same_team_wrs = wr_pool[wr_pool['Team'] == qb_team]
@@ -746,7 +789,7 @@ def main():
         st.header("⚙️ Optimization Settings")
         
         num_simulations = st.slider("Number of Simulations", 1000, 20000, 10000, step=1000)
-        stack_probability = st.slider("Stacking Probability", 0.0, 1.0, 0.55, step=0.05)
+        stack_probability = st.slider("Stacking Probability", 0.0, 1.0, 0.80, step=0.05)
         elite_target_boost = st.slider("Elite Target Boost", 0.0, 1.0, 0.45, step=0.05)
         great_target_boost = st.slider("Great Target Boost", 0.0, 1.0, 0.25, step=0.05)
         
@@ -1147,7 +1190,7 @@ def main():
                 weighted_pools = create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_performance_boosts, elite_target_boost, great_target_boost, all_forced_players, forced_player_boost)
             
             with st.spinner(f"Generating {num_simulations:,} optimized lineups..."):
-                stacked_lineups = generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, player_selections, force_mode)
+                stacked_lineups = generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, fantasy_data, player_selections, force_mode)
                 st.session_state.stacked_lineups = stacked_lineups
                 st.session_state.lineups_generated = True
                 
