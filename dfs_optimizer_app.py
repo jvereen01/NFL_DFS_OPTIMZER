@@ -98,6 +98,9 @@ def load_defensive_data():
     except FileNotFoundError:
         st.error("NFL.xlsx file not found. Defensive targeting will be disabled.")
         return None, None
+    except Exception as e:
+        st.warning(f"Could not load defensive data from NFL.xlsx: {str(e)}. Using basic matchup analysis.")
+        return None, None
 
 @st.cache_data
 def load_fantasy_data():
@@ -118,8 +121,22 @@ def load_fantasy_data():
 def apply_matchup_analysis(df, pass_defense, rush_defense):
     """Apply defensive matchup analysis"""
     if pass_defense is None or rush_defense is None:
+        # Fallback: Use salary as a basic matchup quality indicator
         df['Adjusted_FPPG'] = df['FPPG']
-        df['Matchup_Quality'] = 'Unknown'
+        df['Matchup_Quality'] = 'Good Target'  # Default to neutral matchup
+        
+        # Assign better matchups to higher salary players within position
+        for pos in ['QB', 'WR', 'RB', 'TE']:
+            pos_players = df[df['Position'] == pos]
+            if len(pos_players) > 0:
+                # Top 25% by salary get Elite Target
+                elite_threshold = pos_players['Salary'].quantile(0.75)
+                # Top 50% by salary get Great Target  
+                great_threshold = pos_players['Salary'].quantile(0.5)
+                
+                df.loc[(df['Position'] == pos) & (df['Salary'] >= elite_threshold), 'Matchup_Quality'] = 'ELITE TARGET'
+                df.loc[(df['Position'] == pos) & (df['Salary'] >= great_threshold) & (df['Salary'] < elite_threshold), 'Matchup_Quality'] = 'Great Target'
+        
         return df
     
     # Create team mapping (simplified)
