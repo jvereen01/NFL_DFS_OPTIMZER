@@ -402,6 +402,10 @@ def get_top_matchups(df, pass_defense, rush_defense, num_per_position=6):
         for pos in ['QB', 'RB', 'WR', 'TE']:
             pos_players = df[df['Position'] == pos].copy()
             if len(pos_players) > 0:
+                # For QB and RB, filter to show only highest salaried player per team
+                if pos in ['QB', 'RB']:
+                    pos_players = pos_players.loc[pos_players.groupby('Team')['Salary'].idxmax()]
+                
                 # Sort by matchup quality and FPPG for display
                 pos_players['sort_key'] = pos_players['Matchup_Quality'].map({
                     'ELITE TARGET': 3,
