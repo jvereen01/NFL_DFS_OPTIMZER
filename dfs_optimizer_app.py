@@ -61,24 +61,16 @@ if 'stacked_lineups' not in st.session_state:
 def load_player_data():
     """Load and process player data"""
     import os
-    import glob
     
-    # Try multiple possible file locations and names
+    # Prioritize the specific file you want
+    target_file = 'FanDuel-NFL-2025 EDT-10 EDT-12 EDT-121309-players-list (1).csv'
+    
     possible_paths = [
         # Current directory
-        'FanDuel-NFL-2025 EDT-10 EDT-12 EDT-121309-players-list (1).csv',
+        target_file,
         # Script directory
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'FanDuel-NFL-2025 EDT-10 EDT-12 EDT-121309-players-list (1).csv'),
-        # Alternative file names that might exist
-        'FanDuel-NFL-2025 EDT-10 EDT-05 EDT-121036-players-list (1).csv',
-        'FanDuel-NFL-2025 EDT-10 EDT-05 EDT-121036-players-list (2).csv',
-        'FanDuel-NFL-2025 EDT-10 EDT-05 EDT-121036-players-list.csv'
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), target_file)
     ]
-    
-    # Also look for any FanDuel CSV files with glob pattern
-    csv_pattern = 'FanDuel-NFL-*.csv'
-    found_files = glob.glob(csv_pattern)
-    possible_paths.extend(found_files)
     
     csv_path = None
     for path in possible_paths:
@@ -87,8 +79,8 @@ def load_player_data():
             break
     
     if csv_path is None:
-        st.error(f"No FanDuel player CSV file found. Looked in: {possible_paths[:5]}...")
-        st.info("Please ensure a FanDuel player list CSV file is in the same directory as the app.")
+        st.error(f"Target CSV file not found: {target_file}")
+        st.info("Please ensure this specific FanDuel player list file is in the same directory as the app.")
         return None
     
     try:
