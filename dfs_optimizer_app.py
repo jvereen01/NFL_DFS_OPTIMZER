@@ -86,8 +86,6 @@ def load_player_data():
         st.info("Please upload the correct CSV file to continue.")
         return None
     
-    st.success(f"✅ Using October 12th data: {target_file}")
-    
     try:
         # Load player CSV
         df = pd.read_csv(csv_path)
