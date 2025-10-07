@@ -400,126 +400,35 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_p
     return pools
 
 def get_top_matchups(df, pass_defense, rush_defense, num_per_position=6):
-    """Get top matchup analysis by position for display"""
-    if pass_defense is None or rush_defense is None:
-        return {}
+    """Get top matchup analysis by position for display using current week data"""
+    position_matchups = {}
     
     try:
-        # Create team mapping (simplified)
-        excel_path = find_excel_file()
-        if excel_path is None:
-            return {}
-            
-        teams_sheet = pd.read_excel(excel_path, sheet_name="Teams")
-        team_mapping = {}
-        if len(teams_sheet.columns) >= 6:
-            excel_teams = teams_sheet.iloc[:, 1]
-            csv_teams = teams_sheet.iloc[:, 5]
-            for excel_team, csv_team in zip(excel_teams, csv_teams):
-                if pd.notna(excel_team) and pd.notna(csv_team):
-                    team_mapping[excel_team] = csv_team
-        
-        # Map team names and create rankings
-        pass_def_mapped = pass_defense.copy()
-        rush_def_mapped = rush_defense.copy()
-        pass_def_mapped['Team'] = pass_def_mapped['Team'].map(team_mapping).fillna(pass_def_mapped['Team'])
-        rush_def_mapped['Team'] = rush_def_mapped['Team'].map(team_mapping).fillna(rush_def_mapped['Team'])
-        
-        pass_def_mapped['Pass_Defense_Rank'] = range(1, len(pass_def_mapped) + 1)
-        rush_def_mapped['Rush_Defense_Rank'] = range(1, len(rush_def_mapped) + 1)
-        
-        position_matchups = {}
-        
-        # QB Matchups (vs worst pass defenses)
-        qb_matchups = []
-        worst_pass_def = pass_def_mapped.tail(10)  # Bottom 10 pass defenses
-        for _, defense in worst_pass_def.iterrows():
-            players_vs_def = df[(df['Opponent'] == defense['Team']) & (df['Position'] == 'QB')]
-            for _, player in players_vs_def.iterrows():
-                qb_matchups.append({
-                    'Player': player['Nickname'],
-                    'Team': player['Team'],
-                    'vs': defense['Team'],
-                    'FPPG': player['FPPG'],
-                    'Salary': player['Salary'],
-                    'Defense_Rank': defense['Pass_Defense_Rank'],
-                    'YPG_Allowed': defense['Pass_YPG_Allowed'],
-                    'Matchup_Quality': player['Matchup_Quality']
-                })
-        
-        if qb_matchups:
-            qb_df = pd.DataFrame(qb_matchups).sort_values('FPPG', ascending=False).head(num_per_position)
-            position_matchups['QB'] = qb_df
-        
-        # RB Matchups (vs worst rush defenses)
-        rb_matchups = []
-        worst_rush_def = rush_def_mapped.tail(10)  # Bottom 10 rush defenses
-        for _, defense in worst_rush_def.iterrows():
-            players_vs_def = df[(df['Opponent'] == defense['Team']) & (df['Position'] == 'RB')]
-            for _, player in players_vs_def.iterrows():
-                rb_matchups.append({
-                    'Player': player['Nickname'],
-                    'Team': player['Team'],
-                    'vs': defense['Team'],
-                    'FPPG': player['FPPG'],
-                    'Salary': player['Salary'],
-                    'Defense_Rank': defense['Rush_Defense_Rank'],
-                    'YPG_Allowed': defense['Rush_YPG_Allowed'],
-                    'Matchup_Quality': player['Matchup_Quality']
-                })
-        
-        if rb_matchups:
-            rb_df = pd.DataFrame(rb_matchups).sort_values('FPPG', ascending=False).head(num_per_position)
-            position_matchups['RB'] = rb_df
-        
-        # WR Matchups (vs worst pass defenses)
-        wr_matchups = []
-        for _, defense in worst_pass_def.iterrows():
-            players_vs_def = df[(df['Opponent'] == defense['Team']) & (df['Position'] == 'WR')]
-            for _, player in players_vs_def.iterrows():
-                wr_matchups.append({
-                    'Player': player['Nickname'],
-                    'Team': player['Team'],
-                    'vs': defense['Team'],
-                    'FPPG': player['FPPG'],
-                    'Salary': player['Salary'],
-                    'Defense_Rank': defense['Pass_Defense_Rank'],
-                    'YPG_Allowed': defense['Pass_YPG_Allowed'],
-                    'Matchup_Quality': player['Matchup_Quality']
-                })
-        
-        if wr_matchups:
-            wr_df = pd.DataFrame(wr_matchups).sort_values('FPPG', ascending=False).head(num_per_position)
-            position_matchups['WR'] = wr_df
-        
-        # TE Matchups (vs worst pass defenses)
-        te_matchups = []
-        # For TEs, include all available TEs since there are fewer of them
-        all_tes = df[df['Position'] == 'TE']
-        for _, player in all_tes.iterrows():
-            # Check if opponent is in pass defense data
-            opponent_defense = None
-            if player['Opponent'] in pass_def_mapped['Team'].values:
-                opponent_defense = pass_def_mapped[pass_def_mapped['Team'] == player['Opponent']].iloc[0]
-            
-            te_matchups.append({
-                'Player': player['Nickname'],
-                'Team': player['Team'],
-                'vs': player['Opponent'],
-                'FPPG': player['FPPG'],
-                'Salary': player['Salary'],
-                'Defense_Rank': opponent_defense['Pass_Defense_Rank'] if opponent_defense is not None else 16,
-                'YPG_Allowed': opponent_defense['Pass_YPG_Allowed'] if opponent_defense is not None else 250.0,
-                'Matchup_Quality': player['Matchup_Quality']
-            })
-        
-        if te_matchups:
-            te_df = pd.DataFrame(te_matchups).sort_values('FPPG', ascending=False).head(num_per_position)
-            position_matchups['TE'] = te_df
-        
+        for pos in ['QB', 'RB', 'WR', 'TE']:
+            pos_players = df[df['Position'] == pos].copy()
+            if len(pos_players) > 0:
+                # Sort by matchup quality and FPPG for display
+                pos_players['sort_key'] = pos_players['Matchup_Quality'].map({
+                    'ELITE TARGET': 3,
+                    'Great Target': 2, 
+                    'Good Target': 1
+                }).fillna(0)
+                
+                # Sort by matchup quality first, then by FPPG
+                pos_players = pos_players.sort_values(['sort_key', 'FPPG'], ascending=[False, False])
+                
+                # Create display dataframe with current week opponents
+                display_df = pos_players.head(num_per_position).copy()
+                display_df['Player'] = display_df['Nickname']
+                display_df['vs'] = display_df['Opponent']
+                display_df['Defense_Rank'] = range(1, len(display_df) + 1)  # Simple ranking
+                display_df['YPG_Allowed'] = 250.0  # Default value for display
+                
+                position_matchups[pos] = display_df
+                
         return position_matchups
-            
     except Exception as e:
+        st.warning(f"Could not generate current week matchups: {str(e)}")
         return {}
 
 def generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, player_selections=None, force_mode="Soft Force (Boost Only)"):
