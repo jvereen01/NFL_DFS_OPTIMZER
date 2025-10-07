@@ -276,6 +276,7 @@ def create_performance_boosts(fantasy_data, wr_boost_multiplier=1.0, rb_boost_mu
     wr_performance_boosts = {}
     rb_performance_boosts = {}
     te_performance_boosts = {}
+    qb_performance_boosts = {}
     
     if fantasy_data is not None:
         # WR boosts
@@ -327,8 +328,20 @@ def create_performance_boosts(fantasy_data, wr_boost_multiplier=1.0, rb_boost_mu
             
             for _, te in te_fantasy.iterrows():
                 te_performance_boosts[te['Player']] = te['TE_Performance_Boost']
+        
+        # QB boosts - based purely on FDPts performance
+        qb_fantasy = fantasy_data[fantasy_data['FantPos'] == 'QB'].copy()
+        if len(qb_fantasy) > 0:
+            qb_fantasy['FDPt_Percentile'] = qb_fantasy['FDPt'].rank(pct=True, na_option='bottom')
+            
+            # QB Performance Score: 100% FDPts (simple but effective)
+            qb_fantasy['QB_Performance_Score'] = qb_fantasy['FDPt_Percentile']
+            qb_fantasy['QB_Performance_Boost'] = qb_fantasy['QB_Performance_Score'] * 0.3  # 30% max boost strength
+            
+            for _, qb in qb_fantasy.iterrows():
+                qb_performance_boosts[qb['Player']] = qb['QB_Performance_Boost']
     
-    return wr_performance_boosts, rb_performance_boosts, te_performance_boosts
+    return wr_performance_boosts, rb_performance_boosts, te_performance_boosts, qb_performance_boosts
 
 def get_top_rushing_qbs(fantasy_data, num_qbs=6):
     """Get top rushing QBs based on TD_3 (60%) and Yds_2 (40%) for non-stack lineups"""
@@ -354,7 +367,7 @@ def get_top_rushing_qbs(fantasy_data, num_qbs=6):
     top_rushing_qbs = qb_fantasy.nlargest(num_qbs, 'Rushing_Score')['Player'].tolist()
     return set(top_rushing_qbs)
 
-def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_performance_boosts, elite_target_boost, great_target_boost, forced_players=None, forced_player_boost=0.0):
+def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_performance_boosts, qb_performance_boosts, elite_target_boost, great_target_boost, forced_players=None, forced_player_boost=0.0):
     """Create weighted player pools"""
     pools = {}
     
@@ -375,14 +388,7 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_p
         # Apply TE salary filter (automatic $4,300 minimum)
         if pos == 'TE':
             pos_players = pos_players[pos_players['Salary'] >= 4300]
-            if len(pos_players) < original_count:
-                filtered_out = original_count - len(pos_players)
-                # Debug info for forced TEs that might be filtered out
-                if forced_players:
-                    low_salary_tes = df[(df['Position'] == 'TE') & (df['Salary'] < 4300)]
-                    forced_low_tes = low_salary_tes[low_salary_tes['Nickname'].isin(forced_players)]
-                    if len(forced_low_tes) > 0:
-                        st.warning(f"⚠️ Forced TE(s) filtered out due to salary < $4,300: {', '.join(forced_low_tes['Nickname'].tolist())}")
+            # TEs below $4,300 are filtered out (no debug message needed)
         
         # For QB position, only include highest salary QB per team UNLESS they're forced
         if pos == 'QB':
@@ -397,13 +403,8 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_p
                 pos_players = pos_players[pos_players['Nickname'].isin(highest_salary_qbs)]
             
             if len(pos_players) < pre_filter:
-                # Debug info for forced QBs that might be filtered out  
-                if forced_players:
-                    all_qbs = df[df['Position'] == 'QB']
-                    backup_qbs = all_qbs[~all_qbs['Nickname'].isin(highest_salary_qbs)]
-                    forced_backup_qbs = backup_qbs[backup_qbs['Nickname'].isin(forced_players)]
-                    if len(forced_backup_qbs) > 0:
-                        st.info(f"✅ Including forced backup QB(s): {', '.join(forced_backup_qbs['Nickname'].tolist())}")
+                # Backup QBs included when forced, but no debug message needed
+                pass
         
         weights = []
         
@@ -422,7 +423,9 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_p
             
             # Apply fantasy performance boost
             player_name = player['Nickname']
-            if pos == 'WR' and player_name in wr_performance_boosts:
+            if pos == 'QB' and player_name in qb_performance_boosts:
+                weight = weight * (1 + qb_performance_boosts[player_name])
+            elif pos == 'WR' and player_name in wr_performance_boosts:
                 weight = weight * (1 + wr_performance_boosts[player_name])
             elif pos == 'RB' and player_name in rb_performance_boosts:
                 weight = weight * (1 + rb_performance_boosts[player_name])
@@ -917,7 +920,7 @@ def main():
             df = apply_matchup_analysis(df, pass_defense, rush_defense)
             
         with st.spinner("Creating performance boosts..."):
-            wr_performance_boosts, rb_performance_boosts, te_performance_boosts = create_performance_boosts(fantasy_data, wr_boost_multiplier, rb_boost_multiplier)
+            wr_performance_boosts, rb_performance_boosts, te_performance_boosts, qb_performance_boosts = create_performance_boosts(fantasy_data, wr_boost_multiplier, rb_boost_multiplier)
         
         # Display top matchups
         st.markdown("### 🎯 Top 6 Matchups by Position")
@@ -1227,7 +1230,7 @@ def main():
         
         if generate_button:
             with st.spinner("Creating weighted player pools..."):
-                weighted_pools = create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_performance_boosts, elite_target_boost, great_target_boost, all_forced_players, forced_player_boost)
+                weighted_pools = create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_performance_boosts, qb_performance_boosts, elite_target_boost, great_target_boost, all_forced_players, forced_player_boost)
             
             with st.spinner(f"Generating {num_simulations:,} optimized lineups..."):
                 stacked_lineups = generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, fantasy_data, player_selections, force_mode, forced_player_boost)
