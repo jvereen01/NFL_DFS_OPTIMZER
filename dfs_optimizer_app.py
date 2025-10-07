@@ -1357,38 +1357,31 @@ def main():
                         # Debug first few lineups
                         if i <= 3:
                             st.write(f"Lineup {i} row before validation: {row}")
+                            st.write(f"Lineup {i} raw player IDs: {[type(pid).__name__ + ':' + str(pid) for pid in row]}")
                         
-                        # Validate and clean player IDs
+                        # Validate and clean player IDs for FanDuel format
                         try:
                             validated_row = []
                             for player_id in row:
                                 if player_id == '' or player_id is None:
-                                    continue  # Skip empty IDs instead of failing completely
+                                    continue  # Skip empty IDs
                                 
-                                # Extract numeric part from FanDuel IDs like "121309-6654" -> "6654"
-                                if isinstance(player_id, str) and '-' in player_id:
-                                    # Get the part after the dash
-                                    numeric_part = player_id.split('-')[-1]
-                                    try:
-                                        # Convert to integer to validate it's numeric
-                                        int_id = int(numeric_part)
-                                        validated_row.append(int_id)
-                                    except ValueError:
-                                        # If can't convert, skip this lineup
-                                        continue
-                                elif isinstance(player_id, str):
-                                    # Try to convert string directly to int
-                                    try:
-                                        int_id = int(player_id)
-                                        validated_row.append(int_id)
-                                    except ValueError:
+                                # FanDuel accepts full IDs like "121309-6654"
+                                if isinstance(player_id, str):
+                                    clean_id = str(player_id).strip()
+                                    # Verify it has the correct contest prefix
+                                    if clean_id.startswith('121309-'):
+                                        validated_row.append(clean_id)
+                                    else:
+                                        st.warning(f"⚠️ Invalid ID format found: {clean_id} (expected 121309-XXXXX)")
                                         continue
                                 else:
-                                    # Convert other formats to int
-                                    try:
-                                        int_id = int(player_id)
-                                        validated_row.append(int_id)
-                                    except ValueError:
+                                    # Convert to string format
+                                    str_id = str(player_id)
+                                    if str_id.startswith('121309-'):
+                                        validated_row.append(str_id)
+                                    else:
+                                        st.warning(f"⚠️ Invalid ID format found: {str_id} (expected 121309-XXXXX)")
                                         continue
                             
                             # Only add lineup if we have 9 players (all positions filled)
@@ -1398,9 +1391,13 @@ def main():
                                     st.write(f"Lineup {i} validated row: {validated_row}")
                             else:
                                 lineups_skipped_validation += 1
+                                if i <= 3:
+                                    st.write(f"Lineup {i} skipped - only {len(validated_row)} valid IDs")
                         except Exception as e:
                             # Skip this lineup if there's any major error
                             lineups_skipped_validation += 1
+                            if i <= 3:
+                                st.write(f"Lineup {i} error: {str(e)}")
                             continue
                     
                     # Convert to DataFrame and then CSV
