@@ -5,6 +5,20 @@ import random
 from collections import Counter
 import plotly.express as px
 import plotly.graph_objects as go
+import os
+import glob
+
+def find_excel_file():
+    """Find NFL.xlsx file in current directory or script directory"""
+    possible_paths = [
+        'NFL.xlsx',
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'NFL.xlsx')
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+    return None
 
 # Set page config
 st.set_page_config(
@@ -80,7 +94,6 @@ def load_player_data():
     try:
         # Load player CSV
         df = pd.read_csv(csv_path)
-        st.success(f"✅ Loaded player data from: {os.path.basename(csv_path)}")
         df.columns = [col.strip() for col in df.columns]
         
         # Apply filters
@@ -103,19 +116,24 @@ def load_player_data():
 @st.cache_data
 def load_defensive_data():
     """Load and process defensive matchup data"""
+    excel_path = find_excel_file()
+    if excel_path is None:
+        st.warning("NFL.xlsx file not found. Using salary-based matchup analysis.")
+        return None, None
+        
     try:
         # Load Excel data
-        excel_file = pd.ExcelFile("NFL.xlsx")
+        excel_file = pd.ExcelFile(excel_path)
         
         # Load defensive data
-        passing_team_names = pd.read_excel("NFL.xlsx", sheet_name="Defense Data 2025", 
+        passing_team_names = pd.read_excel(excel_path, sheet_name="Defense Data 2025", 
                                           usecols=[1], skiprows=41, nrows=32, header=None)
-        passing_ypg_data = pd.read_excel("NFL.xlsx", sheet_name="Defense Data 2025", 
+        passing_ypg_data = pd.read_excel(excel_path, sheet_name="Defense Data 2025", 
                                         usecols=[15], skiprows=41, nrows=32, header=None)
         
-        rushing_team_names = pd.read_excel("NFL.xlsx", sheet_name="Defense Data 2025", 
+        rushing_team_names = pd.read_excel(excel_path, sheet_name="Defense Data 2025", 
                                           usecols=[1], skiprows=80, nrows=32, header=None)
-        rushing_ypg_data = pd.read_excel("NFL.xlsx", sheet_name="Defense Data 2025", 
+        rushing_ypg_data = pd.read_excel(excel_path, sheet_name="Defense Data 2025", 
                                         usecols=[7], skiprows=80, nrows=32, header=None)
         
         # Process data
@@ -140,8 +158,13 @@ def load_defensive_data():
 @st.cache_data
 def load_fantasy_data():
     """Load fantasy performance data"""
+    excel_path = find_excel_file()
+    if excel_path is None:
+        st.warning("NFL.xlsx file not found. Performance boosts will be disabled.")
+        return None
+        
     try:
-        fantasy_data = pd.read_excel("NFL.xlsx", sheet_name="Fantasy", header=1)
+        fantasy_data = pd.read_excel(excel_path, sheet_name="Fantasy", header=1)
         fantasy_data['Tgt'] = pd.to_numeric(fantasy_data['Tgt'], errors='coerce')
         fantasy_data['Rec'] = pd.to_numeric(fantasy_data['Rec'], errors='coerce')
         fantasy_data['FDPt'] = pd.to_numeric(fantasy_data['FDPt'], errors='coerce')
@@ -176,7 +199,20 @@ def apply_matchup_analysis(df, pass_defense, rush_defense):
         return df
     
     # Create team mapping (simplified)
-    teams_sheet = pd.read_excel("NFL.xlsx", sheet_name="Teams")
+    excel_path = find_excel_file()
+    if excel_path is None:
+        # No Excel file, use salary-based fallback for all
+        for pos in ['QB', 'WR', 'RB', 'TE']:
+            pos_players = df[df['Position'] == pos]
+            if len(pos_players) > 0:
+                elite_threshold = pos_players['Salary'].quantile(0.75)
+                great_threshold = pos_players['Salary'].quantile(0.5)
+                
+                df.loc[(df['Position'] == pos) & (df['Salary'] >= elite_threshold), 'Matchup_Quality'] = 'ELITE TARGET'
+                df.loc[(df['Position'] == pos) & (df['Salary'] >= great_threshold) & (df['Salary'] < elite_threshold), 'Matchup_Quality'] = 'Great Target'
+        return df
+        
+    teams_sheet = pd.read_excel(excel_path, sheet_name="Teams")
     team_mapping = {}
     if len(teams_sheet.columns) >= 6:
         excel_teams = teams_sheet.iloc[:, 1]
@@ -370,7 +406,11 @@ def get_top_matchups(df, pass_defense, rush_defense, num_per_position=6):
     
     try:
         # Create team mapping (simplified)
-        teams_sheet = pd.read_excel("NFL.xlsx", sheet_name="Teams")
+        excel_path = find_excel_file()
+        if excel_path is None:
+            return {}
+            
+        teams_sheet = pd.read_excel(excel_path, sheet_name="Teams")
         team_mapping = {}
         if len(teams_sheet.columns) >= 6:
             excel_teams = teams_sheet.iloc[:, 1]
