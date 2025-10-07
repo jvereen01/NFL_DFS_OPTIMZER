@@ -667,8 +667,16 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                 
                 lineup_players.append(def_)
                 
-                # FLEX selection
-                flex_players = df[df['Position'].isin(['RB', 'WR', 'TE'])]
+                # FLEX selection - use filtered pools to respect exclusions
+                if player_selections:
+                    # Combine filtered RB, WR, TE pools for FLEX
+                    flex_rb_pool = weighted_pools['RB'] if 'RB' in weighted_pools else pd.DataFrame()
+                    flex_wr_pool = weighted_pools['WR'] if 'WR' in weighted_pools else pd.DataFrame()
+                    flex_te_pool = weighted_pools['TE'] if 'TE' in weighted_pools else pd.DataFrame()
+                    flex_players = pd.concat([flex_rb_pool, flex_wr_pool, flex_te_pool], ignore_index=True)
+                else:
+                    flex_players = df[df['Position'].isin(['RB', 'WR', 'TE'])]
+                
                 used_names = set()
                 for player_group in lineup_players[1:4]:  # RB, WR, TE
                     used_names.update(player_group['Nickname'])
