@@ -370,14 +370,40 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_p
     
     for pos in ['QB', 'RB', 'WR', 'TE']:
         pos_players = df[df['Position'] == pos].copy()
+        original_count = len(pos_players)
         
         # Apply TE salary filter (automatic $4,300 minimum)
         if pos == 'TE':
             pos_players = pos_players[pos_players['Salary'] >= 4300]
+            if len(pos_players) < original_count:
+                filtered_out = original_count - len(pos_players)
+                # Debug info for forced TEs that might be filtered out
+                if forced_players:
+                    low_salary_tes = df[(df['Position'] == 'TE') & (df['Salary'] < 4300)]
+                    forced_low_tes = low_salary_tes[low_salary_tes['Nickname'].isin(forced_players)]
+                    if len(forced_low_tes) > 0:
+                        st.warning(f"⚠️ Forced TE(s) filtered out due to salary < $4,300: {', '.join(forced_low_tes['Nickname'].tolist())}")
         
-        # For QB position, only include highest salary QB per team
+        # For QB position, only include highest salary QB per team UNLESS they're forced
         if pos == 'QB':
-            pos_players = pos_players[pos_players['Nickname'].isin(highest_salary_qbs)]
+            pre_filter = len(pos_players)
+            # Keep highest salary QBs AND any forced QBs
+            if forced_players:
+                forced_qbs_in_pos = pos_players[pos_players['Nickname'].isin(forced_players)]
+                highest_salary_qbs_in_pos = pos_players[pos_players['Nickname'].isin(highest_salary_qbs)]
+                # Combine both sets and remove duplicates
+                pos_players = pd.concat([highest_salary_qbs_in_pos, forced_qbs_in_pos]).drop_duplicates()
+            else:
+                pos_players = pos_players[pos_players['Nickname'].isin(highest_salary_qbs)]
+            
+            if len(pos_players) < pre_filter:
+                # Debug info for forced QBs that might be filtered out  
+                if forced_players:
+                    all_qbs = df[df['Position'] == 'QB']
+                    backup_qbs = all_qbs[~all_qbs['Nickname'].isin(highest_salary_qbs)]
+                    forced_backup_qbs = backup_qbs[backup_qbs['Nickname'].isin(forced_players)]
+                    if len(forced_backup_qbs) > 0:
+                        st.info(f"✅ Including forced backup QB(s): {', '.join(forced_backup_qbs['Nickname'].tolist())}")
         
         weights = []
         
@@ -406,17 +432,36 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_p
             # Apply forced player boost
             if forced_players and forced_player_boost > 0:
                 if player_name in forced_players:
+                    original_weight = weight
                     weight = weight * (1 + forced_player_boost)
+                    # Debug: Show boost application for forced players
+                    if pos == 'QB':  # Focus on QB since that's the issue
+                        st.info(f"🎯 Forced QB '{player_name}': Weight boosted from {original_weight:.3f} to {weight:.3f} (boost: {forced_player_boost:.1%})")
             
             # Apply QB highest salary boost (automatic 100% boost)
             if pos == 'QB':
                 if player_name in highest_salary_qbs:
+                    original_weight = weight
                     weight = weight * (1 + qb_salary_boost)
+                    # Debug: Show automatic QB boost
+                    if player_name in forced_players:
+                        st.info(f"💰 QB '{player_name}': Additional salary boost applied - Final weight: {weight:.3f}")
             
             weights.append(weight)
         
         pos_players['Selection_Weight'] = weights
         pools[pos] = pos_players
+        
+        # Debug: Show QB selection weights for forced players
+        if pos == 'QB' and forced_players and forced_player_boost > 0:
+            qb_weights = pos_players[['Nickname', 'Selection_Weight', 'Salary', 'Matchup_Quality']].copy()
+            qb_weights = qb_weights.sort_values('Selection_Weight', ascending=False)
+            forced_qbs_in_pool = qb_weights[qb_weights['Nickname'].isin(forced_players)]
+            if len(forced_qbs_in_pool) > 0:
+                st.info(f"📊 QB Selection Weights (Top 5):")
+                display_df = qb_weights.head(5)
+                display_df['Is_Forced'] = display_df['Nickname'].isin(forced_players)
+                st.dataframe(display_df, use_container_width=True)
     
     return pools
 
