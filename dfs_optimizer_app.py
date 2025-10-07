@@ -1218,8 +1218,16 @@ def main():
                         
                         for _, player in lineup.iterrows():
                             pos = player['Position']
-                            if pos in positions:
-                                positions[pos].append(player['Id'])  # Use player ID instead of Nickname
+                            if pos == 'D':  # Handle defense position mapping
+                                positions['DEF'].append(player['Id'])
+                            elif pos in positions:
+                                positions[pos].append(player['Id'])
+                        
+                        # Validate that we have all required positions filled
+                        if (len(positions['QB']) < 1 or len(positions['RB']) < 2 or 
+                            len(positions['WR']) < 3 or len(positions['TE']) < 1 or 
+                            len(positions['DEF']) < 1):
+                            continue  # Skip incomplete lineups
                         
                         # Fill FanDuel roster format: entry_id, contest_id, contest_name, entry_fee, then QB, RB, RB, WR, WR, WR, TE, FLEX, DEF
                         row = [
@@ -1227,22 +1235,26 @@ def main():
                             '121309-276916553',  # contest_id  
                             '$60K Sun NFL Hail Mary (Only $0.25 to Enter)',  # contest_name
                             '0.25',  # entry_fee
-                            positions['QB'][0] if positions['QB'] else '',           # QB
-                            positions['RB'][0] if len(positions['RB']) > 0 else '',  # RB
-                            positions['RB'][1] if len(positions['RB']) > 1 else '',  # RB  
-                            positions['WR'][0] if len(positions['WR']) > 0 else '',  # WR
-                            positions['WR'][1] if len(positions['WR']) > 1 else '',  # WR
-                            positions['WR'][2] if len(positions['WR']) > 2 else '',  # WR
-                            positions['TE'][0] if positions['TE'] else '',           # TE
-                            '',  # FLEX - will be determined below
-                            positions['DEF'][0] if positions['DEF'] else ''         # DEF
+                            positions['QB'][0],    # QB - guaranteed to exist
+                            positions['RB'][0],    # RB - guaranteed to exist
+                            positions['RB'][1],    # RB - guaranteed to exist
+                            positions['WR'][0],    # WR - guaranteed to exist
+                            positions['WR'][1],    # WR - guaranteed to exist
+                            positions['WR'][2],    # WR - guaranteed to exist
+                            positions['TE'][0],    # TE - guaranteed to exist
+                            '',                    # FLEX - will be determined below
+                            positions['DEF'][0]    # DEF - guaranteed to exist
                         ]
                         
-                        # Determine FLEX (extra RB or WR) - use ID  
+                        # Determine FLEX (extra RB, WR, or TE) - use ID  
                         if len(positions['RB']) > 2:
                             row[11] = positions['RB'][2]  # FLEX position (index 11 now)
                         elif len(positions['WR']) > 3:
                             row[11] = positions['WR'][3]  # FLEX position (index 11 now)
+                        elif len(positions['TE']) > 1:
+                            row[11] = positions['TE'][1]  # FLEX position (index 11 now)
+                        else:
+                            continue  # Skip lineups without valid FLEX player
                         
                         csv_data.append(row)
                     
