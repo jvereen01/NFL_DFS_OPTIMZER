@@ -859,12 +859,14 @@ def main():
                                             if matchup['Player'] == highest_qb:
                                                 salary_boost_icon = " 💰"
                                 
-                                # Format YPG_Allowed safely
+                                # Format all fields safely
                                 ypg_display = f"{matchup['YPG_Allowed']:.1f} YPG allowed" if isinstance(matchup['YPG_Allowed'], (int, float)) else f"{matchup['YPG_Allowed']} YPG allowed"
+                                fppg_display = f"{matchup['FPPG']:.1f} pts" if isinstance(matchup['FPPG'], (int, float)) else f"{matchup['FPPG']} pts"
+                                salary_display = f"${matchup['Salary']:,}" if isinstance(matchup['Salary'], (int, float)) else f"${matchup['Salary']}"
                                 
                                 st.markdown(
                                     f"**{emoji} {matchup['Player']}** vs {matchup['vs']} {quality_icon}{salary_boost_icon}  \n"
-                                    f"${matchup['Salary']:,} | {matchup['FPPG']:.1f} pts", 
+                                    f"{salary_display} | {fppg_display}", 
                                     help=f"Defense Rank: #{matchup['Defense_Rank']} ({ypg_display})"
                                 )
                     else:
