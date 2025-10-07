@@ -1346,8 +1346,8 @@ def main():
                     # Create CSV string with contest entry columns
                     csv_lines = ['entry_id,contest_id,contest_name,entry_fee,QB,RB,RB,WR,WR,WR,TE,FLEX,DEF']
                     
-                    # Generate entry IDs starting from a base number
-                    base_entry_id = 3584175604  # Use the same format as your example
+                    # Generate entry IDs starting from a base number (sequential)
+                    base_entry_id = 3584175604  
                     contest_id = "121309-276916553"
                     contest_name = "$60K Sun NFL Hail Mary (Only $0.25 to Enter)"
                     entry_fee = "0.25"
@@ -1359,6 +1359,10 @@ def main():
                         csv_lines.append(csv_line)
                     
                     csv_string = '\n'.join(csv_lines)
+                    
+                    # Show a preview of the first few lines to verify format
+                    st.write("**CSV Format Preview:**")
+                    st.code('\n'.join(csv_lines[:3]))
                     
                     if len(csv_data) == 0:
                         st.error(f"❌ No valid lineups found!")
