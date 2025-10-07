@@ -48,7 +48,7 @@ def load_player_data():
     """Load and process player data"""
     try:
         # Load player CSV
-        df = pd.read_csv('FanDuel-NFL-2025 EDT-10 EDT-05 EDT-121036-players-list (2).csv')
+        df = pd.read_csv('FanDuel-NFL-2025 EDT-10 EDT-12 EDT-121309-players-list (1).csv')
         df.columns = [col.strip() for col in df.columns]
         
         # Apply filters
