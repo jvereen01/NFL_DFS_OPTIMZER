@@ -1213,7 +1213,7 @@ def main():
                     csv_data = []
                     
                     for i, (points, lineup, salary, _, _, _) in enumerate(export_lineups, 1):
-                        # Create FanDuel format: QB, RB, RB, WR, WR, WR, TE, FLEX, DEF
+                        # Create FanDuel format with contest entry columns first
                         positions = {'QB': [], 'RB': [], 'WR': [], 'TE': [], 'DEF': []}
                         
                         for _, player in lineup.iterrows():
@@ -1221,8 +1221,12 @@ def main():
                             if pos in positions:
                                 positions[pos].append(player['Id'])  # Use player ID instead of Nickname
                         
-                        # Fill FanDuel roster format with exact column order: QB, RB, RB, WR, WR, WR, TE, FLEX, DEF
+                        # Fill FanDuel roster format: entry_id, contest_id, contest_name, entry_fee, then QB, RB, RB, WR, WR, WR, TE, FLEX, DEF
                         row = [
+                            '3583487004',  # entry_id
+                            '121309-276916553',  # contest_id  
+                            '$60K Sun NFL Hail Mary (Only $0.25 to Enter)',  # contest_name
+                            '0.25',  # entry_fee
                             positions['QB'][0] if positions['QB'] else '',           # QB
                             positions['RB'][0] if len(positions['RB']) > 0 else '',  # RB
                             positions['RB'][1] if len(positions['RB']) > 1 else '',  # RB  
@@ -1234,17 +1238,17 @@ def main():
                             positions['DEF'][0] if positions['DEF'] else ''         # DEF
                         ]
                         
-                        # Determine FLEX (extra RB or WR) - use ID
+                        # Determine FLEX (extra RB or WR) - use ID  
                         if len(positions['RB']) > 2:
-                            row[7] = positions['RB'][2]  # FLEX position (index 7)
+                            row[11] = positions['RB'][2]  # FLEX position (index 11 now)
                         elif len(positions['WR']) > 3:
-                            row[7] = positions['WR'][3]  # FLEX position (index 7)
+                            row[11] = positions['WR'][3]  # FLEX position (index 11 now)
                         
                         csv_data.append(row)
                     
                     # Convert to DataFrame and then CSV
                     import pandas as pd
-                    df_export = pd.DataFrame(csv_data, columns=['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DEF'])
+                    df_export = pd.DataFrame(csv_data, columns=['entry_id', 'contest_id', 'contest_name', 'entry_fee', 'QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DEF'])
                     csv_string = df_export.to_csv(index=False)
                     
                     st.success(f"✅ {num_export} lineups prepared for download!")
