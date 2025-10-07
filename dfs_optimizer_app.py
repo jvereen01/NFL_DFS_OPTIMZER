@@ -65,22 +65,48 @@ def load_player_data():
     # Prioritize the specific file you want
     target_file = 'FanDuel-NFL-2025 EDT-10 EDT-12 EDT-121309-players-list (1).csv'
     
+    # Debug: Show current working directory and file locations
+    current_dir = os.getcwd()
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
     possible_paths = [
-        # Current directory
-        target_file,
+        # Current working directory
+        os.path.join(current_dir, target_file),
         # Script directory
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), target_file)
+        os.path.join(script_dir, target_file),
+        # Just filename (relative)
+        target_file
     ]
     
+    # Debug: Show what we're looking for
+    st.write(f"🔍 Looking for: {target_file}")
+    st.write(f"📁 Current working dir: {current_dir}")
+    st.write(f"📄 Script directory: {script_dir}")
+    
     csv_path = None
-    for path in possible_paths:
+    for i, path in enumerate(possible_paths):
+        st.write(f"Checking path {i+1}: {path}")
         if os.path.exists(path):
             csv_path = path
+            st.write(f"✅ Found at: {path}")
             break
+        else:
+            st.write(f"❌ Not found at: {path}")
     
     if csv_path is None:
+        # List all CSV files in current and script directories
+        st.write("📋 Available CSV files in current directory:")
+        for file in os.listdir(current_dir):
+            if file.endswith('.csv'):
+                st.write(f"  - {file}")
+        
+        if script_dir != current_dir:
+            st.write("📋 Available CSV files in script directory:")
+            for file in os.listdir(script_dir):
+                if file.endswith('.csv'):
+                    st.write(f"  - {file}")
+        
         st.error(f"Target CSV file not found: {target_file}")
-        st.info("Please ensure this specific FanDuel player list file is in the same directory as the app.")
         return None
     
     try:
