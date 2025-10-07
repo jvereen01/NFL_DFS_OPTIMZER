@@ -677,15 +677,6 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
 def main():
     st.markdown('<h1 class="main-header">🏈 FanDuel NFL DFS Optimizer</h1>', unsafe_allow_html=True)
     
-    st.markdown("""
-    **Advanced DFS lineup simulation with:**
-    - ✅ QB-WR/TE Stacking with Enhanced Multi-Receiver Logic
-    - ✅ Defensive Matchup Targeting (Attack Worst Defenses)
-    - ✅ Fantasy Performance Boosts (WR: Targets/Receptions/FDPt, RB: FDPt/Attempts/Receptions)
-    - ✅ Tournament-Optimized Strategy for 12-Person Leagues
-    - ✅ Salary Cap Optimization ($60,000)
-    """)
-    
     # Sidebar controls
     with st.sidebar:
         st.header("⚙️ Optimization Settings")
