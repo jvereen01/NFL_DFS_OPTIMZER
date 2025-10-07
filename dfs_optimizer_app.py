@@ -426,19 +426,19 @@ def get_top_matchups(df, pass_defense, rush_defense, num_per_position=6):
                     opponent = row['Opponent']
                     if pos in ['QB', 'WR', 'TE']:
                         # Use pass defense rankings
-                        if opponent in pass_defense['Team'].values:
+                        if pass_defense is not None and opponent in pass_defense['Team'].values:
                             def_data = pass_defense[pass_defense['Team'] == opponent].iloc[0]
-                            display_df.at[idx, 'Defense_Rank'] = def_data.get('Rank', 'N/A')
-                            display_df.at[idx, 'YPG_Allowed'] = def_data.get('Yds/G', 'N/A')
+                            display_df.at[idx, 'Defense_Rank'] = def_data.get('Pass_Defense_Rank', 'N/A')
+                            display_df.at[idx, 'YPG_Allowed'] = def_data.get('Pass_YPG_Allowed', 'N/A')
                         else:
                             display_df.at[idx, 'Defense_Rank'] = 'N/A'
                             display_df.at[idx, 'YPG_Allowed'] = 'N/A'
                     else:  # RB
                         # Use rush defense rankings
-                        if opponent in rush_defense['Team'].values:
+                        if rush_defense is not None and opponent in rush_defense['Team'].values:
                             def_data = rush_defense[rush_defense['Team'] == opponent].iloc[0]
-                            display_df.at[idx, 'Defense_Rank'] = def_data.get('Rank', 'N/A')
-                            display_df.at[idx, 'YPG_Allowed'] = def_data.get('Yds/G', 'N/A')
+                            display_df.at[idx, 'Defense_Rank'] = def_data.get('Rush_Defense_Rank', 'N/A')
+                            display_df.at[idx, 'YPG_Allowed'] = def_data.get('Rush_YPG_Allowed', 'N/A')
                         else:
                             display_df.at[idx, 'Defense_Rank'] = 'N/A'
                             display_df.at[idx, 'YPG_Allowed'] = 'N/A'
