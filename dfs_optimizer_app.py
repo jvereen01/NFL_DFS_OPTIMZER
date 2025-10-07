@@ -760,71 +760,46 @@ def main():
         with st.spinner("Creating performance boosts..."):
             wr_performance_boosts, rb_performance_boosts = create_performance_boosts(fantasy_data, wr_boost_multiplier, rb_boost_multiplier)
         
-        # Display data summary and top matchups
-        col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 2])
-        with col1:
-            st.metric("Total Players", len(df))
-        with col2:
-            st.metric("Elite Targets", len(df[df['Matchup_Quality'] == 'ELITE TARGET']))
-        with col3:
-            # Show TE filter info (automatic $4,300 minimum)
-            total_tes = len(df[df['Position'] == 'TE'])
-            eligible_tes = len(df[(df['Position'] == 'TE') & (df['Salary'] >= 4300)])
-            st.metric("Eligible TEs", eligible_tes)
-        with col4:
-            # Show forced player count if any are selected
-            forced_count = 0
-            if enable_player_selection:
-                # Count forced players from session state
-                for pos in ['qb', 'rb', 'wr', 'te', 'def']:
-                    auto_key = f'auto_{pos}'
-                    if auto_key in st.session_state:
-                        forced_count += len(st.session_state[auto_key])
+        # Display top matchups
+        st.markdown("### 🎯 Top 6 Matchups by Position")
+        
+        # Get top matchups by position
+        position_matchups = get_top_matchups(df, pass_defense, rush_defense, num_per_position=6)
+        
+        if position_matchups:
+            # Create tabs for each position
+            pos_tabs = st.tabs(["QB", "RB", "WR", "TE"])
             
-            if forced_count > 0:
-                st.metric("⚡ Forced Players", forced_count, delta=f"+{forced_player_boost:.0%} boost")
-            else:
-                st.metric("RB Performance Boosts", len(rb_performance_boosts))
-        with col5:
-            st.markdown("### 🎯 Top 6 Matchups by Position")
+            positions = ['QB', 'RB', 'WR', 'TE']
+            emojis = ['🎯', '🏈', '⚡', '🎪']
             
-            # Get top matchups by position
-            position_matchups = get_top_matchups(df, pass_defense, rush_defense, num_per_position=6)
-            
-            if position_matchups:
-                # Create tabs for each position
-                pos_tabs = st.tabs(["QB", "RB", "WR", "TE"])
-                
-                positions = ['QB', 'RB', 'WR', 'TE']
-                emojis = ['🎯', '🏈', '⚡', '🎪']
-                
-                for i, (tab, pos, emoji) in enumerate(zip(pos_tabs, positions, emojis)):
-                    with tab:
-                        if pos in position_matchups and len(position_matchups[pos]) > 0:
-                            for j, (_, matchup) in enumerate(position_matchups[pos].iterrows()):
-                                if j < 6:  # Show top 6 in each tab
-                                    quality_icon = "🔥" if matchup['Matchup_Quality'] == 'ELITE TARGET' else ("⭐" if matchup['Matchup_Quality'] == 'Great Target' else "")
-                                    
-                                    # Add salary boost indicator for QBs
-                                    salary_boost_icon = ""
-                                    if pos == 'QB':
-                                        qb_data = df[df['Position'] == 'QB']
-                                        for team in qb_data['Team'].unique():
-                                            team_qbs = qb_data[qb_data['Team'] == team]
-                                            if len(team_qbs) > 0:
-                                                highest_qb = team_qbs.loc[team_qbs['Salary'].idxmax(), 'Nickname']
-                                                if matchup['Player'] == highest_qb:
-                                                    salary_boost_icon = " 💰"
-                                    
-                                    st.markdown(
-                                        f"**{emoji} {matchup['Player']}** vs {matchup['vs']} {quality_icon}{salary_boost_icon}  \n"
-                                        f"${matchup['Salary']:,} | {matchup['FPPG']:.1f} pts", 
-                                        help=f"Defense Rank: #{matchup['Defense_Rank']} ({matchup['YPG_Allowed']:.1f} YPG allowed)"
-                                    )
-                        else:
-                            st.info(f"No {pos} matchups found")
-            else:
-                st.info("Top matchups will appear here once data is loaded")
+            for i, (tab, pos, emoji) in enumerate(zip(pos_tabs, positions, emojis)):
+                with tab:
+                    if pos in position_matchups and len(position_matchups[pos]) > 0:
+                        for j, (_, matchup) in enumerate(position_matchups[pos].iterrows()):
+                            if j < 6:  # Show top 6 in each tab
+                                quality_icon = "🔥" if matchup['Matchup_Quality'] == 'ELITE TARGET' else ("⭐" if matchup['Matchup_Quality'] == 'Great Target' else "")
+                                
+                                # Add salary boost indicator for QBs
+                                salary_boost_icon = ""
+                                if pos == 'QB':
+                                    qb_data = df[df['Position'] == 'QB']
+                                    for team in qb_data['Team'].unique():
+                                        team_qbs = qb_data[qb_data['Team'] == team]
+                                        if len(team_qbs) > 0:
+                                            highest_qb = team_qbs.loc[team_qbs['Salary'].idxmax(), 'Nickname']
+                                            if matchup['Player'] == highest_qb:
+                                                salary_boost_icon = " 💰"
+                                
+                                st.markdown(
+                                    f"**{emoji} {matchup['Player']}** vs {matchup['vs']} {quality_icon}{salary_boost_icon}  \n"
+                                    f"${matchup['Salary']:,} | {matchup['FPPG']:.1f} pts", 
+                                    help=f"Defense Rank: #{matchup['Defense_Rank']} ({matchup['YPG_Allowed']:.1f} YPG allowed)"
+                                )
+                    else:
+                        st.info(f"No {pos} matchups found")
+        else:
+            st.info("Top matchups will appear here once data is loaded")
         
         # Player Selection Interface
         if enable_player_selection:
