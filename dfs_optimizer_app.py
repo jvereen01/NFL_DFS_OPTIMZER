@@ -62,52 +62,31 @@ def load_player_data():
     """Load and process player data"""
     import os
     
-    # Prioritize the specific file you want
+    # ONLY use the October 12th CSV file
     target_file = 'FanDuel-NFL-2025 EDT-10 EDT-12 EDT-121309-players-list (1).csv'
     
-    # Debug: Show current working directory and file locations
     current_dir = os.getcwd()
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
     possible_paths = [
-        # Current working directory
         os.path.join(current_dir, target_file),
-        # Script directory
         os.path.join(script_dir, target_file),
-        # Just filename (relative)
         target_file
     ]
     
-    # Debug: Show what we're looking for
-    st.write(f"🔍 Looking for: {target_file}")
-    st.write(f"📁 Current working dir: {current_dir}")
-    st.write(f"📄 Script directory: {script_dir}")
-    
     csv_path = None
-    for i, path in enumerate(possible_paths):
-        st.write(f"Checking path {i+1}: {path}")
+    for path in possible_paths:
         if os.path.exists(path):
             csv_path = path
-            st.write(f"✅ Found at: {path}")
             break
-        else:
-            st.write(f"❌ Not found at: {path}")
     
     if csv_path is None:
-        # List all CSV files in current and script directories
-        st.write("📋 Available CSV files in current directory:")
-        for file in os.listdir(current_dir):
-            if file.endswith('.csv'):
-                st.write(f"  - {file}")
-        
-        if script_dir != current_dir:
-            st.write("📋 Available CSV files in script directory:")
-            for file in os.listdir(script_dir):
-                if file.endswith('.csv'):
-                    st.write(f"  - {file}")
-        
-        st.error(f"Target CSV file not found: {target_file}")
+        st.error(f"❌ Required CSV file not found: {target_file}")
+        st.warning("This app requires the October 12th FanDuel player list file.")
+        st.info("Please upload the correct CSV file to continue.")
         return None
+    
+    st.success(f"✅ Using October 12th data: {target_file}")
     
     try:
         # Load player CSV
