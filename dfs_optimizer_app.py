@@ -46,9 +46,13 @@ if 'stacked_lineups' not in st.session_state:
 @st.cache_data
 def load_player_data():
     """Load and process player data"""
+    import os
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    csv_path = os.path.join(current_dir, 'FanDuel-NFL-2025 EDT-10 EDT-12 EDT-121309-players-list (1).csv')
+    
     try:
-        # Load player CSV
-        df = pd.read_csv('FanDuel-NFL-2025 EDT-10 EDT-12 EDT-121309-players-list (1).csv')
+        # Load player CSV with absolute path
+        df = pd.read_csv(csv_path)
         df.columns = [col.strip() for col in df.columns]
         
         # Apply filters
@@ -62,7 +66,10 @@ def load_player_data():
         
         return df
     except FileNotFoundError:
-        st.error("Player CSV file not found. Please upload the FanDuel player list.")
+        st.error(f"Player CSV file not found at: {csv_path}. Please ensure the FanDuel player list file exists.")
+        return None
+    except Exception as e:
+        st.error(f"Error loading player data: {str(e)}")
         return None
 
 @st.cache_data
