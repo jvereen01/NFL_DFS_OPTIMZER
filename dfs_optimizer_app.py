@@ -1313,10 +1313,16 @@ def main():
                         
                         for _, player in lineup.iterrows():
                             pos = player['Position']
+                            player_id = player['Id']
+                            
+                            # Debug player ID format
+                            if i <= 2:  # Debug first 2 lineups
+                                st.write(f"Player {player.get('Nickname', 'Unknown')}: ID = '{player_id}' (type: {type(player_id)})")
+                            
                             if pos == 'D':  # Handle defense position mapping
-                                positions['DEF'].append(player['Id'])
+                                positions['DEF'].append(player_id)
                             elif pos in positions:
-                                positions[pos].append(player['Id'])
+                                positions[pos].append(player_id)
                         
                         # Debug position counts
                         pos_counts = {k: len(v) for k, v in positions.items()}
