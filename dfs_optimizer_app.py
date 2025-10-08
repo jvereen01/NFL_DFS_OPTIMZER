@@ -1284,6 +1284,72 @@ def main():
                 with col3:
                     st.metric("Best Projected Points", f"{best_points:.2f}")
             
+            # Player Usage Analysis for Top 20 Lineups
+            st.markdown("---")
+            st.markdown('<h3 class="sub-header">📊 Player Usage Analysis (Top 20 Lineups)</h3>', unsafe_allow_html=True)
+            
+            # Analyze top 20 lineups for player usage
+            analysis_lineups = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:20]
+            player_usage = {}
+            
+            for points, lineup, salary, _, _, _ in analysis_lineups:
+                for _, player in lineup.iterrows():
+                    player_name = player['Nickname']
+                    position = player['Position']
+                    if position == 'D':
+                        position = 'DEF'
+                    
+                    key = f"{player_name} ({position})"
+                    if key not in player_usage:
+                        player_usage[key] = {
+                            'count': 0,
+                            'position': position,
+                            'salary': player['Salary'],
+                            'nickname': player_name
+                        }
+                    player_usage[key]['count'] += 1
+            
+            # Create usage breakdown by position
+            usage_data = []
+            for player_key, data in player_usage.items():
+                usage_percentage = (data['count'] / 20) * 100
+                usage_data.append({
+                    'Player': data['nickname'],
+                    'Position': data['position'],
+                    'Salary': f"${data['salary']:,}",
+                    'Usage Count': f"{data['count']}/20",
+                    'Usage %': f"{usage_percentage:.1f}%"
+                })
+            
+            # Sort by usage count descending
+            usage_data.sort(key=lambda x: int(x['Usage Count'].split('/')[0]), reverse=True)
+            
+            # Display in columns by position
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**🎯 Most Used Players:**")
+                top_usage = usage_data[:10]
+                usage_df = pd.DataFrame(top_usage)
+                st.dataframe(usage_df, use_container_width=True, hide_index=True)
+            
+            with col2:
+                st.write("**📈 Usage by Position:**")
+                pos_summary = {}
+                for data in usage_data:
+                    pos = data['Position']
+                    if pos not in pos_summary:
+                        pos_summary[pos] = []
+                    pos_summary[pos].append(data)
+                
+                for pos in ['QB', 'RB', 'WR', 'TE', 'DEF']:
+                    if pos in pos_summary:
+                        pos_players = pos_summary[pos][:3]  # Top 3 per position
+                        st.write(f"**{pos}:**")
+                        for player in pos_players:
+                            st.write(f"• {player['Player']} - {player['Usage Count']} ({player['Usage %']})")
+                        st.write("")
+            
             # CSV Download Section
             st.markdown("---")
             col1, col2 = st.columns([2, 1])
