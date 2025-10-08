@@ -783,6 +783,11 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                 if total_salary > salary_cap:
                     continue
                 
+                # Check 4-player per team limit (FanDuel rule)
+                team_counts = lineup['Team'].value_counts()
+                if team_counts.max() > 4:
+                    continue  # Skip lineups with more than 4 players from same team
+                
                 # Validate lineup
                 if (len(lineup) == 9 and 
                     len(lineup['Nickname'].unique()) == 9):
