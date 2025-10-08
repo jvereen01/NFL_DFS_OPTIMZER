@@ -336,7 +336,7 @@ def create_performance_boosts(fantasy_data, wr_boost_multiplier=1.0, rb_boost_mu
             
             # QB Performance Score: 100% FDPts (simple but effective)
             qb_fantasy['QB_Performance_Score'] = qb_fantasy['FDPt_Percentile']
-            qb_fantasy['QB_Performance_Boost'] = qb_fantasy['QB_Performance_Score'] * 0.3  # 30% max boost strength
+            qb_fantasy['QB_Performance_Boost'] = qb_fantasy['QB_Performance_Score'] * 0.15  # Reduced from 30% to 15% max boost strength
             
             for _, qb in qb_fantasy.iterrows():
                 qb_performance_boosts[qb['Player']] = qb['QB_Performance_Boost']
@@ -372,7 +372,7 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_p
     pools = {}
     
     # For QB position, identify highest salary QB per team and apply automatic boost
-    qb_salary_boost = 1.0  # Fixed 100% boost for highest salary QBs
+    qb_salary_boost = 0.5  # Reduced from 100% to 50% boost for highest salary QBs
     highest_salary_qbs = set()
     qb_players = df[df['Position'] == 'QB']
     for team in qb_players['Team'].unique():
@@ -1284,6 +1284,56 @@ def main():
                 with col3:
                     st.metric("Best Projected Points", f"{best_points:.2f}")
             
+            # Display lineups first, then show usage analysis
+            st.markdown("---")
+            
+            # Display lineups
+            st.subheader("📋 Generated Lineups")
+            for i, (points, lineup, salary, stacked_wrs_count, stacked_tes_count, qb_wr_te_count) in enumerate(top_lineups, 1):
+                with st.expander(f"Lineup #{i}: {points:.2f} points | ${salary:,} | {'QB+' + str(qb_wr_te_count) + ' receivers' if qb_wr_te_count > 0 else 'No stack'}"):
+                    
+                    # Create lineup display
+                    lineup_display = lineup[['Nickname', 'Position', 'Team', 'Salary', 'FPPG', 'Matchup_Quality', 'PosRank']].copy()
+                    lineup_display['Salary'] = lineup_display['Salary'].apply(lambda x: f"${x:,}")
+                    lineup_display['FPPG'] = lineup_display['FPPG'].apply(lambda x: f"{x:.1f}")
+                    
+                    # Set PosRank as the index for display
+                    lineup_display.set_index('PosRank', inplace=True)
+                    lineup_display = lineup_display.drop('PosRank', axis=1, errors='ignore')  # Remove if accidentally included twice
+                    
+                    st.dataframe(lineup_display, use_container_width=True)
+                    
+                    # Show boosts
+                    fantasy_boosted = 0
+                    elite_targets = 0
+                    forced_boosted = 0
+                    qb_team = lineup[lineup['Position'] == 'QB']['Team'].iloc[0]
+                    
+                    for _, player in lineup.iterrows():
+                        if player['Position'] == 'WR' and player['Nickname'] in wr_performance_boosts:
+                            fantasy_boosted += 1
+                        elif player['Position'] == 'RB' and player['Nickname'] in rb_performance_boosts:
+                            fantasy_boosted += 1
+                        
+                        if player['Matchup_Quality'] == 'ELITE TARGET':
+                            elite_targets += 1
+                        
+                        # Check if player was forced and got boost
+                        if enable_player_selection and player_selections and all_forced_players:
+                            if player['Nickname'] in all_forced_players:
+                                forced_boosted += 1
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.write(f"🏈 Fantasy-boosted players: {fantasy_boosted}")
+                    with col2:
+                        st.write(f"🎯 Elite targets: {elite_targets}")
+                    with col3:
+                        if forced_boosted > 0:
+                            st.write(f"⚡ Forced player boosts: {forced_boosted}")
+                        else:
+                            st.write("⚡ Forced player boosts: 0")
+            
             # Player Usage Analysis for Top 20 Lineups
             st.markdown("---")
             st.markdown('<h3 class="sub-header">📊 Player Usage Analysis (Top 20 Lineups)</h3>', unsafe_allow_html=True)
@@ -1443,53 +1493,6 @@ def main():
                         )
             
             st.markdown("---")
-            
-            # Display lineups
-            st.subheader("📋 Generated Lineups")
-            for i, (points, lineup, salary, stacked_wrs_count, stacked_tes_count, qb_wr_te_count) in enumerate(top_lineups, 1):
-                with st.expander(f"Lineup #{i}: {points:.2f} points | ${salary:,} | {'QB+' + str(qb_wr_te_count) + ' receivers' if qb_wr_te_count > 0 else 'No stack'}"):
-                    
-                    # Create lineup display
-                    lineup_display = lineup[['Nickname', 'Position', 'Team', 'Salary', 'FPPG', 'Matchup_Quality', 'PosRank']].copy()
-                    lineup_display['Salary'] = lineup_display['Salary'].apply(lambda x: f"${x:,}")
-                    lineup_display['FPPG'] = lineup_display['FPPG'].apply(lambda x: f"{x:.1f}")
-                    
-                    # Set PosRank as the index for display
-                    lineup_display.set_index('PosRank', inplace=True)
-                    lineup_display = lineup_display.drop('PosRank', axis=1, errors='ignore')  # Remove if accidentally included twice
-                    
-                    st.dataframe(lineup_display, use_container_width=True)
-                    
-                    # Show boosts
-                    fantasy_boosted = 0
-                    elite_targets = 0
-                    forced_boosted = 0
-                    qb_team = lineup[lineup['Position'] == 'QB']['Team'].iloc[0]
-                    
-                    for _, player in lineup.iterrows():
-                        if player['Position'] == 'WR' and player['Nickname'] in wr_performance_boosts:
-                            fantasy_boosted += 1
-                        elif player['Position'] == 'RB' and player['Nickname'] in rb_performance_boosts:
-                            fantasy_boosted += 1
-                        
-                        if player['Matchup_Quality'] == 'ELITE TARGET':
-                            elite_targets += 1
-                        
-                        # Check if player was forced and got boost
-                        if enable_player_selection and player_selections and all_forced_players:
-                            if player['Nickname'] in all_forced_players:
-                                forced_boosted += 1
-                    
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.write(f"🏈 Fantasy-boosted players: {fantasy_boosted}")
-                    with col2:
-                        st.write(f"🎯 Elite targets: {elite_targets}")
-                    with col3:
-                        if forced_boosted > 0:
-                            st.write(f"⚡ Forced player boosts: {forced_boosted}")
-                        else:
-                            st.write("⚡ Forced player boosts: 0")
             
             # Stacking analysis
             if len(stacked_lineups) > 0:
