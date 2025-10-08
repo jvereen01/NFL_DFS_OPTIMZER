@@ -324,7 +324,7 @@ def create_performance_boosts(fantasy_data, wr_boost_multiplier=1.0, rb_boost_mu
                 te_fantasy['Rec_Percentile'] * 0.5 +
                 te_fantasy['FDPt_Percentile'] * 0.5
             )
-            te_fantasy['TE_Performance_Boost'] = te_fantasy['TE_Performance_Score'] * 0.5  # 50% boost strength
+            te_fantasy['TE_Performance_Boost'] = te_fantasy['TE_Performance_Score'] * 0.25  # Reduced from 50% to 25% boost strength
             
             for _, te in te_fantasy.iterrows():
                 te_performance_boosts[te['Player']] = te['TE_Performance_Boost']
@@ -385,10 +385,10 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_p
         pos_players = df[df['Position'] == pos].copy()
         original_count = len(pos_players)
         
-        # Apply TE salary filter (automatic $4,300 minimum)
+        # Apply TE salary filter (reduced minimum to $4,000 for more options)
         if pos == 'TE':
-            pos_players = pos_players[pos_players['Salary'] >= 4300]
-            # TEs below $4,300 are filtered out (no debug message needed)
+            pos_players = pos_players[pos_players['Salary'] >= 4000]
+            # TEs below $4,000 are filtered out (no debug message needed)
         
         # For QB position, only include highest salary QB per team UNLESS they're forced
         if pos == 'QB':
