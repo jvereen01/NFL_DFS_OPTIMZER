@@ -324,7 +324,7 @@ def create_performance_boosts(fantasy_data, wr_boost_multiplier=1.0, rb_boost_mu
                 te_fantasy['Rec_Percentile'] * 0.5 +
                 te_fantasy['FDPt_Percentile'] * 0.5
             )
-            te_fantasy['TE_Performance_Boost'] = te_fantasy['TE_Performance_Score'] * 0.25  # Reduced from 50% to 25% boost strength
+            te_fantasy['TE_Performance_Boost'] = te_fantasy['TE_Performance_Score'] * 0.15  # Further reduced from 25% to 15% boost strength
             
             for _, te in te_fantasy.iterrows():
                 te_performance_boosts[te['Player']] = te['TE_Performance_Boost']
@@ -598,11 +598,11 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                     
                     # Enhanced soft forcing: For forced players with high boost, increase their selection probability
                     forced_qb_in_pool = None
-                    if player_selections and forced_player_boost > 0.5:  # If boost > 50%
+                    if player_selections and forced_player_boost > 0.2:  # If boost > 20% (lowered from 50%)
                         forced_qbs_in_pool = qb_pool[qb_pool['Nickname'].isin(player_selections['QB']['must_include'])]
                         if len(forced_qbs_in_pool) > 0:
-                            # Use a more aggressive selection probability based on boost level
-                            force_probability = min(0.9, forced_player_boost + 0.2)  # Cap at 90% selection rate
+                            # Enhanced soft forcing - higher probability for forced players
+                            force_probability = min(0.85, forced_player_boost + 0.4)  # Higher base probability
                             if random.random() < force_probability:
                                 # Select from forced QBs only
                                 qb = forced_qbs_in_pool.sample(1, weights=forced_qbs_in_pool['Selection_Weight'])
@@ -841,7 +841,7 @@ def main():
         rb_boost_multiplier = st.slider("RB Performance Boost Multiplier", 0.5, 2.0, 1.0, step=0.1)
         
         st.subheader("🎯 Forced Player Boost")
-        forced_player_boost = st.slider("Forced Player Extra Boost", 0.0, 1.0, 0.05, step=0.05)
+        forced_player_boost = st.slider("Forced Player Extra Boost", 0.0, 1.0, 0.3, step=0.05)  # Increased default from 0.05 to 0.3
         force_mode = st.radio("Force Mode", 
                              ["Hard Force (Always Include)", "Soft Force (Boost Only)"], 
                              index=1,
