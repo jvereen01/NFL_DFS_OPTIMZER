@@ -915,32 +915,34 @@ def main():
     if ENHANCED_FEATURES_AVAILABLE:
         logger = init_logging()
         config = load_config()
-        config_ui = ConfigUI(get_config_manager())
         log_info("DFS Optimizer v2.1 started with enhanced features")
         
         st.markdown('<h1 class="main-header">🏈 FanDuel NFL DFS Optimizer v2.1</h1>', unsafe_allow_html=True)
-        
-        # Render enhanced settings panel
-        current_config = config_ui.render_settings_panel()
         
         # Use config values for defaults
         default_simulations = config.optimization.num_simulations
         default_stack_prob = config.optimization.stack_probability
         default_elite_boost = config.optimization.elite_target_boost
         default_great_boost = config.optimization.great_target_boost
+        default_lineups_display = config.optimization.num_lineups_display
     else:
         st.markdown('<h1 class="main-header">🏈 FanDuel NFL DFS Optimizer</h1>', unsafe_allow_html=True)
         # Use original defaults
-        default_simulations = 10000
+        default_simulations = 5000  # Reduced from 10000 for faster generation
         default_stack_prob = 0.80
         default_elite_boost = 0.45
         default_great_boost = 0.25
+        default_lineups_display = 20
     
     # Sidebar controls
     with st.sidebar:
         st.header("⚙️ Optimization Settings")
         
-        num_simulations = st.slider("Number of Simulations", 1000, 20000, default_simulations, step=1000)
+        if ENHANCED_FEATURES_AVAILABLE:
+            st.success("🚀 Enhanced Performance Active")
+        
+        num_simulations = st.slider("Number of Simulations", 1000, 20000, default_simulations, step=1000,
+                                    help="More simulations = more unique lineups but slower generation. 5000 simulations typically generates 3000-4000 unique lineups.")
         stack_probability = st.slider("Stacking Probability", 0.0, 1.0, default_stack_prob, step=0.05)
         elite_target_boost = st.slider("Elite Target Boost", 0.0, 1.0, default_elite_boost, step=0.05)
         great_target_boost = st.slider("Great Target Boost", 0.0, 1.0, default_great_boost, step=0.05)
@@ -996,8 +998,8 @@ def main():
                 - Focus on 1-2 positions rather than all positions
                 """)
         
-        st.header("�📊 Display Settings")
-        num_lineups_display = st.slider("Number of Top Lineups to Show", 5, 50, 20, step=5)
+        st.header("📊 Display Settings")
+        num_lineups_display = st.slider("Number of Top Lineups to Show", 5, 50, default_lineups_display, step=5)
         
         generate_button = st.button("🚀 Generate Lineups", type="primary")
     

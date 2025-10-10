@@ -5,7 +5,7 @@ Centralized settings, user preferences, and environment configuration
 import json
 import os
 from typing import Dict, Any, Optional, Union, List
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from pathlib import Path
 from datetime import datetime
 
@@ -25,7 +25,7 @@ except ImportError:
 @dataclass
 class OptimizationSettings:
     """Core optimization settings"""
-    num_simulations: int = 10000
+    num_simulations: int = 5000  # Reduced from 10000 for faster generation
     stack_probability: float = 0.80
     elite_target_boost: float = 0.45
     great_target_boost: float = 0.25
@@ -77,11 +77,11 @@ class PerformanceSettings:
 @dataclass
 class DFSOptimizerConfig:
     """Complete configuration for DFS optimizer"""
-    optimization: OptimizationSettings = OptimizationSettings()
-    data: DataSettings = DataSettings()
-    ui: UISettings = UISettings()
-    export: ExportSettings = ExportSettings()
-    performance: PerformanceSettings = PerformanceSettings()
+    optimization: OptimizationSettings = field(default_factory=OptimizationSettings)
+    data: DataSettings = field(default_factory=DataSettings)
+    ui: UISettings = field(default_factory=UISettings)
+    export: ExportSettings = field(default_factory=ExportSettings)
+    performance: PerformanceSettings = field(default_factory=PerformanceSettings)
     version: str = "2.1.0"
     last_updated: str = ""
 

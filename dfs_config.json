@@ -1,0 +1,46 @@
+{
+  "optimization": {
+    "num_simulations": 10000,
+    "stack_probability": 0.8,
+    "elite_target_boost": 0.45,
+    "great_target_boost": 0.25,
+    "wr_boost_multiplier": 1.0,
+    "rb_boost_multiplier": 1.0,
+    "forced_player_boost": 0.3,
+    "num_lineups_display": 20,
+    "force_mode": "Soft Force (Boost Only)"
+  },
+  "data": {
+    "required_csv_file": "FanDuel-NFL-2025 EDT-10 EDT-12 EDT-121309-players-list (1).csv",
+    "excel_file": "NFL.xlsx",
+    "auto_validate_data": true,
+    "cache_duration_hours": 1,
+    "backup_data": false
+  },
+  "ui": {
+    "theme": "wide",
+    "show_debug_info": false,
+    "enable_advanced_analytics": true,
+    "auto_refresh_data": false,
+    "compact_lineup_display": false
+  },
+  "export": {
+    "default_export_format": "fanduel",
+    "max_export_lineups": 150,
+    "include_contest_info": true,
+    "auto_generate_entry_ids": true,
+    "base_entry_id": 3584175604,
+    "default_contest_id": "121309-276916553",
+    "default_contest_name": "$60K Sun NFL Hail Mary (Only $0.25 to Enter)",
+    "default_entry_fee": "0.25"
+  },
+  "performance": {
+    "enable_caching": true,
+    "parallel_processing": false,
+    "memory_optimization": true,
+    "max_memory_usage_mb": 1024,
+    "enable_profiling": false
+  },
+  "version": "2.1.0",
+  "last_updated": "2025-10-10T12:21:12.904699"
+}
