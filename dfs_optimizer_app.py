@@ -8,6 +8,48 @@ import plotly.graph_objects as go
 import os
 import glob
 
+# New enhanced modules
+try:
+    from performance_cache import cached_load_player_data, cached_load_defensive_data, cached_load_fantasy_data
+    from data_validation import DataValidator
+    from advanced_analytics import AdvancedAnalytics
+    from config_manager import load_config, ConfigUI, get_config_manager
+    from memory_optimizer import MemoryMonitor, DataFrameOptimizer, reduce_memory_usage
+    from export_templates import LineupExporter, ExportManager
+    from logging_system import init_logging, performance_track, log_info, log_error, get_logger, log_operation
+    ENHANCED_FEATURES_AVAILABLE = True
+    print("✅ Enhanced features loaded successfully!")
+except ImportError as e:
+    print(f"⚠️ Enhanced features not available, using fallback: {e}")
+    try:
+        from fallback_modules import *
+        ENHANCED_FEATURES_AVAILABLE = False
+    except ImportError:
+        print("❌ Fallback modules also not available. Some features will be disabled.")
+        ENHANCED_FEATURES_AVAILABLE = False
+        # Create minimal dummy functions to prevent crashes
+        def log_info(*args): pass
+        def log_error(*args): pass
+        def get_logger(): return type('DummyLogger', (), {'info': log_info, 'error': log_error})()
+        def log_operation(*args): 
+            class DummyContext:
+                def __enter__(self): return self
+                def __exit__(self, *args): pass
+            return DummyContext()
+        def load_config(): return type('DummyConfig', (), {'optimization': type('obj', (), {'num_simulations': 10000, 'stack_probability': 0.80, 'elite_target_boost': 0.45, 'great_target_boost': 0.25})()})()
+        def get_config_manager(): return type('DummyManager', (), {'load_config': load_config})()
+        ConfigUI = type('DummyConfigUI', (), {'__init__': lambda self, manager: None, 'render_settings_panel': lambda self: {}})
+        DataValidator = type('DummyValidator', (), {'validate_player_data': lambda self, df: (df, {'data_quality_score': 100}), 'generate_data_quality_report': lambda self, r: "No validation available"})
+        reduce_memory_usage = lambda df, verbose=False: df
+        AdvancedAnalytics = type('DummyAnalytics', (), {
+            'generate_ownership_projections': lambda self, *args: pd.DataFrame(),
+            'generate_lineup_performance_insights': lambda self, *args: {},
+            'create_advanced_visualizations': lambda self, *args: {},
+            'generate_roi_projections': lambda self, *args: {'avg_roi': 0, 'cash_rate': 0, 'top_1_percent_rate': 0}
+        })
+        LineupExporter = type('DummyExporter', (), {'get_supported_platforms': lambda self: ['fanduel'], 'export_lineups': lambda self, *args: ""})
+        ExportManager = type('DummyManager', (), {'export_to_multiple_platforms': lambda self, *args: {}})
+
 def find_excel_file():
     """Find NFL.xlsx file in current directory or script directory"""
     possible_paths = [
@@ -59,7 +101,32 @@ if 'stacked_lineups' not in st.session_state:
 
 @st.cache_data
 def load_player_data():
-    """Load and process player data"""
+    """Load and process player data with enhanced validation and optimization"""
+    if ENHANCED_FEATURES_AVAILABLE:
+        # Use enhanced loading with validation and optimization
+        try:
+            with log_operation("load_player_data"):
+                df = cached_load_player_data()
+                
+                # Add validation
+                validator = DataValidator()
+                validated_df, validation_results = validator.validate_player_data(df)
+                
+                if validation_results['data_quality_score'] < 90:
+                    with st.expander("📊 Data Quality Report", expanded=True):
+                        report = validator.generate_data_quality_report(validation_results)
+                        st.markdown(report)
+                
+                # Optimize memory usage
+                optimized_df = reduce_memory_usage(validated_df, verbose=False)
+                log_info(f"Loaded {len(optimized_df)} players with enhanced features")
+                
+                return optimized_df
+        except Exception as e:
+            log_error("Enhanced data loading failed, falling back to standard loading", e)
+            # Fall back to standard loading
+    
+    # Standard loading (original code)
     import os
     
     # ONLY use the October 12th CSV file
@@ -110,7 +177,14 @@ def load_player_data():
 
 @st.cache_data
 def load_defensive_data():
-    """Load and process defensive matchup data"""
+    """Load and process defensive matchup data with enhanced caching"""
+    if ENHANCED_FEATURES_AVAILABLE:
+        try:
+            return cached_load_defensive_data()
+        except Exception as e:
+            log_error("Enhanced defensive data loading failed, falling back to standard loading", e)
+    
+    # Standard loading (original code)
     excel_path = find_excel_file()
     if excel_path is None:
         st.warning("NFL.xlsx file not found. Using salary-based matchup analysis.")
@@ -152,7 +226,14 @@ def load_defensive_data():
 
 @st.cache_data
 def load_fantasy_data():
-    """Load fantasy performance data"""
+    """Load fantasy performance data with enhanced caching"""
+    if ENHANCED_FEATURES_AVAILABLE:
+        try:
+            return cached_load_fantasy_data()
+        except Exception as e:
+            log_error("Enhanced fantasy data loading failed, falling back to standard loading", e)
+    
+    # Standard loading (original code)
     excel_path = find_excel_file()
     if excel_path is None:
         st.warning("NFL.xlsx file not found. Performance boosts will be disabled.")
@@ -830,16 +911,39 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
     return stacked_lineups
 
 def main():
-    st.markdown('<h1 class="main-header">🏈 FanDuel NFL DFS Optimizer</h1>', unsafe_allow_html=True)
+    # Initialize enhanced systems if available
+    if ENHANCED_FEATURES_AVAILABLE:
+        logger = init_logging()
+        config = load_config()
+        config_ui = ConfigUI(get_config_manager())
+        log_info("DFS Optimizer v2.1 started with enhanced features")
+        
+        st.markdown('<h1 class="main-header">🏈 FanDuel NFL DFS Optimizer v2.1</h1>', unsafe_allow_html=True)
+        
+        # Render enhanced settings panel
+        current_config = config_ui.render_settings_panel()
+        
+        # Use config values for defaults
+        default_simulations = config.optimization.num_simulations
+        default_stack_prob = config.optimization.stack_probability
+        default_elite_boost = config.optimization.elite_target_boost
+        default_great_boost = config.optimization.great_target_boost
+    else:
+        st.markdown('<h1 class="main-header">🏈 FanDuel NFL DFS Optimizer</h1>', unsafe_allow_html=True)
+        # Use original defaults
+        default_simulations = 10000
+        default_stack_prob = 0.80
+        default_elite_boost = 0.45
+        default_great_boost = 0.25
     
     # Sidebar controls
     with st.sidebar:
         st.header("⚙️ Optimization Settings")
         
-        num_simulations = st.slider("Number of Simulations", 1000, 20000, 10000, step=1000)
-        stack_probability = st.slider("Stacking Probability", 0.0, 1.0, 0.80, step=0.05)
-        elite_target_boost = st.slider("Elite Target Boost", 0.0, 1.0, 0.45, step=0.05)
-        great_target_boost = st.slider("Great Target Boost", 0.0, 1.0, 0.25, step=0.05)
+        num_simulations = st.slider("Number of Simulations", 1000, 20000, default_simulations, step=1000)
+        stack_probability = st.slider("Stacking Probability", 0.0, 1.0, default_stack_prob, step=0.05)
+        elite_target_boost = st.slider("Elite Target Boost", 0.0, 1.0, default_elite_boost, step=0.05)
+        great_target_boost = st.slider("Great Target Boost", 0.0, 1.0, default_great_boost, step=0.05)
         
         st.subheader("🚀 Performance Boost Multipliers")
         wr_boost_multiplier = st.slider("WR Performance Boost Multiplier", 0.5, 2.0, 1.0, step=0.1)
@@ -1405,97 +1509,147 @@ def main():
                             st.write(f"• {player['Player']} - {player['Usage Count']} ({player['Usage %']})")
                         st.write("")
             
-            # CSV Download Section
+            # Enhanced Multi-Platform Export Section
             st.markdown("---")
-            col1, col2 = st.columns([2, 1])
-            with col1:
-                st.subheader("📥 Export Lineups")
-                num_export = st.slider("Number of lineups to export", 1, min(len(stacked_lineups), 150), min(20, len(stacked_lineups)))
-                st.caption(f"Export top {num_export} lineups for FanDuel upload")
             
-            with col2:
-                if st.button("📋 Prepare CSV Download", type="primary"):
-                    # Prepare CSV data for FanDuel format
-                    export_lineups = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:num_export]
-                    csv_data = []
+            if ENHANCED_FEATURES_AVAILABLE:
+                st.subheader("📥 Multi-Platform Export")
+                
+                export_manager = ExportManager()
+                exporter = LineupExporter()
+                
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    # Platform selection
+                    platforms = st.multiselect(
+                        "Select platforms to export to:",
+                        options=exporter.get_supported_platforms(),
+                        default=['fanduel'],
+                        help="Export lineups to multiple DFS platforms simultaneously"
+                    )
                     
-                    for i, (points, lineup, salary, _, _, _) in enumerate(export_lineups, 1):
-                        # Create FanDuel format without contest entry columns
-                        positions = {'QB': [], 'RB': [], 'WR': [], 'TE': [], 'DEF': []}
-                        
-                        for _, player in lineup.iterrows():
-                            pos = player['Position']
-                            player_id = player['Id']
-                            
-                            if pos == 'D':  # Handle defense position mapping
-                                positions['DEF'].append(player_id)
-                            elif pos in positions:
-                                positions[pos].append(player_id)
-                        
-                        # Validate that we have all required positions filled
-                        if (len(positions['QB']) < 1 or len(positions['RB']) < 2 or 
-                            len(positions['WR']) < 3 or len(positions['TE']) < 1 or 
-                            len(positions['DEF']) < 1):
-                            continue  # Skip incomplete lineups
-                        
-                        # Fill FanDuel roster format: QB, RB, RB, WR, WR, WR, TE, FLEX, DEF
-                        row = [
-                            positions['QB'][0],    # QB
-                            positions['RB'][0],    # RB
-                            positions['RB'][1],    # RB
-                            positions['WR'][0],    # WR
-                            positions['WR'][1],    # WR
-                            positions['WR'][2],    # WR
-                            positions['TE'][0],    # TE
-                            '',                    # FLEX - will be determined below
-                            positions['DEF'][0]    # DEF
-                        ]
-                        
-                        # Determine FLEX (extra RB, WR, or TE)
-                        if len(positions['RB']) > 2:
-                            row[7] = positions['RB'][2]
-                        elif len(positions['WR']) > 3:
-                            row[7] = positions['WR'][3]
-                        elif len(positions['TE']) > 1:
-                            row[7] = positions['TE'][1]
+                    num_export = st.slider("Number of lineups to export", 1, min(len(stacked_lineups), 150), min(20, len(stacked_lineups)))
+
+                with col2:
+                    if st.button("📋 Generate Multi-Platform Export", type="primary"):
+                        if platforms:
+                            with st.spinner("Generating exports for selected platforms..."):
+                                contest_info = {
+                                    'base_entry_id': 3584175604,
+                                    'contest_id': '121309-276916553',
+                                    'contest_name': '$60K Sun NFL Hail Mary',
+                                    'entry_fee': '0.25'
+                                }
+                                
+                                exports = export_manager.export_to_multiple_platforms(
+                                    stacked_lineups, platforms, contest_info, num_export
+                                )
+                                
+                                # Display download buttons for each platform
+                                for platform, export_content in exports.items():
+                                    if not export_content.startswith("Export failed"):
+                                        st.download_button(
+                                            label=f"💾 Download {platform.title()} CSV",
+                                            data=export_content,
+                                            file_name=f"{platform}_lineups_{num_export}lineups.csv",
+                                            mime="text/csv"
+                                        )
+                                        st.success(f"✅ {platform.title()} export ready!")
+                                    else:
+                                        st.error(f"❌ {platform.title()}: {export_content}")
                         else:
-                            continue  # Skip lineups without valid FLEX player
+                            st.warning("Please select at least one platform to export to")
+            else:
+                # Fallback to original export (FanDuel only)
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    st.subheader("📥 Export Lineups")
+                    num_export = st.slider("Number of lineups to export", 1, min(len(stacked_lineups), 150), min(20, len(stacked_lineups)))
+                    st.caption(f"Export top {num_export} lineups for FanDuel upload")
+                
+                with col2:
+                    if st.button("📋 Prepare CSV Download", type="primary"):
+                        # Original CSV export code (shortened for space)
+                        export_lineups = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:num_export]
+                        csv_data = []
                         
-                        # Add completed lineup
-                        csv_data.append(row)
-                    
-                    # Create CSV string with contest entry columns
-                    csv_lines = ['entry_id,contest_id,contest_name,entry_fee,QB,RB,RB,WR,WR,WR,TE,FLEX,DEF']
-                    
-                    # Generate entry IDs starting from a base number (sequential)
-                    base_entry_id = 3584175604  
-                    contest_id = "121309-276916553"
-                    contest_name = "$60K Sun NFL Hail Mary (Only $0.25 to Enter)"
-                    entry_fee = "0.25"
-                    
-                    for i, row in enumerate(csv_data):
-                        entry_id = base_entry_id + i
-                        lineup_data = ','.join(map(str, row))
-                        csv_line = f"{entry_id},{contest_id},{contest_name},{entry_fee},{lineup_data}"
-                        csv_lines.append(csv_line)
-                    
-                    csv_string = '\n'.join(csv_lines)
-                    
-                    # Show a preview of the first few lines to verify format
-                    st.write("**CSV Format Preview:**")
-                    st.code('\n'.join(csv_lines[:3]))
-                    
-                    if len(csv_data) == 0:
-                        st.error(f"❌ No valid lineups found!")
-                    else:
-                        st.success(f"✅ {len(csv_data)} lineups prepared for download!")
-                        st.download_button(
-                            label="💾 Download CSV for FanDuel",
-                            data=csv_string,
-                            file_name=f"fanduel_lineups_{len(csv_data)}lineups.csv",
-                            mime="text/csv",
-                            type="secondary"
-                        )
+                        for i, (points, lineup, salary, _, _, _) in enumerate(export_lineups, 1):
+                            # Create FanDuel format without contest entry columns
+                            positions = {'QB': [], 'RB': [], 'WR': [], 'TE': [], 'DEF': []}
+                            
+                            for _, player in lineup.iterrows():
+                                pos = player['Position']
+                                player_id = player['Id']
+                                
+                                if pos == 'D':  # Handle defense position mapping
+                                    positions['DEF'].append(player_id)
+                                elif pos in positions:
+                                    positions[pos].append(player_id)
+                            
+                            # Validate that we have all required positions filled
+                            if (len(positions['QB']) < 1 or len(positions['RB']) < 2 or 
+                                len(positions['WR']) < 3 or len(positions['TE']) < 1 or 
+                                len(positions['DEF']) < 1):
+                                continue  # Skip incomplete lineups
+                            
+                            # Fill FanDuel roster format: QB, RB, RB, WR, WR, WR, TE, FLEX, DEF
+                            row = [
+                                positions['QB'][0],    # QB
+                                positions['RB'][0],    # RB
+                                positions['RB'][1],    # RB
+                                positions['WR'][0],    # WR
+                                positions['WR'][1],    # WR
+                                positions['WR'][2],    # WR
+                                positions['TE'][0],    # TE
+                                '',                    # FLEX - will be determined below
+                                positions['DEF'][0]    # DEF
+                            ]
+                            
+                            # Determine FLEX (extra RB, WR, or TE)
+                            if len(positions['RB']) > 2:
+                                row[7] = positions['RB'][2]
+                            elif len(positions['WR']) > 3:
+                                row[7] = positions['WR'][3]
+                            elif len(positions['TE']) > 1:
+                                row[7] = positions['TE'][1]
+                            else:
+                                continue  # Skip lineups without valid FLEX player
+                            
+                            # Add completed lineup
+                            csv_data.append(row)
+                        
+                        # Create CSV string with contest entry columns
+                        csv_lines = ['entry_id,contest_id,contest_name,entry_fee,QB,RB,RB,WR,WR,WR,TE,FLEX,DEF']
+                        
+                        # Generate entry IDs starting from a base number (sequential)
+                        base_entry_id = 3584175604  
+                        contest_id = "121309-276916553"
+                        contest_name = "$60K Sun NFL Hail Mary (Only $0.25 to Enter)"
+                        entry_fee = "0.25"
+                        
+                        for i, row in enumerate(csv_data):
+                            entry_id = base_entry_id + i
+                            lineup_data = ','.join(map(str, row))
+                            csv_line = f"{entry_id},{contest_id},{contest_name},{entry_fee},{lineup_data}"
+                            csv_lines.append(csv_line)
+                        
+                        csv_string = '\n'.join(csv_lines)
+                        
+                        # Show a preview of the first few lines to verify format
+                        st.write("**CSV Format Preview:**")
+                        st.code('\n'.join(csv_lines[:3]))
+                        
+                        if len(csv_data) == 0:
+                            st.error(f"❌ No valid lineups found!")
+                        else:
+                            st.success(f"✅ {len(csv_data)} lineups prepared for download!")
+                            st.download_button(
+                                label="💾 Download CSV for FanDuel",
+                                data=csv_string,
+                                file_name=f"fanduel_lineups_{len(csv_data)}lineups.csv",
+                                mime="text/csv",
+                                type="secondary"
+                            )
             
             st.markdown("---")
             
@@ -1536,6 +1690,44 @@ def main():
                 except Exception as e:
                     st.error(f"Error in stacking analysis: {str(e)}")
                     st.info("📊 Stacking analysis temporarily unavailable")
+
+            # Advanced Analytics Section (Enhanced Features)
+            if ENHANCED_FEATURES_AVAILABLE:
+                st.markdown("---")
+                st.markdown('<h2 class="sub-header">📊 Advanced Analytics</h2>', unsafe_allow_html=True)
+                
+                analytics = AdvancedAnalytics()
+                
+                # Generate analytics
+                with st.spinner("Generating advanced analytics..."):
+                    try:
+                        ownership_df = analytics.generate_ownership_projections(df, stacked_lineups)
+                        insights = analytics.generate_lineup_performance_insights(stacked_lineups)
+                        charts = analytics.create_advanced_visualizations(df, stacked_lineups, ownership_df)
+                        roi_projections = analytics.generate_roi_projections(stacked_lineups)
+                        
+                        # Display key metrics
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Projected ROI", f"{roi_projections.get('avg_roi', 0):.1%}")
+                        with col2:
+                            st.metric("Cash Rate", f"{roi_projections.get('cash_rate', 0):.1%}")
+                        with col3:
+                            st.metric("Top 1% Rate", f"{roi_projections.get('top_1_percent_rate', 0):.2%}")
+                        
+                        # Show ownership projections
+                        if not ownership_df.empty:
+                            st.subheader("🎯 Ownership Projections")
+                            st.dataframe(ownership_df.head(20), use_container_width=True)
+                        
+                        # Show charts
+                        for chart_name, chart in charts.items():
+                            if chart:
+                                st.plotly_chart(chart, use_container_width=True)
+                                
+                    except Exception as e:
+                        log_error("Advanced analytics failed", e)
+                        st.warning("⚠️ Advanced analytics temporarily unavailable. Check logs for details.")
 
 if __name__ == "__main__":
     main()
