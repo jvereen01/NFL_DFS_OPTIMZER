@@ -938,14 +938,59 @@ def main():
     with st.sidebar:
         st.header("⚙️ Optimization Settings")
         
-        if ENHANCED_FEATURES_AVAILABLE:
-            st.success("🚀 Enhanced Performance Active")
+        # Quick Strategy Presets
+        st.subheader("🎯 Quick Strategy Presets")
         
-        num_simulations = st.slider("Number of Simulations", 1000, 20000, default_simulations, step=1000,
+        # Strategy selection with radio buttons (like force mode)
+        strategy_preset = st.radio("Strategy Type", 
+                                 ["Custom Settings", "💰 Single Entry", "🏆 Tournament"], 
+                                 index=0,
+                                 help="Single Entry: Cash games, head-to-head, 50/50s. Tournament: GPPs, large tournaments")
+        
+        with st.expander("💡 Strategy Types Explained"):
+            st.markdown("""
+            **💰 Single Entry (Cash Games):**
+            - Conservative stacking (65%)
+            - Consistent elite performers (35% boost)
+            - 8,000 simulations for stability
+            - Best for: Head-to-head, 50/50s, cash games
+            
+            **🏆 Tournament (GPPs):**
+            - Aggressive stacking (85%)
+            - High ceiling players (55% boost)
+            - 12,000 simulations for diversity
+            - Best for: Large tournaments, contrarian plays
+            
+            **⚙️ Custom Settings:**
+            - Use your manual slider configurations
+            - Full control over all parameters
+            """)
+        
+        # Apply presets based on selection
+        if strategy_preset == "💰 Single Entry":
+            current_simulations = 8000
+            current_stack_prob = 0.65
+            current_elite_boost = 0.35
+            current_great_boost = 0.20
+            st.success("💰 Single Entry preset active!")
+        elif strategy_preset == "🏆 Tournament":
+            current_simulations = 12000
+            current_stack_prob = 0.85
+            current_elite_boost = 0.55
+            current_great_boost = 0.30
+            st.success("🏆 Tournament preset active!")
+        else:  # Custom Settings
+            current_simulations = default_simulations
+            current_stack_prob = default_stack_prob
+            current_elite_boost = default_elite_boost
+            current_great_boost = default_great_boost
+        
+        # Configuration sliders (will use preset values if buttons were clicked)
+        num_simulations = st.slider("Number of Simulations", 1000, 20000, current_simulations, step=1000,
                                     help="More simulations = more unique lineups but slower generation. 5000 simulations typically generates 3000-4000 unique lineups.")
-        stack_probability = st.slider("Stacking Probability", 0.0, 1.0, default_stack_prob, step=0.05)
-        elite_target_boost = st.slider("Elite Target Boost", 0.0, 1.0, default_elite_boost, step=0.05)
-        great_target_boost = st.slider("Great Target Boost", 0.0, 1.0, default_great_boost, step=0.05)
+        stack_probability = st.slider("Stacking Probability", 0.0, 1.0, current_stack_prob, step=0.05)
+        elite_target_boost = st.slider("Elite Target Boost", 0.0, 1.0, current_elite_boost, step=0.05)
+        great_target_boost = st.slider("Great Target Boost", 0.0, 1.0, current_great_boost, step=0.05)
         
         st.subheader("🚀 Performance Boost Multipliers")
         wr_boost_multiplier = st.slider("WR Performance Boost Multiplier", 0.5, 2.0, 1.0, step=0.1)
@@ -1531,16 +1576,44 @@ def main():
                     )
                     
                     num_export = st.slider("Number of lineups to export", 1, min(len(stacked_lineups), 150), min(20, len(stacked_lineups)))
+                    
+                    # Entry ID Configuration
+                    with st.expander("🎯 Contest Entry Settings"):
+                        st.markdown("**Configure contest details for CSV export:**")
+                        
+                        col_a, col_b = st.columns(2)
+                        with col_a:
+                            base_entry_id = st.number_input(
+                                "Base Entry ID", 
+                                value=3584175604, 
+                                help="Starting entry ID (will increment for each lineup)"
+                            )
+                            contest_id = st.text_input(
+                                "Contest ID", 
+                                value="121309-276916553",
+                                help="Contest identifier from DFS platform"
+                            )
+                        with col_b:
+                            contest_name = st.text_input(
+                                "Contest Name", 
+                                value="$60K Sun NFL Hail Mary",
+                                help="Name of the contest"
+                            )
+                            entry_fee = st.text_input(
+                                "Entry Fee", 
+                                value="0.25",
+                                help="Fee per entry (e.g., 0.25, 5.00, 100)"
+                            )
 
                 with col2:
                     if st.button("📋 Generate Multi-Platform Export", type="primary"):
                         if platforms:
                             with st.spinner("Generating exports for selected platforms..."):
                                 contest_info = {
-                                    'base_entry_id': 3584175604,
-                                    'contest_id': '121309-276916553',
-                                    'contest_name': '$60K Sun NFL Hail Mary',
-                                    'entry_fee': '0.25'
+                                    'base_entry_id': base_entry_id,
+                                    'contest_id': contest_id,
+                                    'contest_name': contest_name,
+                                    'entry_fee': entry_fee
                                 }
                                 
                                 exports = export_manager.export_to_multiple_platforms(
@@ -1568,6 +1641,38 @@ def main():
                     st.subheader("📥 Export Lineups")
                     num_export = st.slider("Number of lineups to export", 1, min(len(stacked_lineups), 150), min(20, len(stacked_lineups)))
                     st.caption(f"Export top {num_export} lineups for FanDuel upload")
+                    
+                    # Entry ID Configuration (Fallback)
+                    with st.expander("🎯 Contest Entry Settings"):
+                        st.markdown("**Configure contest details for CSV export:**")
+                        
+                        col_a, col_b = st.columns(2)
+                        with col_a:
+                            fallback_base_entry_id = st.number_input(
+                                "Base Entry ID ", 
+                                value=3584175604, 
+                                help="Starting entry ID (will increment for each lineup)",
+                                key="fallback_entry_id"
+                            )
+                            fallback_contest_id = st.text_input(
+                                "Contest ID ", 
+                                value="121309-276916553",
+                                help="Contest identifier from DFS platform",
+                                key="fallback_contest_id"
+                            )
+                        with col_b:
+                            fallback_contest_name = st.text_input(
+                                "Contest Name ", 
+                                value="$60K Sun NFL Hail Mary",
+                                help="Name of the contest",
+                                key="fallback_contest_name"
+                            )
+                            fallback_entry_fee = st.text_input(
+                                "Entry Fee ", 
+                                value="0.25",
+                                help="Fee per entry (e.g., 0.25, 5.00, 100)",
+                                key="fallback_entry_fee"
+                            )
                 
                 with col2:
                     if st.button("📋 Prepare CSV Download", type="primary"):
@@ -1623,16 +1728,11 @@ def main():
                         # Create CSV string with contest entry columns
                         csv_lines = ['entry_id,contest_id,contest_name,entry_fee,QB,RB,RB,WR,WR,WR,TE,FLEX,DEF']
                         
-                        # Generate entry IDs starting from a base number (sequential)
-                        base_entry_id = 3584175604  
-                        contest_id = "121309-276916553"
-                        contest_name = "$60K Sun NFL Hail Mary (Only $0.25 to Enter)"
-                        entry_fee = "0.25"
-                        
+                        # Use user-configured entry settings
                         for i, row in enumerate(csv_data):
-                            entry_id = base_entry_id + i
+                            entry_id = fallback_base_entry_id + i
                             lineup_data = ','.join(map(str, row))
-                            csv_line = f"{entry_id},{contest_id},{contest_name},{entry_fee},{lineup_data}"
+                            csv_line = f"{entry_id},{fallback_contest_id},{fallback_contest_name},{fallback_entry_fee},{lineup_data}"
                             csv_lines.append(csv_line)
                         
                         csv_string = '\n'.join(csv_lines)
@@ -1654,82 +1754,6 @@ def main():
                             )
             
             st.markdown("---")
-            
-            # Stacking analysis
-            if len(stacked_lineups) > 0:
-                st.markdown('<h2 class="sub-header">📊 Stacking Analysis</h2>', unsafe_allow_html=True)
-                
-                try:
-                    no_stack = [lineup for lineup in stacked_lineups if lineup[5] == 0]
-                    single_stack = [lineup for lineup in stacked_lineups if lineup[5] == 1]
-                    double_stack = [lineup for lineup in stacked_lineups if lineup[5] == 2]
-                    triple_stack = [lineup for lineup in stacked_lineups if lineup[5] >= 3]
-                    
-                    stack_data = {
-                        'Stack Type': ['No Stack', '1 Receiver', '2 Receivers', '3+ Receivers'],
-                        'Count': [len(no_stack), len(single_stack), len(double_stack), len(triple_stack)],
-                        'Avg Points': [
-                            np.mean([lineup[0] for lineup in no_stack]) if no_stack else 0,
-                            np.mean([lineup[0] for lineup in single_stack]) if single_stack else 0,
-                            np.mean([lineup[0] for lineup in double_stack]) if double_stack else 0,
-                            np.mean([lineup[0] for lineup in triple_stack]) if triple_stack else 0
-                        ]
-                    }
-                    
-                    stack_df = pd.DataFrame(stack_data)
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        fig = px.bar(stack_df, x='Stack Type', y='Count', title='Stacking Distribution')
-                        st.plotly_chart(fig, use_container_width=True)
-                    
-                    with col2:
-                        fig = px.bar(stack_df, x='Stack Type', y='Avg Points', title='Average Points by Stack Type')
-                        st.plotly_chart(fig, use_container_width=True)
-                
-                except (IndexError, KeyError) as e:
-                    st.info("📊 Stacking analysis will be available after generating lineups")
-                except Exception as e:
-                    st.error(f"Error in stacking analysis: {str(e)}")
-                    st.info("📊 Stacking analysis temporarily unavailable")
-
-            # Advanced Analytics Section (Enhanced Features)
-            if ENHANCED_FEATURES_AVAILABLE:
-                st.markdown("---")
-                st.markdown('<h2 class="sub-header">📊 Advanced Analytics</h2>', unsafe_allow_html=True)
-                
-                analytics = AdvancedAnalytics()
-                
-                # Generate analytics
-                with st.spinner("Generating advanced analytics..."):
-                    try:
-                        ownership_df = analytics.generate_ownership_projections(df, stacked_lineups)
-                        insights = analytics.generate_lineup_performance_insights(stacked_lineups)
-                        charts = analytics.create_advanced_visualizations(df, stacked_lineups, ownership_df)
-                        roi_projections = analytics.generate_roi_projections(stacked_lineups)
-                        
-                        # Display key metrics
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("Projected ROI", f"{roi_projections.get('avg_roi', 0):.1%}")
-                        with col2:
-                            st.metric("Cash Rate", f"{roi_projections.get('cash_rate', 0):.1%}")
-                        with col3:
-                            st.metric("Top 1% Rate", f"{roi_projections.get('top_1_percent_rate', 0):.2%}")
-                        
-                        # Show ownership projections
-                        if not ownership_df.empty:
-                            st.subheader("🎯 Ownership Projections")
-                            st.dataframe(ownership_df.head(20), use_container_width=True)
-                        
-                        # Show charts
-                        for chart_name, chart in charts.items():
-                            if chart:
-                                st.plotly_chart(chart, use_container_width=True)
-                                
-                    except Exception as e:
-                        log_error("Advanced analytics failed", e)
-                        st.warning("⚠️ Advanced analytics temporarily unavailable. Check logs for details.")
 
 if __name__ == "__main__":
     main()
