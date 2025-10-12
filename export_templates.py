@@ -33,11 +33,10 @@ class PlatformTemplates:
         return ExportTemplate(
             platform="FanDuel",
             file_format="csv",
-            roster_positions=["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "D"],
-            required_columns=["entry_id", "contest_id", "contest_name", "entry_fee", 
-                            "QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "D"],
+            roster_positions=["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DEF"],
+            required_columns=["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DEF"],
             optional_columns=["lineup_name", "captain"],
-            position_mapping={"D": "D", "DEF": "D"},
+            position_mapping={"D": "DEF", "DEF": "DEF"},
             salary_cap=60000,
             max_players_per_team=4,
             file_extension=".csv"
@@ -124,35 +123,29 @@ class LineupExporter:
     def _export_fanduel(self, lineup_data: List[Tuple], template: ExportTemplate, 
                        contest_info: Optional[Dict] = None) -> str:
         """Export lineups for FanDuel"""
-        csv_lines = ['entry_id,contest_id,contest_name,entry_fee,QB,RB,RB,WR,WR,WR,TE,FLEX,D']
-        
-        # Default contest info
-        base_entry_id = contest_info.get('base_entry_id', 3584175604) if contest_info else 3584175604
-        contest_id = contest_info.get('contest_id', '121309-276916553') if contest_info else '121309-276916553'
-        contest_name = contest_info.get('contest_name', '$60K Sun NFL Hail Mary') if contest_info else '$60K Sun NFL Hail Mary'
-        entry_fee = contest_info.get('entry_fee', '0.25') if contest_info else '0.25'
+        csv_lines = ['QB,RB,RB,WR,WR,WR,TE,FLEX,DEF']
         
         csv_data = []
         for i, (points, lineup, salary, _, _, _) in enumerate(lineup_data):
             # Build roster mapping
-            positions = {'QB': [], 'RB': [], 'WR': [], 'TE': [], 'D': []}
+            positions = {'QB': [], 'RB': [], 'WR': [], 'TE': [], 'DEF': []}
             
             for _, player in lineup.iterrows():
                 pos = player['Position']
                 player_id = player['Id']
                 
-                if pos == 'D':
-                    positions['D'].append(player_id)
+                if pos == 'D':  # Map D to DEF
+                    positions['DEF'].append(player_id)
                 elif pos in positions:
                     positions[pos].append(player_id)
             
             # Validate lineup completeness
             if (len(positions['QB']) < 1 or len(positions['RB']) < 2 or 
                 len(positions['WR']) < 3 or len(positions['TE']) < 1 or 
-                len(positions['D']) < 1):
+                len(positions['DEF']) < 1):
                 continue
             
-            # Build FanDuel format: QB, RB, RB, WR, WR, WR, TE, FLEX, D
+            # Build FanDuel format: QB, RB, RB, WR, WR, WR, TE, FLEX, DEF
             row = [
                 positions['QB'][0],     # QB
                 positions['RB'][0],     # RB1
@@ -162,7 +155,7 @@ class LineupExporter:
                 positions['WR'][2],     # WR3
                 positions['TE'][0],     # TE
                 '',                     # FLEX
-                positions['D'][0]       # D
+                positions['DEF'][0]     # DEF
             ]
             
             # Determine FLEX player
@@ -175,11 +168,9 @@ class LineupExporter:
             else:
                 continue
             
-            # Add entry metadata
-            entry_id = base_entry_id + i
+            # Add lineup data with commas
             lineup_data_str = ','.join(map(str, row))
-            csv_line = f"{entry_id},{contest_id},{contest_name},{entry_fee},{lineup_data_str}"
-            csv_lines.append(csv_line)
+            csv_lines.append(lineup_data_str)
             csv_data.append(row)
         
         return '\n'.join(csv_lines)

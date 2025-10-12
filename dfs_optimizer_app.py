@@ -160,11 +160,22 @@ def load_player_data():
         
         # Apply filters
         injury_exclusions = ['IR', 'O', 'D']  # Include Q (Questionable) players
-        df = df[~df['Injury Indicator'].isin(injury_exclusions)]
         
-        # Salary filters
+        # Debug: Show injury filtering info
+        total_before = len(df)
+        injured_players = df[df['Injury Indicator'].isin(injury_exclusions)]
+        
+        # Apply injury filter
+        df = df[~df['Injury Indicator'].isin(injury_exclusions)]
+        total_after = len(df)
+        
+        print(f"🏥 Injury Filter: {total_before} → {total_after} players ({total_before - total_after} excluded)")
+        if len(injured_players) > 0:
+            print(f"🚫 Excluded injured players: {', '.join(injured_players['Nickname'].head(5).tolist())}")
+        
+        # Salary filters - only apply to defense, include all other positions
         defense_mask = (df['Position'] == 'D') & (df['Salary'] >= 3000) & (df['Salary'] <= 5000)
-        other_positions_mask = (df['Position'] != 'D') & (df['Salary'] >= 5000)
+        other_positions_mask = (df['Position'] != 'D')  # Include all non-defense players regardless of salary
         df = df[defense_mask | other_positions_mask]
         
         return df
@@ -471,20 +482,45 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_p
             pos_players = pos_players[pos_players['Salary'] >= 4000]
             # TEs below $4,000 are filtered out (no debug message needed)
         
-        # For QB position, only include highest salary QB per team UNLESS they're forced
+        # For QB position, only include highest salary QB per team UNLESS they're forced OR manually boosted
         if pos == 'QB':
             pre_filter = len(pos_players)
-            # Keep highest salary QBs AND any forced QBs
+            
+            # Detect manually boosted QBs (those with significantly higher projections than original)
+            manually_boosted_qbs = []
+            if 'Original_FPPG' in pos_players.columns:
+                for _, qb in pos_players.iterrows():
+                    original_proj = qb.get('Original_FPPG', qb['FPPG'])
+                    current_proj = qb['FPPG'] 
+                    # If projection increased by more than 5 points, consider it manually boosted
+                    if current_proj > original_proj + 5.0:
+                        manually_boosted_qbs.append(qb['Nickname'])
+            
+            # Keep highest salary QBs AND any forced QBs AND manually boosted QBs
             if forced_players:
                 forced_qbs_in_pos = pos_players[pos_players['Nickname'].isin(forced_players)]
                 highest_salary_qbs_in_pos = pos_players[pos_players['Nickname'].isin(highest_salary_qbs)]
-                # Combine both sets and remove duplicates
-                pos_players = pd.concat([highest_salary_qbs_in_pos, forced_qbs_in_pos]).drop_duplicates()
+                manually_boosted_qbs_in_pos = pos_players[pos_players['Nickname'].isin(manually_boosted_qbs)]
+                # Combine all sets and remove duplicates
+                pos_players = pd.concat([highest_salary_qbs_in_pos, forced_qbs_in_pos, manually_boosted_qbs_in_pos]).drop_duplicates()
             else:
-                pos_players = pos_players[pos_players['Nickname'].isin(highest_salary_qbs)]
+                highest_salary_qbs_in_pos = pos_players[pos_players['Nickname'].isin(highest_salary_qbs)]
+                manually_boosted_qbs_in_pos = pos_players[pos_players['Nickname'].isin(manually_boosted_qbs)]
+                pos_players = pd.concat([highest_salary_qbs_in_pos, manually_boosted_qbs_in_pos]).drop_duplicates()
+            
+            if len(manually_boosted_qbs) > 0:
+                print(f"🎯 Including manually boosted QBs: {', '.join(manually_boosted_qbs)}")
+                # Show their value calculations for debugging
+                for qb_name in manually_boosted_qbs:
+                    qb_data = pos_players[pos_players['Nickname'] == qb_name]
+                    if len(qb_data) > 0:
+                        salary = qb_data.iloc[0]['Salary']
+                        projection = qb_data.iloc[0]['FPPG']
+                        value = projection / (salary / 1000) if salary > 0 else 0
+                        print(f"   • {qb_name}: ${salary}, {projection:.1f} pts, {value:.2f} pts/$1K")
             
             if len(pos_players) < pre_filter:
-                # Backup QBs included when forced, but no debug message needed
+                # Backup QBs included when forced or manually boosted, but no debug message needed
                 pass
         
         weights = []
@@ -518,10 +554,18 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_p
                 if player_name in forced_players:
                     weight = weight * (1 + forced_player_boost)
             
-            # Apply QB highest salary boost (automatic 100% boost)
+            # Apply QB highest salary boost (automatic 50% boost)
             if pos == 'QB':
                 if player_name in highest_salary_qbs:
                     weight = weight * (1 + qb_salary_boost)
+                
+                # Apply massive boost for manually boosted QBs to ensure they get selected
+                if 'Original_FPPG' in df.columns:
+                    original_proj = player.get('Original_FPPG', player['FPPG'])
+                    current_proj = player['FPPG']
+                    if current_proj > original_proj + 5.0:  # Manually boosted
+                        weight = weight * 10.0  # 1000% boost for manually boosted QBs
+                        print(f"💥 MASSIVE boost applied to {player_name}: {weight:.2f} selection weight")
             
             weights.append(weight)
         
@@ -585,6 +629,48 @@ def get_top_matchups(df, pass_defense, rush_defense, num_per_position=6):
     except Exception as e:
         st.warning(f"Could not generate current week matchups: {str(e)}")
         return {}
+
+def select_stack_partner_by_tier(players_pool, strategy_preset, max_selections=1):
+    """Select stack partners using salary tier randomization for variety"""
+    if len(players_pool) == 0:
+        return pd.DataFrame()
+    
+    # Define salary tiers - adjusted for more inclusive value tier
+    top_tier = players_pool[players_pool['Salary'] >= 8000]
+    mid_tier = players_pool[(players_pool['Salary'] >= 5500) & (players_pool['Salary'] < 8000)]
+    value_tier = players_pool[players_pool['Salary'] < 5500]  # Lowered from 6000 to 5500
+    
+    # Set tier weights based on strategy
+    if "Single Entry" in strategy_preset:
+        # More conservative - favor top/mid tiers
+        tier_weights = {"top": 0.5, "mid": 0.4, "value": 0.1}
+    else:  # Tournament or Custom
+        # More aggressive - embrace value plays for differentiation
+        # Increased value tier weight for more contrarian picks
+        tier_weights = {"top": 0.25, "mid": 0.35, "value": 0.40}
+    
+    # Randomly select which tier to pick from
+    tier_choice = random.choices(
+        ["top", "mid", "value"], 
+        weights=[tier_weights["top"], tier_weights["mid"], tier_weights["value"]]
+    )[0]
+    
+    # Select from chosen tier, fallback if tier is empty
+    if tier_choice == "top" and len(top_tier) > 0:
+        selected_tier = top_tier
+    elif tier_choice == "mid" and len(mid_tier) > 0:
+        selected_tier = mid_tier
+    elif tier_choice == "value" and len(value_tier) > 0:
+        selected_tier = value_tier
+    else:
+        # Fallback to any available players if chosen tier is empty
+        selected_tier = players_pool
+    
+    # Sample from selected tier
+    if len(selected_tier) >= max_selections:
+        return selected_tier.sample(max_selections, weights=selected_tier['Selection_Weight'])
+    else:
+        return selected_tier
 
 def generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, fantasy_data=None, player_selections=None, force_mode="Soft Force (Boost Only)", forced_player_boost=0.0):
     """Generate optimized lineups with optional player selection constraints"""
@@ -784,9 +870,29 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                         
                         if len(same_team_wrs) >= 1:
                             stack_count = min(remaining_wr_spots, len(same_team_wrs), 2)
-                            stacked_wrs = same_team_wrs.sample(stack_count, weights=same_team_wrs['Selection_Weight'])
-                            selected_wrs = pd.concat([selected_wrs, stacked_wrs])
-                            remaining_wr_spots -= stack_count
+                            
+                            # Debug: Show available WRs for stacking when QB is forced
+                            qb_name = qb['Nickname'].iloc[0] if len(qb) > 0 else "Unknown"
+                            if qb_name in ['Drake Maye', 'Jacoby Brissett']:  # Debug specific QBs
+                                print(f"🏈 Stacking options for {qb_name} ({qb_team}):")
+                                for _, wr in same_team_wrs.iterrows():
+                                    value = wr['FPPG'] / (wr['Salary'] / 1000) if wr['Salary'] > 0 else 0
+                                    print(f"   • {wr['Nickname']}: ${wr['Salary']}, {wr['FPPG']:.1f} pts, {value:.2f} pts/$1K")
+                            
+                            # Get strategy preset from session state
+                            strategy_preset = st.session_state.get('strategy_preset', 'Tournament')
+                            
+                            # Use salary tier randomization for stack partner selection
+                            stacked_wrs = select_stack_partner_by_tier(same_team_wrs, strategy_preset, stack_count)
+                            
+                            if len(stacked_wrs) > 0:
+                                selected_wrs = pd.concat([selected_wrs, stacked_wrs])
+                                remaining_wr_spots -= len(stacked_wrs)
+                                
+                                # Debug: Show which WRs were actually selected for stacking
+                                if qb_name in ['Drake Maye', 'Jacoby Brissett']:
+                                    selected_names = stacked_wrs['Nickname'].tolist()
+                                    print(f"   ✅ Selected for stack: {', '.join(selected_names)}")
                     
                     # Fill remaining WR spots
                     if remaining_wr_spots > 0:
@@ -803,10 +909,23 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                     else:
                         wr = selected_wrs
                     
-                    # Handle TE
+                    # Handle TE with potential stacking
                     if need_te:
                         available_tes = te_pool
-                        te = available_tes.sample(1, weights=available_tes['Selection_Weight'])
+                        
+                        # Consider TE stacking with QB (30% chance)
+                        if attempt_stack and random.random() < 0.3:
+                            same_team_tes = available_tes[available_tes['Team'] == qb_team]
+                            if len(same_team_tes) > 0:
+                                # Get strategy preset for tier selection
+                                strategy_preset = st.session_state.get('strategy_preset', 'Tournament')
+                                te = select_stack_partner_by_tier(same_team_tes, strategy_preset, 1)
+                            else:
+                                # No same-team TEs available, use regular selection
+                                te = available_tes.sample(1, weights=available_tes['Selection_Weight'])
+                        else:
+                            # Regular TE selection
+                            te = available_tes.sample(1, weights=available_tes['Selection_Weight'])
                     else:
                         te = selected_te
                 else:
@@ -953,18 +1072,29 @@ def main():
             - Conservative stacking (65%)
             - Consistent elite performers (35% boost)
             - 8,000 simulations for stability
+            - Smart stacking: 50% top-tier, 40% mid-tier, 10% value WRs/TEs
             - Best for: Head-to-head, 50/50s, cash games
             
             **🏆 Tournament (GPPs):**
             - Aggressive stacking (85%)
             - High ceiling players (55% boost)
             - 12,000 simulations for diversity
+            - Contrarian stacking: 25% top-tier, 35% mid-tier, **40% value WRs/TEs**
+            - **Value tier expanded**: Under $5,500 (includes more contrarian plays)
             - Best for: Large tournaments, contrarian plays
             
             **⚙️ Custom Settings:**
             - Use your manual slider configurations
             - Full control over all parameters
+            
+            **🎯 New Feature: Smart Stacking Variety**
+            - No more repetitive expensive stacks!
+            - Salary tier randomization finds value gems
+            - Sometimes the $5,500 WR2 > $8,500 WR1
             """)
+
+        # Store strategy preset in session state for use during lineup generation
+        st.session_state['strategy_preset'] = strategy_preset
         
         # Apply presets based on selection
         if strategy_preset == "💰 Single Entry":
@@ -1074,6 +1204,85 @@ def main():
         # Apply analysis
         with st.spinner("Applying matchup analysis..."):
             df = apply_matchup_analysis(df, pass_defense, rush_defense)
+        
+        # Manual Projection Override Section
+        st.header("📊 Manual Projection Overrides")
+        with st.expander("🏥 Edit Player Projections (Injury Replacements, etc.)", expanded=False):
+            st.markdown("""
+            **💡 Perfect for:**
+            - Backup RBs getting starter workload
+            - WR2/WR3 when WR1 is out  
+            - TEs in high-target games
+            - Any player with increased opportunity
+            
+            **Just edit the FDPts column below and your changes will be used in simulations!**
+            """)
+            
+            # Create editable dataframe for projections
+            projection_columns = ['Nickname', 'Position', 'Team', 'FPPG', 'Salary', 'Injury Indicator']
+            
+            # Safety check: Ensure no injured players (O, IR, D) are in the data
+            injury_exclusions = ['IR', 'O', 'D']
+            excluded_injured = df[df['Injury Indicator'].isin(injury_exclusions)]
+            df = df[~df['Injury Indicator'].isin(injury_exclusions)]
+            
+            # Show excluded injured players for transparency
+            if len(excluded_injured) > 0:
+                st.info(f"🏥 Automatically excluded {len(excluded_injured)} injured players (O/IR/D status): {', '.join(excluded_injured['Nickname'].tolist())}")
+            
+            # Initialize session state for edited projections if not exists
+            if 'edited_projections' not in st.session_state:
+                st.session_state.edited_projections = df[projection_columns].copy()
+            
+            # Show editable table
+            edited_df = st.data_editor(
+                st.session_state.edited_projections,
+                column_config={
+                    "FPPG": st.column_config.NumberColumn(
+                        "Projected Points ✏️",
+                        help="Edit projections for injury replacements or increased opportunity",
+                        min_value=0.0,
+                        max_value=50.0,
+                        step=0.1,
+                        format="%.1f"
+                    ),
+                    "Nickname": st.column_config.TextColumn("Player", disabled=True),
+                    "Position": st.column_config.TextColumn("Pos", disabled=True, width="small"),
+                    "Team": st.column_config.TextColumn("Team", disabled=True, width="small"),
+                    "Salary": st.column_config.NumberColumn("Salary", disabled=True, format="$%d"),
+                    "Injury Indicator": st.column_config.TextColumn("Status", disabled=True, width="small")
+                },
+                use_container_width=True,
+                hide_index=True,
+                height=400
+            )
+            
+            # Update session state with edited values
+            st.session_state.edited_projections = edited_df
+            
+            # Apply the edited projections back to the main dataframe
+            projection_mapping = dict(zip(edited_df['Nickname'], edited_df['FPPG']))
+            df['Original_FPPG'] = df['FPPG']  # Keep backup of original
+            df['FPPG'] = df['Nickname'].map(projection_mapping).fillna(df['FPPG'])
+            
+            # CRITICAL: Update Adjusted_FPPG with new projections
+            df['Adjusted_FPPG'] = df['FPPG'] * df['Overall_Matchup_Multiplier']
+            
+            # Show quick stats about changes
+            changes_made = df[df['FPPG'] != df['Original_FPPG']]
+            if len(changes_made) > 0:
+                st.success(f"✅ Modified projections for {len(changes_made)} players:")
+                for _, player in changes_made.head(3).iterrows():
+                    st.caption(f"• {player['Nickname']}: {player['Original_FPPG']:.1f} → {player['FPPG']:.1f} pts (Adj: {player['Adjusted_FPPG']:.1f})")
+                if len(changes_made) > 3:
+                    st.caption(f"• ... and {len(changes_made) - 3} more players")
+            
+            # Reset button
+            if st.button("🔄 Reset All Projections"):
+                st.session_state.edited_projections = df[projection_columns].copy()
+                st.rerun()
+            
+        st.divider()
             
         with st.spinner("Creating performance boosts..."):
             wr_performance_boosts, rb_performance_boosts, te_performance_boosts, qb_performance_boosts = create_performance_boosts(fantasy_data, wr_boost_multiplier, rb_boost_multiplier)
@@ -1576,48 +1785,14 @@ def main():
                     )
                     
                     num_export = st.slider("Number of lineups to export", 1, min(len(stacked_lineups), 150), min(20, len(stacked_lineups)))
-                    
-                    # Entry ID Configuration
-                    with st.expander("🎯 Contest Entry Settings"):
-                        st.markdown("**Configure contest details for CSV export:**")
-                        
-                        col_a, col_b = st.columns(2)
-                        with col_a:
-                            base_entry_id = st.number_input(
-                                "Base Entry ID", 
-                                value=3584175604, 
-                                help="Starting entry ID (will increment for each lineup)"
-                            )
-                            contest_id = st.text_input(
-                                "Contest ID", 
-                                value="121309-276916553",
-                                help="Contest identifier from DFS platform"
-                            )
-                        with col_b:
-                            contest_name = st.text_input(
-                                "Contest Name", 
-                                value="$60K Sun NFL Hail Mary",
-                                help="Name of the contest"
-                            )
-                            entry_fee = st.text_input(
-                                "Entry Fee", 
-                                value="0.25",
-                                help="Fee per entry (e.g., 0.25, 5.00, 100)"
-                            )
 
                 with col2:
                     if st.button("📋 Generate Multi-Platform Export", type="primary"):
                         if platforms:
                             with st.spinner("Generating exports for selected platforms..."):
-                                contest_info = {
-                                    'base_entry_id': base_entry_id,
-                                    'contest_id': contest_id,
-                                    'contest_name': contest_name,
-                                    'entry_fee': entry_fee
-                                }
-                                
+                                # Simple export without entry information
                                 exports = export_manager.export_to_multiple_platforms(
-                                    stacked_lineups, platforms, contest_info, num_export
+                                    stacked_lineups, platforms, None, num_export
                                 )
                                 
                                 # Display download buttons for each platform
@@ -1641,38 +1816,6 @@ def main():
                     st.subheader("📥 Export Lineups")
                     num_export = st.slider("Number of lineups to export", 1, min(len(stacked_lineups), 150), min(20, len(stacked_lineups)))
                     st.caption(f"Export top {num_export} lineups for FanDuel upload")
-                    
-                    # Entry ID Configuration (Fallback)
-                    with st.expander("🎯 Contest Entry Settings"):
-                        st.markdown("**Configure contest details for CSV export:**")
-                        
-                        col_a, col_b = st.columns(2)
-                        with col_a:
-                            fallback_base_entry_id = st.number_input(
-                                "Base Entry ID ", 
-                                value=3584175604, 
-                                help="Starting entry ID (will increment for each lineup)",
-                                key="fallback_entry_id"
-                            )
-                            fallback_contest_id = st.text_input(
-                                "Contest ID ", 
-                                value="121309-276916553",
-                                help="Contest identifier from DFS platform",
-                                key="fallback_contest_id"
-                            )
-                        with col_b:
-                            fallback_contest_name = st.text_input(
-                                "Contest Name ", 
-                                value="$60K Sun NFL Hail Mary",
-                                help="Name of the contest",
-                                key="fallback_contest_name"
-                            )
-                            fallback_entry_fee = st.text_input(
-                                "Entry Fee ", 
-                                value="0.25",
-                                help="Fee per entry (e.g., 0.25, 5.00, 100)",
-                                key="fallback_entry_fee"
-                            )
                 
                 with col2:
                     if st.button("📋 Prepare CSV Download", type="primary"):
@@ -1725,15 +1868,13 @@ def main():
                             # Add completed lineup
                             csv_data.append(row)
                         
-                        # Create CSV string with contest entry columns
-                        csv_lines = ['entry_id,contest_id,contest_name,entry_fee,QB,RB,RB,WR,WR,WR,TE,FLEX,DEF']
+                        # Create simple FanDuel CSV format with commas
+                        csv_lines = ['QB,RB,RB,WR,WR,WR,TE,FLEX,DEF']
                         
-                        # Use user-configured entry settings
-                        for i, row in enumerate(csv_data):
-                            entry_id = fallback_base_entry_id + i
+                        # Add lineup data using commas
+                        for row in csv_data:
                             lineup_data = ','.join(map(str, row))
-                            csv_line = f"{entry_id},{fallback_contest_id},{fallback_contest_name},{fallback_entry_fee},{lineup_data}"
-                            csv_lines.append(csv_line)
+                            csv_lines.append(lineup_data)
                         
                         csv_string = '\n'.join(csv_lines)
                         
