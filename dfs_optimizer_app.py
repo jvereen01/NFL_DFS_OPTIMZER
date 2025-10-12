@@ -129,8 +129,8 @@ def load_player_data():
     # Standard loading (original code)
     import os
     
-    # ONLY use the October 12th CSV file
-    target_file = 'FanDuel-NFL-2025 EDT-10 EDT-12 EDT-121309-players-list (1).csv'
+    # ONLY use the October 12th CSV file - Updated to version (2)
+    target_file = 'FanDuel-NFL-2025 EDT-10 EDT-12 EDT-121309-players-list (2).csv'
     
     current_dir = os.getcwd()
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -158,8 +158,8 @@ def load_player_data():
         df = pd.read_csv(csv_path)
         df.columns = [col.strip() for col in df.columns]
         
-        # Apply filters
-        injury_exclusions = ['Q', 'IR', 'O', 'D']
+        # Apply filters - Include Q (Questionable) players, exclude only serious injuries
+        injury_exclusions = ['IR', 'O', 'D']  # Removed 'Q' to include Questionable players
         df = df[~df['Injury Indicator'].isin(injury_exclusions)]
         
         # Salary filters
