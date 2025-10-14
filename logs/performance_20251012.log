@@ -1,0 +1,9 @@
+2025-10-12 09:47:10,866 | PERF | load_player_data | Duration: 0.106s
+2025-10-12 09:52:53,211 | PERF | load_player_data | Duration: 0.041s
+2025-10-12 15:09:53,556 | PERF | load_player_data | Duration: 0.097s
+2025-10-12 15:19:13,040 | PERF | load_player_data | Duration: 0.067s
+2025-10-12 15:22:44,399 | PERF | load_player_data | Duration: 0.044s
+2025-10-12 15:50:58,444 | PERF | load_player_data | Duration: 0.043s
+2025-10-12 15:59:12,015 | PERF | load_player_data | Duration: 0.061s
+2025-10-12 16:59:39,237 | PERF | load_player_data | Duration: 0.075s
+2025-10-12 17:18:59,742 | PERF | load_player_data | Duration: 0.051s

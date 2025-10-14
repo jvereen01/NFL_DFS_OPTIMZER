@@ -1,0 +1,126 @@
+2025-10-14 09:57:42,577 | INFO | info:124 | Logging system initialized
+2025-10-14 09:57:42,603 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 09:57:42,635 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 09:57:42,750 | INFO | info:124 | Loaded 168 players with enhanced features
+2025-10-14 09:57:42,751 | INFO | info:124 | Completed operation: load_player_data in 0.116s
+2025-10-14 10:01:11,819 | INFO | info:124 | Logging system initialized
+2025-10-14 10:01:11,821 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:03:25,337 | INFO | info:124 | Logging system initialized
+2025-10-14 10:03:25,339 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:04:49,512 | INFO | info:124 | Logging system initialized
+2025-10-14 10:04:49,514 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:04:49,538 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:04:49,644 | INFO | info:124 | Loaded 168 players with enhanced features
+2025-10-14 10:04:49,645 | INFO | info:124 | Completed operation: load_player_data in 0.106s
+2025-10-14 10:10:49,344 | INFO | info:124 | Logging system initialized
+2025-10-14 10:10:49,346 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:10:49,378 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:10:49,473 | INFO | info:124 | Loaded 168 players with enhanced features
+2025-10-14 10:10:49,473 | INFO | info:124 | Completed operation: load_player_data in 0.095s
+2025-10-14 10:13:09,502 | INFO | info:124 | Logging system initialized
+2025-10-14 10:13:09,504 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:13:09,539 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:13:09,621 | INFO | info:124 | Loaded 168 players with enhanced features
+2025-10-14 10:13:09,621 | INFO | info:124 | Completed operation: load_player_data in 0.082s
+2025-10-14 10:13:44,695 | INFO | info:124 | Logging system initialized
+2025-10-14 10:13:44,698 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:14:15,939 | INFO | info:124 | Logging system initialized
+2025-10-14 10:14:15,940 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:14:15,974 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:14:16,029 | INFO | info:124 | Loaded 168 players with enhanced features
+2025-10-14 10:14:16,029 | INFO | info:124 | Completed operation: load_player_data in 0.056s
+2025-10-14 10:14:27,197 | INFO | info:124 | Logging system initialized
+2025-10-14 10:14:27,199 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:14:27,230 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:14:27,293 | INFO | info:124 | Loaded 168 players with enhanced features
+2025-10-14 10:14:27,294 | INFO | info:124 | Completed operation: load_player_data in 0.064s
+2025-10-14 10:14:37,123 | INFO | info:124 | Logging system initialized
+2025-10-14 10:14:37,124 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:14:37,154 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:14:37,228 | INFO | info:124 | Loaded 168 players with enhanced features
+2025-10-14 10:14:37,228 | INFO | info:124 | Completed operation: load_player_data in 0.074s
+2025-10-14 10:14:52,972 | INFO | info:124 | Logging system initialized
+2025-10-14 10:14:52,973 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:14:53,003 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:14:53,068 | INFO | info:124 | Loaded 168 players with enhanced features
+2025-10-14 10:14:53,068 | INFO | info:124 | Completed operation: load_player_data in 0.065s
+2025-10-14 10:16:50,042 | INFO | info:124 | Logging system initialized
+2025-10-14 10:16:50,044 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:16:50,080 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:16:50,203 | INFO | info:124 | Loaded 168 players with enhanced features
+2025-10-14 10:16:50,204 | INFO | info:124 | Completed operation: load_player_data in 0.124s
+2025-10-14 10:20:31,162 | INFO | info:124 | Logging system initialized
+2025-10-14 10:20:31,165 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:20:31,203 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:20:31,305 | INFO | info:124 | Loaded 172 players with enhanced features
+2025-10-14 10:20:31,305 | INFO | info:124 | Completed operation: load_player_data in 0.103s
+2025-10-14 10:20:45,762 | INFO | info:124 | Logging system initialized
+2025-10-14 10:20:45,769 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:20:45,810 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:20:45,907 | INFO | info:124 | Loaded 172 players with enhanced features
+2025-10-14 10:20:45,908 | INFO | info:124 | Completed operation: load_player_data in 0.098s
+2025-10-14 10:24:04,684 | INFO | info:124 | Logging system initialized
+2025-10-14 10:24:04,689 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:24:04,701 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:24:04,760 | INFO | info:124 | Loaded 172 players with enhanced features
+2025-10-14 10:24:04,760 | INFO | info:124 | Completed operation: load_player_data in 0.059s
+2025-10-14 10:24:16,932 | INFO | info:124 | Logging system initialized
+2025-10-14 10:24:16,932 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:24:16,954 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:24:17,009 | INFO | info:124 | Loaded 172 players with enhanced features
+2025-10-14 10:24:17,010 | INFO | info:124 | Completed operation: load_player_data in 0.056s
+2025-10-14 10:25:44,788 | INFO | info:124 | Logging system initialized
+2025-10-14 10:25:44,789 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:25:44,803 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:25:44,846 | INFO | info:124 | Loaded 172 players with enhanced features
+2025-10-14 10:25:44,847 | INFO | info:124 | Completed operation: load_player_data in 0.044s
+2025-10-14 10:31:39,290 | INFO | info:124 | Logging system initialized
+2025-10-14 10:31:39,291 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:31:39,302 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:31:39,351 | INFO | info:124 | Loaded 172 players with enhanced features
+2025-10-14 10:31:39,352 | INFO | info:124 | Completed operation: load_player_data in 0.050s
+2025-10-14 10:35:49,507 | INFO | info:124 | Logging system initialized
+2025-10-14 10:35:49,510 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:35:49,531 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:35:49,594 | INFO | info:124 | Loaded 172 players with enhanced features
+2025-10-14 10:35:49,595 | INFO | info:124 | Completed operation: load_player_data in 0.064s
+2025-10-14 10:37:36,002 | INFO | info:124 | Logging system initialized
+2025-10-14 10:37:36,003 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:37:36,020 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:37:36,076 | INFO | info:124 | Loaded 172 players with enhanced features
+2025-10-14 10:37:36,077 | INFO | info:124 | Completed operation: load_player_data in 0.057s
+2025-10-14 10:38:37,900 | INFO | info:124 | Logging system initialized
+2025-10-14 10:38:37,904 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:38:37,928 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:38:37,970 | INFO | info:124 | Loaded 172 players with enhanced features
+2025-10-14 10:38:37,971 | INFO | info:124 | Completed operation: load_player_data in 0.044s
+2025-10-14 10:38:51,048 | INFO | info:124 | Logging system initialized
+2025-10-14 10:38:51,052 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:38:51,130 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:38:51,195 | INFO | info:124 | Loaded 172 players with enhanced features
+2025-10-14 10:38:51,196 | INFO | info:124 | Completed operation: load_player_data in 0.066s
+2025-10-14 10:38:56,596 | INFO | info:124 | Logging system initialized
+2025-10-14 10:38:56,598 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:38:56,624 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:38:56,669 | INFO | info:124 | Loaded 172 players with enhanced features
+2025-10-14 10:38:56,669 | INFO | info:124 | Completed operation: load_player_data in 0.045s
+2025-10-14 10:45:05,738 | INFO | info:124 | Logging system initialized
+2025-10-14 10:45:05,739 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:45:05,751 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:45:05,796 | INFO | info:124 | Loaded 172 players with enhanced features
+2025-10-14 10:45:05,797 | INFO | info:124 | Completed operation: load_player_data in 0.046s
+2025-10-14 10:45:18,571 | INFO | info:124 | Logging system initialized
+2025-10-14 10:45:18,573 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:45:18,599 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:45:18,648 | INFO | info:124 | Loaded 172 players with enhanced features
+2025-10-14 10:45:18,648 | INFO | info:124 | Completed operation: load_player_data in 0.049s
+2025-10-14 10:45:39,885 | INFO | info:124 | Logging system initialized
+2025-10-14 10:45:39,886 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:45:39,912 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:45:39,972 | INFO | info:124 | Loaded 172 players with enhanced features
+2025-10-14 10:45:39,973 | INFO | info:124 | Completed operation: load_player_data in 0.061s
+2025-10-14 10:45:50,891 | INFO | info:124 | Logging system initialized
+2025-10-14 10:45:50,894 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-14 10:45:50,950 | INFO | info:124 | Starting operation: load_player_data
+2025-10-14 10:45:51,004 | INFO | info:124 | Loaded 172 players with enhanced features
+2025-10-14 10:45:51,005 | INFO | info:124 | Completed operation: load_player_data in 0.055s

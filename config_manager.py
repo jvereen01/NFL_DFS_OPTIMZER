@@ -38,7 +38,7 @@ class OptimizationSettings:
 @dataclass  
 class DataSettings:
     """Data source and file settings"""
-    required_csv_file: str = "FanDuel-NFL-2025 EDT-10 EDT-12 EDT-121309-players-list (1).csv"
+    required_csv_file: str = "FanDuel-NFL-2025 EDT-10 EDT-19 EDT-121559-players-list.csv"
     excel_file: str = "NFL.xlsx"
     auto_validate_data: bool = True
     cache_duration_hours: int = 1

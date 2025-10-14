@@ -54,7 +54,7 @@ def cached_load_player_data():
     """Cached version of load_player_data with enhanced error handling"""
     import os
     
-    target_file = 'FanDuel-NFL-2025 EDT-10 EDT-12 EDT-121309-players-list (1).csv'
+    target_file = 'FanDuel-NFL-2025 EDT-10 EDT-19 EDT-121559-players-list.csv'
     
     current_dir = os.getcwd()
     script_dir = os.path.dirname(os.path.abspath(__file__))
