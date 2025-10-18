@@ -247,7 +247,7 @@ class AdvancedAnalytics:
         
         # 3. Position Distribution Pie Chart
         if not ownership_df.empty:
-            position_usage = ownership_df.groupby('Position')['Our_Usage_%'].mean().reset_index()
+            position_usage = ownership_df.groupby('Position', observed=True)['Our_Usage_%'].mean().reset_index()
             fig = px.pie(
                 position_usage,
                 values='Our_Usage_%',

@@ -99,10 +99,105 @@ if 'lineups_generated' not in st.session_state:
 if 'stacked_lineups' not in st.session_state:
     st.session_state.stacked_lineups = []
 
-# @st.cache_data(ttl=60)  # Cache disabled to force fresh data loading
-def load_player_data(_cache_key=None):
+@st.cache_data
+def load_player_data():
     """Load and process player data with enhanced validation and optimization"""
-    if ENHANCED_FEATURES_AVAILABLE:
+    
+    # DIRECT CSV LOADING - NO CACHING, NO FALLBACKS
+    import pandas as pd
+    import os
+    
+    # Direct path to the exact file we want
+    csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-19 EDT-121559-players-list (2).csv"
+    
+    if not os.path.exists(csv_file):
+        st.error(f"CSV file not found: {csv_file}")
+        return pd.DataFrame()
+    
+    try:
+        # Load the CSV directly - no caching, no complexity
+        df = pd.read_csv(csv_file)
+        df.columns = [col.strip() for col in df.columns]
+        
+        # Apply salary filters by position
+        if 'Salary' in df.columns and 'Position' in df.columns:
+            # Remove players with missing salary
+            df = df[df['Salary'].notna() & (df['Salary'] > 0)]
+            
+            # Position-specific salary filters
+            rb_filter = (df['Position'] == 'RB') & (df['Salary'] >= 5000)
+            wr_filter = (df['Position'] == 'WR') & (df['Salary'] >= 4600)
+            te_filter = (df['Position'] == 'TE') & (df['Salary'] >= 4200)
+            qb_filter = (df['Position'] == 'QB') & (df['Salary'] >= 6000)
+            def_filter = (df['Position'] == 'D') & (df['Salary'] >= 3000) & (df['Salary'] <= 5000)
+            
+            # Combine all position filters
+            df = df[rb_filter | wr_filter | te_filter | qb_filter | def_filter]
+        
+        # Remove injury exclusions but keep 'Q' (Questionable) players
+        if 'Injury Indicator' in df.columns:
+            df = df[~df['Injury Indicator'].isin(['IR', 'O', 'D'])]  # Removed 'Q' from exclusions
+        
+        # Add ceiling and floor projections
+        df = calculate_ceiling_floor_projections(df)
+        
+        return df
+        
+    except Exception as e:
+        st.error(f"Error loading CSV: {str(e)}")
+        return pd.DataFrame()
+
+def calculate_ceiling_floor_projections(df):
+    """Calculate ceiling and floor projections for each player"""
+    
+    # Position-specific variance multipliers for ceiling calculation
+    position_variance = {
+        'QB': 1.25,    # QBs can boom big with multiple TDs
+        'RB': 1.35,    # RBs have high ceiling with goal line work  
+        'WR': 1.30,    # WRs can explode in shootouts
+        'TE': 1.25,    # TEs more consistent but can boom
+        'D': 1.20      # Defenses have some variance
+    }
+    
+    # Additional ceiling bonuses based on salary (higher salary = more ceiling)
+    df['Salary_Tier'] = pd.cut(df['Salary'], 
+                               bins=[0, 5000, 6500, 8000, float('inf')], 
+                               labels=['Budget', 'Mid', 'Premium', 'Elite'])
+    
+    salary_bonus = {
+        'Budget': 1.0,    # No bonus for cheap players
+        'Mid': 1.1,       # 10% bonus for mid-tier
+        'Premium': 1.2,   # 20% bonus for premium  
+        'Elite': 1.3      # 30% bonus for elite players
+    }
+    
+    # Calculate ceiling and floor
+    df['Base_Projection'] = df['FPPG']
+    
+    # Ceiling = Base * Position_Variance * Salary_Bonus  
+    df['Ceiling'] = df.apply(lambda row: 
+        row['FPPG'] * 
+        position_variance.get(row['Position'], 1.2) * 
+        salary_bonus.get(row['Salary_Tier'], 1.0), axis=1
+    )
+    
+    # Floor = Base * 0.75 (more conservative)
+    df['Floor'] = df['FPPG'] * 0.75
+    
+    # Round projections
+    df['Ceiling'] = df['Ceiling'].round(1)
+    df['Floor'] = df['Floor'].round(1)
+    
+    return df
+    
+    # OLD COMPLEX LOADING (commented out)
+    if False and ENHANCED_FEATURES_AVAILABLE:
+        # Clear cache to force fresh load
+        try:
+            cached_load_player_data.clear()
+        except:
+            pass
+            
         # Use enhanced loading with validation and optimization
         try:
             with log_operation("load_player_data"):
@@ -129,8 +224,11 @@ def load_player_data(_cache_key=None):
     # Standard loading (original code)
     import os
     
-    # ONLY use the October 19th CSV file - Updated to latest
-    target_file = 'FanDuel-NFL-2025 EDT-10 EDT-19 EDT-121559-players-list.csv'
+    # ONLY use the October 19th CSV file
+    target_file = 'FanDuel-NFL-2025 EDT-10 EDT-19 EDT-121559-players-list (2).csv'
+    
+    # Debug: Show what we're looking for
+    st.info(f"🔍 **Looking for CSV file:** {target_file}")
     
     current_dir = os.getcwd()
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -140,6 +238,12 @@ def load_player_data(_cache_key=None):
         os.path.join(script_dir, target_file),
         target_file
     ]
+    
+    # Debug: Show all possible paths
+    st.write("**Checking paths:**")
+    for i, path in enumerate(possible_paths):
+        exists = os.path.exists(path)
+        st.write(f"{i+1}. `{path}` - {'✅ EXISTS' if exists else '❌ NOT FOUND'}")
     
     csv_path = None
     for path in possible_paths:
@@ -155,20 +259,81 @@ def load_player_data(_cache_key=None):
     
     try:
         # Load player CSV
-        st.info(f"🔍 Loading CSV file: {os.path.basename(csv_path)}")  # Debug info
+        st.info(f"📂 **Loading CSV file:** {os.path.basename(csv_path)}")
         df = pd.read_csv(csv_path)
         df.columns = [col.strip() for col in df.columns]
         
-        # Apply filters - Include Q (Questionable) players, exclude only serious injuries
-        injury_exclusions = ['IR', 'O', 'D']  # Removed 'Q' to include Questionable players
+        # Show file details and timestamp
+        import datetime
+        file_mod_time = datetime.datetime.fromtimestamp(os.path.getmtime(csv_path))
+        st.success(f"✅ **Loaded {len(df)} players** from {os.path.basename(csv_path)} (Modified: {file_mod_time.strftime('%m/%d/%Y %H:%M')})")
+        
+        # Debug: Check if CeeDee Lamb is in the dataset
+        lamb_check = df[df['Nickname'].str.contains('Lamb', case=False, na=False)]
+        if len(lamb_check) > 0:
+            st.info(f"🏈 **CeeDee Lamb found:** {lamb_check['Nickname'].iloc[0]} - ${lamb_check['Salary'].iloc[0]:,}")
+        else:
+            st.warning("⚠️ **CeeDee Lamb not found in dataset** - checking name variations...")
+            # Check for other name formats
+            cd_check = df[df['Nickname'].str.contains('CeeDee|CD|Ceedee', case=False, na=False)]
+            if len(cd_check) > 0:
+                st.info(f"🏈 **Found similar:** {', '.join(cd_check['Nickname'].tolist())}")
+            else:
+                st.error("❌ **No CeeDee Lamb found** - file may not be updated")
+                # Show a few sample player names for debugging
+                sample_players = df['Nickname'].head(10).tolist()
+                st.write(f"**Sample players in file:** {', '.join(sample_players)}")
+        
+        # Debug: Check CeeDee Lamb BEFORE filtering
+        lamb_before = df[df['Nickname'].str.contains('Lamb', case=False, na=False)]
+        if len(lamb_before) > 0:
+            injury_status = lamb_before['Injury Indicator'].iloc[0]
+            st.write(f"🔍 **CeeDee Lamb before filtering:** Injury Status = '{injury_status}'")
+        
+        # Apply filters
+        injury_exclusions = ['IR', 'O', 'D']  # Include Q (Questionable) players
+        st.write(f"🚫 **Excluding injury statuses:** {injury_exclusions}")
         df = df[~df['Injury Indicator'].isin(injury_exclusions)]
         
+        # Debug: Check CeeDee Lamb AFTER injury filtering
+        lamb_after_injury = df[df['Nickname'].str.contains('Lamb', case=False, na=False)]
+        if len(lamb_after_injury) > 0:
+            st.write(f"✅ **CeeDee Lamb after injury filter:** Still in dataset")
+        else:
+            st.write(f"❌ **CeeDee Lamb after injury filter:** REMOVED from dataset")
+        
         # Salary filters
+        st.write(f"💰 **Applying salary filters:** Defense $3,000-$5,000, Others $5,000+")
+        
+        # Debug: Check CeeDee Lamb BEFORE salary filtering
+        lamb_before_salary = df[df['Nickname'].str.contains('Lamb', case=False, na=False)]
+        if len(lamb_before_salary) > 0:
+            salary = lamb_before_salary['Salary'].iloc[0]
+            position = lamb_before_salary['Position'].iloc[0]
+            st.write(f"🔍 **CeeDee Lamb before salary filter:** {position}, ${salary:,}")
+        
         defense_mask = (df['Position'] == 'D') & (df['Salary'] >= 3000) & (df['Salary'] <= 5000)
         other_positions_mask = (df['Position'] != 'D') & (df['Salary'] >= 5000)
         df = df[defense_mask | other_positions_mask]
         
-        st.success(f"✅ Loaded {len(df)} players from {os.path.basename(csv_path)}")  # Debug info
+        # Debug: Check CeeDee Lamb AFTER salary filtering
+        lamb_after_salary = df[df['Nickname'].str.contains('Lamb', case=False, na=False)]
+        if len(lamb_after_salary) > 0:
+            st.write(f"✅ **CeeDee Lamb after salary filter:** Still in dataset")
+        else:
+            st.write(f"❌ **CeeDee Lamb after salary filter:** REMOVED from dataset (salary too low?)")
+        
+        # Final comprehensive check
+        st.write("---")
+        st.write(f"📊 **Final Dataset Summary:**")
+        st.write(f"- Total players: {len(df)}")
+        st.write(f"- Salary range: ${df['Salary'].min():,} - ${df['Salary'].max():,}")
+        
+        # Show all WRs with "C" names to see if CeeDee is there under different name
+        c_wrs = df[(df['Position'] == 'WR') & (df['Nickname'].str.startswith('C', na=False))]['Nickname'].tolist()
+        if c_wrs:
+            st.write(f"**WRs starting with 'C':** {', '.join(sorted(c_wrs))}")
+        
         return df
     except FileNotFoundError:
         st.error(f"File was found but couldn't be read: {csv_path}")
@@ -177,7 +342,7 @@ def load_player_data(_cache_key=None):
         st.error(f"Error loading player data from {csv_path}: {str(e)}")
         return None
 
-# @st.cache_data  # Cache disabled to force fresh data loading
+@st.cache_data
 def load_defensive_data():
     """Load and process defensive matchup data with enhanced caching"""
     if ENHANCED_FEATURES_AVAILABLE:
@@ -220,16 +385,13 @@ def load_defensive_data():
         
         return pass_defense, rush_defense
     except FileNotFoundError:
-        st.info("NFL.xlsx file not found. Using salary-based analysis instead.")
-        return None, None
-    except PermissionError:
-        st.info("NFL.xlsx file is currently open in another program. Close Excel to enable advanced features, or continue with basic analysis.")
+        st.error("NFL.xlsx file not found. Defensive targeting will be disabled.")
         return None, None
     except Exception as e:
-        st.info(f"Could not load NFL.xlsx data: {str(e)}. Using basic analysis instead.")
+        st.warning(f"Could not load defensive data from NFL.xlsx: {str(e)}. Using basic matchup analysis.")
         return None, None
 
-# @st.cache_data  # Cache disabled to force fresh data loading
+@st.cache_data
 def load_fantasy_data():
     """Load fantasy performance data with enhanced caching"""
     if ENHANCED_FEATURES_AVAILABLE:
@@ -257,13 +419,7 @@ def load_fantasy_data():
         fantasy_clean = fantasy_data.dropna(subset=['FDPt']).copy()
         return fantasy_clean
     except FileNotFoundError:
-        st.info("NFL.xlsx file not found. Performance analysis will use basic projections.")
-        return None
-    except PermissionError:
-        st.info("NFL.xlsx file is currently open in another program. Close Excel to enable performance analysis, or continue with basic projections.")
-        return None
-    except Exception as e:
-        st.info(f"Could not load fantasy data: {str(e)}. Using basic projections instead.")
+        st.error("Fantasy performance data not found. Performance boosts will be disabled.")
         return None
 
 def apply_matchup_analysis(df, pass_defense, rush_defense):
@@ -477,6 +633,10 @@ def create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_p
         pos_players = df[df['Position'] == pos].copy()
         original_count = len(pos_players)
         
+        # Apply ceiling filter for RBs, WRs, and TEs (must have ceiling > 7 points)
+        if pos in ['RB', 'WR', 'TE'] and 'Ceiling' in pos_players.columns:
+            pos_players = pos_players[pos_players['Ceiling'] > 7.0]
+        
         # Apply TE salary filter (reduced minimum to $4,000 for more options)
         if pos == 'TE':
             pos_players = pos_players[pos_players['Salary'] >= 4000]
@@ -551,7 +711,7 @@ def get_top_matchups(df, pass_defense, rush_defense, num_per_position=6):
             if len(pos_players) > 0:
                 # For QB and RB, filter to show only highest salaried player per team
                 if pos in ['QB', 'RB']:
-                    pos_players = pos_players.loc[pos_players.groupby('Team')['Salary'].idxmax()]
+                    pos_players = pos_players.loc[pos_players.groupby('Team', observed=True)['Salary'].idxmax()]
                 
                 # Sort by matchup quality and FPPG for display
                 pos_players['sort_key'] = pos_players['Matchup_Quality'].map({
@@ -597,10 +757,18 @@ def get_top_matchups(df, pass_defense, rush_defense, num_per_position=6):
         st.warning(f"Could not generate current week matchups: {str(e)}")
         return {}
 
-def generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, fantasy_data=None, player_selections=None, force_mode="Soft Force (Boost Only)", forced_player_boost=0.0):
-    """Generate optimized lineups with optional player selection constraints"""
+def generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, fantasy_data=None, player_selections=None, force_mode="Soft Force (Boost Only)", forced_player_boost=0.0, strategy_type="Custom", tournament_params=None):
+    """Generate optimized lineups with optional player selection constraints and tournament optimization"""
     stacked_lineups = []
     salary_cap = 60000
+    
+    # Extract tournament parameters
+    if tournament_params is None:
+        tournament_params = {}
+    contrarian_boost = tournament_params.get('contrarian_boost', 0.05)
+    correlation_preference = tournament_params.get('correlation_preference', 0.3)
+    salary_variance_target = tournament_params.get('salary_variance_target', 0.2)
+    leverage_focus = tournament_params.get('leverage_focus', 0.1)
     
     # Pre-validate constraints and adjust simulation count if needed
     original_simulations = num_simulations
@@ -618,6 +786,48 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
         elif total_forced > 5:
             num_simulations = min(num_simulations, 5000)
             st.info(f"ℹ️ Reduced simulations to {num_simulations:,} due to {total_forced} forced players for faster generation")
+    
+    # Apply strategy-specific adjustments to weighted pools
+    strategy_pools = {}
+    for pos in weighted_pools:
+        strategy_pools[pos] = weighted_pools[pos].copy()
+        
+        if strategy_type == "Single Entry":
+            # Single Entry Strategy: Favor consistency and lower ownership
+            if 'FPPG' in strategy_pools[pos].columns and 'Salary' in strategy_pools[pos].columns:
+                # Boost floor-based value (FPPG/Salary ratio)
+                strategy_pools[pos]['Floor_Value'] = strategy_pools[pos]['FPPG'] / (strategy_pools[pos]['Salary'] / 1000)
+                # Penalize extremely cheap players (often boom/bust)
+                min_salary_threshold = {'QB': 7000, 'RB': 5000, 'WR': 5000, 'TE': 4000, 'D': 4000}
+                strategy_pools[pos].loc[strategy_pools[pos]['Salary'] < min_salary_threshold.get(pos, 4000), 'Selection_Weight'] *= 0.7
+                # Boost mid-range salaries (typically more consistent)
+                mid_salary_threshold = {'QB': 8500, 'RB': 7000, 'WR': 7000, 'TE': 5500, 'D': 5000}
+                strategy_pools[pos].loc[
+                    (strategy_pools[pos]['Salary'] >= min_salary_threshold.get(pos, 4000)) & 
+                    (strategy_pools[pos]['Salary'] <= mid_salary_threshold.get(pos, 7000)), 
+                    'Selection_Weight'
+                ] *= 1.3
+                
+        elif strategy_type == "Tournament":
+            # Simplified Tournament Strategy: Basic contrarian focus
+            if 'FPPG' in strategy_pools[pos].columns and 'Salary' in strategy_pools[pos].columns:
+                # Simple salary tier adjustments (less complex)
+                if pos == 'QB':
+                    # Boost punt QBs and elite QBs slightly
+                    strategy_pools[pos].loc[strategy_pools[pos]['Salary'] < 7000, 'Selection_Weight'] *= 1.2
+                    strategy_pools[pos].loc[strategy_pools[pos]['Salary'] >= 9000, 'Selection_Weight'] *= 1.1
+                
+                elif pos in ['RB', 'WR']:
+                    # Boost punt plays and studs slightly
+                    strategy_pools[pos].loc[strategy_pools[pos]['Salary'] < 5500, 'Selection_Weight'] *= 1.3
+                    strategy_pools[pos].loc[strategy_pools[pos]['Salary'] >= 8500, 'Selection_Weight'] *= 1.1
+                
+                elif pos == 'TE':
+                    # Boost punt TEs
+                    strategy_pools[pos].loc[strategy_pools[pos]['Salary'] < 4500, 'Selection_Weight'] *= 1.2
+    
+    # Use strategy-adjusted pools for lineup generation
+    weighted_pools = strategy_pools
     
     # Apply player selection filters if enabled
     if player_selections:
@@ -649,6 +859,17 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
     successful_lineups = 0
     total_attempts = 0
     
+    # Debug tracking
+    failure_reasons = {
+        'salary_too_high': 0,
+        'team_limit_exceeded': 0,
+        'rb_same_team': 0,
+        'insufficient_rbs': 0,
+        'insufficient_players': 0,
+        'salary_variance_check': 0,
+        'other_errors': 0
+    }
+    
     for simulation in range(num_simulations):
         attempts = 0
         max_attempts = 50 if player_selections else 20  # More attempts when forcing players
@@ -665,8 +886,13 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
             try:
                 lineup_players = []
                 
-                # Determine if this will be a stacked lineup early
-                will_attempt_stack = random.random() < stack_probability
+                # Determine if this will be a stacked lineup early (enhanced for tournaments)
+                adjusted_stack_prob = stack_probability
+                if strategy_type == "Tournament" and correlation_preference > 0.5:
+                    # Increase stacking probability for tournament correlation focus
+                    adjusted_stack_prob = min(0.95, stack_probability * (1 + correlation_preference * 0.3))
+                
+                will_attempt_stack = random.random() < adjusted_stack_prob
                 
                 # Get top rushing QBs for non-stacked lineups
                 top_rushing_qbs = get_top_rushing_qbs(fantasy_data) if fantasy_data is not None else set()
@@ -743,9 +969,20 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                         available_rbs = available_rbs[~available_rbs['Team'].isin(used_rb_teams)]
                     
                     if len(available_rbs) >= remaining_rb_spots:
-                        additional_rbs = available_rbs.sample(remaining_rb_spots, weights=available_rbs['Selection_Weight'])
+                        # CEILING-PRIORITIZED RB SELECTION
+                        # Boost Selection_Weight by ceiling potential for RBs
+                        if 'Ceiling' in available_rbs.columns and 'Selection_Weight' in available_rbs.columns:
+                            ceiling_boost = available_rbs['Ceiling'] / available_rbs['FPPG']  # Ceiling multiplier
+                            available_rbs['Ceiling_Boosted_Weight'] = available_rbs['Selection_Weight'] * ceiling_boost
+                            additional_rbs = available_rbs.sample(remaining_rb_spots, weights=available_rbs['Ceiling_Boosted_Weight'])
+                        elif 'Selection_Weight' in available_rbs.columns:
+                            additional_rbs = available_rbs.sample(remaining_rb_spots, weights=available_rbs['Selection_Weight'])
+                        else:
+                            # Fallback to equal probability if no Selection_Weight
+                            additional_rbs = available_rbs.sample(remaining_rb_spots)
                         rb = pd.concat([selected_rbs, additional_rbs])
                     else:
+                        failure_reasons['insufficient_rbs'] += 1
                         continue  # Skip this lineup if can't find RBs from different teams
                 else:
                     rb = selected_rbs
@@ -754,6 +991,7 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                 if len(rb) == 2:
                     rb_teams = rb['Team'].tolist()
                     if rb_teams[0] == rb_teams[1]:
+                        failure_reasons['rb_same_team'] += 1
                         continue  # Skip this lineup if RBs are from same team
                 
                 lineup_players.append(rb)
@@ -778,14 +1016,15 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                     if len(must_te) > 0:
                         selected_te = must_te
                 
-                # Fill remaining WR/TE spots with stacking logic
+                # Enhanced tournament stacking logic
                 remaining_wr_spots = 3 - len(selected_wrs)
                 need_te = len(selected_te) == 0
                 
                 if remaining_wr_spots > 0 or need_te:
-                    # Use the pre-determined stacking decision
+                    # Enhanced stacking decision for tournaments
                     attempt_stack = will_attempt_stack and remaining_wr_spots > 0
                     
+                    # Simplified stacking (back to original working logic)
                     if attempt_stack:
                         same_team_wrs = wr_pool[wr_pool['Team'] == qb_team]
                         # Remove already selected WRs
@@ -862,44 +1101,106 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                 flex_pool = flex_players[~flex_players['Nickname'].isin(used_names)]
                 
                 if len(flex_pool) == 0:
+                    failure_reasons['insufficient_players'] += 1
                     continue
                 
-                flex = flex_pool.sample(1)
+                # CEILING-PRIORITIZED FLEX SELECTION (balanced across all positions)
+                if 'Ceiling' in flex_pool.columns and 'Selection_Weight' in flex_pool.columns:
+                    flex_weights = flex_pool['Selection_Weight'].copy()
+                    
+                    # Apply ceiling boost to all positions
+                    ceiling_boost = flex_pool['Ceiling'] / flex_pool['FPPG']
+                    flex_weights *= ceiling_boost
+                    
+                    # Small additional boost for RBs (only 10% to maintain balance)
+                    rb_mask = flex_pool['Position'] == 'RB'
+                    flex_weights.loc[rb_mask] *= 1.10
+                    
+                    flex = flex_pool.sample(1, weights=flex_weights)
+                elif 'Selection_Weight' in flex_pool.columns:
+                    flex = flex_pool.sample(1, weights=flex_pool['Selection_Weight'])
+                else:
+                    # Fallback to equal probability
+                    flex = flex_pool.sample(1)
                 lineup_players.append(flex)
                 
                 # Build final lineup
                 lineup = pd.concat(lineup_players).reset_index(drop=True)
                 
-                # Validate lineup with early salary check
+                # Enhanced tournament lineup validation
                 total_salary = lineup['Salary'].sum()
                 if total_salary > salary_cap:
+                    failure_reasons['salary_too_high'] += 1
                     continue
                 
                 # Check 4-player per team limit (FanDuel rule)
                 team_counts = lineup['Team'].value_counts()
                 if team_counts.max() > 4:
+                    failure_reasons['team_limit_exceeded'] += 1
                     continue  # Skip lineups with more than 4 players from same team
+                
+                # Tournament-specific salary distribution validation
+                if strategy_type == "Tournament":
+                    # Advanced salary distribution validation for tournaments
+                    high_salary_players = len(lineup[lineup['Salary'] >= 8000])
+                    low_salary_players = len(lineup[lineup['Salary'] <= 5500])
+                    mid_salary_players = len(lineup[(lineup['Salary'] > 5500) & (lineup['Salary'] < 8000)])
+                    
+                    # Calculate salary distribution score
+                    salary_variance = lineup['Salary'].var()
+                    normalized_variance = min(1.0, salary_variance / 5000000)  # Normalize to 0-1
+                    
+                    # Simplified salary variance (much less restrictive)
+                    # Only apply very basic checks to avoid generation failures
+                    if salary_variance_target > 0.9:  # Only in extreme cases
+                        if high_salary_players == 0 and low_salary_players == 0:
+                            failure_reasons['salary_variance_check'] += 1
+                            continue  # Only skip if completely flat
+                    
+                    # Note: Tournament leverage scoring moved after total_points calculation
                 
                 # Validate lineup
                 if (len(lineup) == 9 and 
                     len(lineup['Nickname'].unique()) == 9):
                     
+                    # Calculate base points first
                     total_points = lineup['Adjusted_FPPG'].sum()
                     
-                    # Check stacking
+                    # Enhanced stacking analysis
                     qb_team = lineup[lineup['Position'] == 'QB']['Team'].iloc[0]
                     wr_teams = lineup[lineup['Position'] == 'WR']['Team'].tolist()
                     te_teams = lineup[lineup['Position'] == 'TE']['Team'].tolist()
+                    rb_teams = lineup[lineup['Position'] == 'RB']['Team'].tolist()
                     
                     stacked_wrs_count = sum(1 for team in wr_teams if team == qb_team)
                     stacked_tes_count = sum(1 for team in te_teams if team == qb_team)
                     qb_wr_te_count = stacked_wrs_count + stacked_tes_count
+                    
+                    # Simplified tournament correlation scoring
+                    if strategy_type == "Tournament":
+                        # QB stack bonus (correlated production)
+                        if qb_wr_te_count >= 2:
+                            total_points *= 1.03  # 3% bonus for strong stacks
+                        elif qb_wr_te_count == 1:
+                            total_points *= 1.01  # 1% bonus for mini stacks
+                        
+                        # Tournament leverage scoring (now safe to use total_points)
+                        if leverage_focus > 0.3:
+                            high_salary_players = len(lineup[lineup['Salary'] >= 8000])
+                            low_salary_players = len(lineup[lineup['Salary'] <= 5500])
+                            # Bonus for punt + stud combinations (leverage plays)
+                            leverage_score = (high_salary_players * low_salary_players) / 9
+                            total_points *= (1 + leverage_score * leverage_focus * 0.02)
                     
                     stacked_lineups.append((total_points, lineup, total_salary, stacked_wrs_count, stacked_tes_count, qb_wr_te_count))
                     successful_lineups += 1
                     break
                     
             except Exception as e:
+                failure_reasons['other_errors'] += 1
+                # Print first 5 errors for debugging
+                if failure_reasons['other_errors'] <= 5:
+                    st.error(f"🐛 **Debug Error #{failure_reasons['other_errors']}:** {str(e)}")
                 continue
         
         # Break outer loop if too many failed attempts
@@ -915,11 +1216,118 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
     progress_bar.empty()
     status_text.empty()
     
-    # Show final stats
-    if player_selections and successful_lineups < num_simulations * 0.5:
-        st.warning(f"⚠️ Low success rate ({(successful_lineups/num_simulations*100):.1f}%). Consider reducing forced players or adjusting salary constraints.")
+    # Show enhanced debug information for low success rates
+    success_rate = successful_lineups / num_simulations if num_simulations > 0 else 0
+    if success_rate < 0.1:  # Less than 10% success rate
+        st.error(f"🚨 **Critical Generation Failure** ({success_rate:.1%} success rate)")
+        
+        total_failures = sum(failure_reasons.values())
+        if total_failures > 0:
+            st.write("**Detailed Failure Analysis:**")
+            
+            # Create columns for better display
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**Failure Counts:**")
+                for reason, count in failure_reasons.items():
+                    if count > 0:
+                        percentage = (count / total_failures) * 100
+                        st.write(f"• {reason.replace('_', ' ').title()}: {count:,} ({percentage:.1f}%)")
+            
+            with col2:
+                st.write("**Recommended Fixes:**")
+                
+                if failure_reasons['salary_too_high'] > total_failures * 0.2:
+                    st.error("💰 Salary cap issues - reduce high-salary forced players")
+                
+                if failure_reasons['team_limit_exceeded'] > total_failures * 0.2:
+                    st.error("🏈 Team limit issues - spread forced players across teams")
+                
+                if failure_reasons['insufficient_rbs'] > total_failures * 0.2:
+                    st.error("🏃 RB pool too small - reduce RB exclusions")
+                
+                if failure_reasons['rb_same_team'] > total_failures * 0.2:
+                    st.error("🏃 RB team conflicts - need more RB team diversity")
+                
+                if failure_reasons['salary_variance_check'] > total_failures * 0.2:
+                    st.error("📊 Tournament settings too restrictive - lower Salary Variance Target")
+    
+    elif success_rate < 0.5:  # 10-50% success rate
+        st.warning(f"⚠️ Low success rate ({success_rate:.1%}). Consider reducing forced players or adjusting constraints.")
+    
+    # Apply exposure capping (30% max) while preserving all existing logic
+    stacked_lineups = apply_exposure_capping(stacked_lineups, max_exposure=0.30)
     
     return stacked_lineups
+
+def apply_exposure_capping(lineups, max_exposure=0.30):
+    """
+    Apply exposure capping to lineups while preserving existing selection logic
+    Max exposure = 30% means a player can appear in max 30% of lineups
+    """
+    if not lineups:
+        return lineups
+    
+    total_lineups = len(lineups)
+    max_appearances = int(total_lineups * max_exposure)
+    
+    # Count current player usage
+    player_counts = {}
+    lineup_players = {}  # Track which players are in each lineup
+    
+    for i, (points, lineup, salary, stacked_wrs, stacked_tes, qb_wr_te) in enumerate(lineups):
+        lineup_players[i] = []
+        for _, player in lineup.iterrows():
+            player_key = f"{player['Nickname']}_{player['Position']}_{player['Team']}"
+            lineup_players[i].append(player_key)
+            
+            if player_key not in player_counts:
+                player_counts[player_key] = {'count': 0, 'lineups': []}
+            player_counts[player_key]['count'] += 1
+            player_counts[player_key]['lineups'].append(i)
+    
+    # Identify over-exposed players
+    over_exposed = {}
+    for player_key, data in player_counts.items():
+        if data['count'] > max_appearances:
+            over_exposed[player_key] = data
+    
+    if not over_exposed:
+        return lineups  # No exposure issues
+    
+    # Remove lineups to cap exposure, prioritizing lower-scoring lineups for removal
+    lineups_to_remove = set()
+    
+    for player_key, data in over_exposed.items():
+        excess_appearances = data['count'] - max_appearances
+        
+        # Get lineups with this over-exposed player, sorted by score (lowest first)
+        player_lineup_scores = [(i, lineups[i][0]) for i in data['lineups'] if i not in lineups_to_remove]
+        player_lineup_scores.sort(key=lambda x: x[1])  # Sort by score ascending
+        
+        # Mark lowest-scoring lineups for removal
+        for i, (lineup_idx, score) in enumerate(player_lineup_scores):
+            if i < excess_appearances:
+                lineups_to_remove.add(lineup_idx)
+    
+    # Create final lineup list without over-exposed lineups
+    final_lineups = [lineup for i, lineup in enumerate(lineups) if i not in lineups_to_remove]
+    
+    # Show exposure capping results
+    if lineups_to_remove:
+        st.info(f"🎯 **Exposure Capping Applied**: Removed {len(lineups_to_remove)} lineups to maintain ≤30% player exposure")
+        
+        # Show which players were capped
+        capped_players = []
+        for player_key in over_exposed.keys():
+            player_name = player_key.split('_')[0]  # Extract name
+            capped_players.append(player_name)
+        
+        if capped_players:
+            st.write(f"**Players capped**: {', '.join(capped_players[:5])}{'...' if len(capped_players) > 5 else ''}")
+    
+    return final_lineups
 
 def main():
     # Initialize enhanced systems if available
@@ -929,6 +1337,8 @@ def main():
         log_info("DFS Optimizer v2.1 started with enhanced features")
         
         st.markdown('<h1 class="main-header">🏈 FanDuel NFL DFS Optimizer v2.1</h1>', unsafe_allow_html=True)
+        
+
         
         # Use config values for defaults
         default_simulations = config.optimization.num_simulations
@@ -949,63 +1359,123 @@ def main():
     with st.sidebar:
         st.header("⚙️ Optimization Settings")
         
-        # Quick Strategy Presets
-        st.subheader("🎯 Quick Strategy Presets")
+        if ENHANCED_FEATURES_AVAILABLE:
+            st.success("🚀 Enhanced Performance Active")
         
-        # Strategy selection with radio buttons (like force mode)
-        strategy_preset = st.radio("Strategy Type", 
-                                 ["Custom Settings", "💰 Single Entry", "🏆 Tournament"], 
-                                 index=0,
-                                 help="Single Entry: Cash games, head-to-head, 50/50s. Tournament: GPPs, large tournaments")
+        # Strategy Type Selection
+        st.subheader("🎯 Strategy Type")
+        strategy_type = st.selectbox(
+            "Contest Strategy",
+            ["Single Entry", "Tournament", "Custom"],
+            index=0,
+            help="Single Entry: Safer picks, higher floor, target ownership. Tournament: Lower boosts for contrarian builds, avoid chalk."
+        )
         
-        with st.expander("💡 Strategy Types Explained"):
-            st.markdown("""
-            **💰 Single Entry (Cash Games):**
-            - Conservative stacking (65%)
-            - Consistent elite performers (35% boost)
-            - 8,000 simulations for stability
-            - Best for: Head-to-head, 50/50s, cash games
+        # Strategy presets
+        if strategy_type == "Single Entry":
+            preset_stack_prob = 0.65  # More conservative stacking
+            preset_elite_boost = 0.35  # Favor consistent performers
+            preset_great_boost = 0.20
+            preset_simulations = 8000  # Fewer simulations for consistency
+            ownership_strategy = "Avoid High Ownership (>15%)"
+        elif strategy_type == "Tournament":
+            preset_stack_prob = 0.40  # LOWER stacking for contrarian builds
+            preset_elite_boost = 0.15  # LOWER elite boost to avoid chalk
+            preset_great_boost = 0.10  # LOWER great boost for differentiation
+            preset_simulations = 15000  # More diversity for unique builds
+            ownership_strategy = "Target Low Ownership (<8%) + Contrarian Builds"
+        else:  # Custom
+            preset_stack_prob = default_stack_prob
+            preset_elite_boost = default_elite_boost
+            preset_great_boost = default_great_boost
+            preset_simulations = default_simulations
+            ownership_strategy = "Balanced Approach"
+        
+        # Show strategy info
+        if strategy_type != "Custom":
+            st.info(f"📊 **{strategy_type} Strategy Active**\n\n🎯 Focus: {ownership_strategy}")
             
-            **🏆 Tournament (GPPs):**
-            - Aggressive stacking (85%)
-            - High ceiling players (55% boost)
-            - 12,000 simulations for diversity
-            - Best for: Large tournaments, contrarian plays
-            
-            **⚙️ Custom Settings:**
-            - Use your manual slider configurations
-            - Full control over all parameters
-            """)
+            with st.expander("📋 Strategy Details"):
+                st.markdown(f"""
+                **{strategy_type} Strategy Adjustments:**
+                
+                🔢 **Simulations:** {preset_simulations:,} (optimized for {strategy_type.lower()})
+                📊 **Stack Probability:** {preset_stack_prob:.1%} ({'Conservative stacking for consistency' if strategy_type == 'Single Entry' else 'Lower stacking for contrarian differentiation'})
+                ⭐ **Elite Boost:** {preset_elite_boost:.1%} ({'Consistent scorers focus' if strategy_type == 'Single Entry' else 'Reduced to avoid chalk plays'})
+                🎯 **Great Boost:** {preset_great_boost:.1%} ({'Reliable performers' if strategy_type == 'Single Entry' else 'Minimal boost for max differentiation'})
+                
+                {'💰 **Best for:** Cash games, head-to-head, 50/50s' if strategy_type == 'Single Entry' else '🏆 **Best for:** GPPs, large tournaments, contrarian/leverage plays'}
+                """)
         
-        # Apply presets based on selection
-        if strategy_preset == "💰 Single Entry":
-            current_simulations = 8000
-            current_stack_prob = 0.65
-            current_elite_boost = 0.35
-            current_great_boost = 0.20
-            st.success("💰 Single Entry preset active!")
-        elif strategy_preset == "🏆 Tournament":
-            current_simulations = 12000
-            current_stack_prob = 0.85
-            current_elite_boost = 0.55
-            current_great_boost = 0.30
-            st.success("🏆 Tournament preset active!")
-        else:  # Custom Settings
-            current_simulations = default_simulations
-            current_stack_prob = default_stack_prob
-            current_elite_boost = default_elite_boost
-            current_great_boost = default_great_boost
+        # Override defaults with strategy presets if not custom
+        if strategy_type != "Custom":
+            default_simulations = preset_simulations
+            default_stack_prob = preset_stack_prob
+            default_elite_boost = preset_elite_boost
+            default_great_boost = preset_great_boost
         
-        # Configuration sliders (will use preset values if buttons were clicked)
-        num_simulations = st.slider("Number of Simulations", 1000, 20000, current_simulations, step=1000,
+        # Configuration sliders (will use strategy presets as defaults)
+        num_simulations = st.slider("Number of Simulations", 1000, 20000, default_simulations, step=1000,
                                     help="More simulations = more unique lineups but slower generation. 5000 simulations typically generates 3000-4000 unique lineups.")
-        stack_probability = st.slider("Stacking Probability", 0.0, 1.0, current_stack_prob, step=0.05)
-        elite_target_boost = st.slider("Elite Target Boost", 0.0, 1.0, current_elite_boost, step=0.05)
-        great_target_boost = st.slider("Great Target Boost", 0.0, 1.0, current_great_boost, step=0.05)
+        stack_probability = st.slider("Stacking Probability", 0.0, 1.0, default_stack_prob, step=0.05,
+                                     help=f"Current strategy optimized for {strategy_type.lower()} contests")
+        elite_target_boost = st.slider("Elite Target Boost", 0.0, 1.0, default_elite_boost, step=0.05,
+                                      help=f"{'Consistent elite performers' if strategy_type == 'Single Entry' else 'High ceiling elite players'}")
+        great_target_boost = st.slider("Great Target Boost", 0.0, 1.0, default_great_boost, step=0.05)
         
-        st.subheader("🚀 Performance Boost Multipliers")
-        wr_boost_multiplier = st.slider("WR Performance Boost Multiplier", 0.5, 2.0, 1.0, step=0.1)
-        rb_boost_multiplier = st.slider("RB Performance Boost Multiplier", 0.5, 2.0, 1.0, step=0.1)
+        st.subheader("🚀 Fantasy Performance Adjustments")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            wr_boost_multiplier = st.slider("WR Performance Boost Multiplier", 0.5, 2.0, 1.0, step=0.1, 
+                                           help="Adjusts WR fantasy projections based on recent performance")
+            rb_boost_multiplier = st.slider("RB Performance Boost Multiplier", 0.5, 2.0, 1.0, step=0.1,
+                                           help="Adjusts RB fantasy projections based on recent performance")
+        
+        with col2:
+            # Add individual FPPG adjustment sliders
+            global_fppg_adjustment = st.slider("Global FPPG Adjustment", 0.5, 1.5, 1.0, step=0.05,
+                                              help="Globally adjust all fantasy point projections")
+            
+            ceiling_floor_variance = st.slider("Ceiling/Floor Variance", 0.8, 1.5, 1.0, step=0.1,
+                                             help="Adjust the spread between ceiling and floor projections")
+        
+        # Advanced Tournament Settings (only show for Tournament strategy)
+        if strategy_type == "Tournament":
+            st.subheader("🏆 Advanced Tournament Settings")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                contrarian_boost = st.slider(
+                    "🎯 Contrarian Player Boost", 
+                    0.0, 0.5, 0.15, step=0.05,
+                    help="Extra boost for low-owned players (punt plays and studs)"
+                )
+                
+                correlation_preference = st.slider(
+                    "🔗 Correlation Preference", 
+                    0.0, 1.0, 0.7, step=0.1,
+                    help="Preference for correlated lineups (stacks, game stacks, bring-backs)"
+                )
+                
+            with col2:
+                salary_variance_target = st.slider(
+                    "💰 Salary Variance Target", 
+                    0.0, 1.0, 0.6, step=0.1,
+                    help="Target salary distribution variance (0=flat, 1=stars+punts)"
+                )
+                
+                leverage_focus = st.slider(
+                    "📈 Leverage Focus", 
+                    0.0, 1.0, 0.4, step=0.1,
+                    help="Focus on players with tournament leverage (low ownership, high upside)"
+                )
+        else:
+            # Set defaults for non-tournament strategies
+            contrarian_boost = 0.05
+            correlation_preference = 0.3
+            salary_variance_target = 0.2
+            leverage_focus = 0.1
         
         st.subheader("🎯 Forced Player Boost")
         forced_player_boost = st.slider("Forced Player Extra Boost", 0.0, 1.0, 0.3, step=0.05)  # Increased default from 0.05 to 0.3
@@ -1031,7 +1501,12 @@ def main():
             - **30% Boost** = ~80-90% of lineups (16-18 out of 20)
             - **50%+ Boost** = ~95%+ of lineups (19-20 out of 20)
             
-            **💡 Pro Tip:** Use Soft Force with 10-20% boost for optimal tournament lineup variety!
+            **💡 Pro Tips:**
+            - Use Soft Force with 10-20% boost for optimal tournament lineup variety!
+            - **Tournament Mode**: LOWER boosts = more contrarian, HIGHER boosts = more chalk
+            - **Contrarian Edge**: Tournament mode uses lower elite/great boosts to avoid chalk
+            - **Stacking Strategy**: 40% stacking creates unique lineup construction
+            - **Leverage Plays**: Higher Salary Variance = Stars + Punts strategy
             """)
         st.caption("Extra boost for players you manually include")
         
@@ -1061,7 +1536,7 @@ def main():
     
     # Load data
     with st.spinner("Loading player data..."):
-        df = load_player_data("FanDuel-NFL-2025 EDT-10 EDT-19 EDT-121559-players-list.csv")
+        df = load_player_data()
         
     if df is not None:
         with st.spinner("Loading defensive matchup data..."):
@@ -1088,6 +1563,294 @@ def main():
             
         with st.spinner("Creating performance boosts..."):
             wr_performance_boosts, rb_performance_boosts, te_performance_boosts, qb_performance_boosts = create_performance_boosts(fantasy_data, wr_boost_multiplier, rb_boost_multiplier)
+        
+        # Apply global fantasy adjustments
+        with st.spinner("Applying fantasy adjustments..."):
+            # Global FPPG adjustment
+            df['Adjusted_FPPG'] = df['Adjusted_FPPG'] * global_fppg_adjustment
+            
+            # Adjust ceiling/floor variance if columns exist
+            if 'Ceiling' in df.columns and 'Floor' in df.columns:
+                # Calculate current ceiling/floor relative to FPPG
+                ceiling_diff = df['Ceiling'] - df['FPPG'] 
+                floor_diff = df['FPPG'] - df['Floor']
+                
+                # Adjust the variance
+                df['Ceiling'] = df['FPPG'] * global_fppg_adjustment + (ceiling_diff * ceiling_floor_variance)
+                df['Floor'] = df['FPPG'] * global_fppg_adjustment - (floor_diff * ceiling_floor_variance)
+                
+                # Ensure floor doesn't go negative
+                df['Floor'] = df['Floor'].clip(lower=0)
+            
+            # Show adjustment summary
+            if global_fppg_adjustment != 1.0 or ceiling_floor_variance != 1.0 or wr_boost_multiplier != 1.0 or rb_boost_multiplier != 1.0:
+                adjustments = []
+                if global_fppg_adjustment != 1.0:
+                    adjustments.append(f"Global FPPG: {global_fppg_adjustment:.2f}x")
+                if ceiling_floor_variance != 1.0:
+                    adjustments.append(f"Ceiling/Floor Variance: {ceiling_floor_variance:.2f}x")
+                if wr_boost_multiplier != 1.0:
+                    adjustments.append(f"WR Performance: {wr_boost_multiplier:.2f}x")
+                if rb_boost_multiplier != 1.0:
+                    adjustments.append(f"RB Performance: {rb_boost_multiplier:.2f}x")
+                
+                st.success(f"✅ **Fantasy Adjustments Applied:** {', '.join(adjustments)}")
+        
+        # Manual Projection Overrides Section
+        st.subheader("📝 Manual Projection Overrides")
+        st.caption("Adjust individual player projections for injuries, weather, or personal insights")
+        
+        with st.expander("🎯 Override Player Projections", expanded=False):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("**Select Player to Override:**")
+                
+                # Position filter
+                positions = ["All Positions"] + sorted(df['Position'].unique().tolist())
+                selected_position = st.selectbox(
+                    "Filter by Position:",
+                    positions,
+                    help="Filter players by position to make selection easier"
+                )
+                
+                # Filter players by position if selected
+                if selected_position == "All Positions":
+                    filtered_df = df
+                    position_label = ""
+                else:
+                    filtered_df = df[df['Position'] == selected_position]
+                    position_label = f" ({selected_position}s)"
+                
+                # Sort players by salary (descending) for easier navigation
+                filtered_df_sorted = filtered_df.sort_values('Salary', ascending=False)
+                
+                # Create player display names with salary for easier identification
+                player_options = [""]
+                for _, player in filtered_df_sorted.iterrows():
+                    display_name = f"{player['Nickname']} - ${player['Salary']:,} ({player['FPPG']:.1f} FPPG)"
+                    player_options.append(display_name)
+                
+                selected_player_display = st.selectbox(
+                    f"Choose Player{position_label}:", 
+                    player_options,
+                    help="Players sorted by salary (highest first)"
+                )
+                
+                # Extract actual player name from display name
+                if selected_player_display:
+                    selected_player = selected_player_display.split(" - ")[0]
+                else:
+                    selected_player = ""
+                
+                if selected_player:
+                    # Get current player stats
+                    player_row = df[df['Nickname'] == selected_player].iloc[0]
+                    current_fppg = player_row['FPPG']
+                    current_salary = player_row['Salary']
+                    current_pos = player_row['Position']
+                    
+                    st.info(f"**{selected_player}** ({current_pos}) - ${current_salary:,} - Current: {current_fppg:.1f} FPPG")
+            
+            with col2:
+                if selected_player:
+                    st.markdown("**Override Settings:**")
+                    
+                    override_type = st.radio(
+                        "Override Type:",
+                        ["Percentage Adjustment", "Absolute Value"],
+                        help="Percentage: Multiply by factor (e.g., 1.2 = +20%). Absolute: Set exact FPPG value."
+                    )
+                    
+                    if override_type == "Percentage Adjustment":
+                        adjustment_factor = st.slider(
+                            "Adjustment Factor",
+                            0.0, 3.0, 1.0, 0.05,
+                            help="1.0 = no change, 1.2 = +20%, 0.8 = -20%"
+                        )
+                        new_projection = current_fppg * adjustment_factor
+                        st.write(f"**New Projection:** {new_projection:.1f} FPPG ({adjustment_factor:.0%} of original)")
+                    
+                    else:  # Absolute Value
+                        new_projection = st.number_input(
+                            "New FPPG Projection",
+                            0.0, 50.0, float(current_fppg), 0.1,
+                            help="Set exact fantasy points projection"
+                        )
+                        adjustment_factor = new_projection / current_fppg if current_fppg > 0 else 1.0
+                    
+                    # Apply override button
+                    if st.button(f"Apply Override to {selected_player}", type="primary"):
+                        # Store original value if first override for this player
+                        if selected_player not in st.session_state.projection_overrides:
+                            original_fppg = current_fppg
+                        else:
+                            original_fppg = st.session_state.projection_overrides[selected_player]['original']
+                        
+                        # Apply the override
+                        mask = df['Nickname'] == selected_player
+                        df.loc[mask, 'FPPG'] = new_projection
+                        df.loc[mask, 'Adjusted_FPPG'] = new_projection * global_fppg_adjustment
+                        
+                        # Adjust ceiling/floor proportionally if they exist
+                        if 'Ceiling' in df.columns and 'Floor' in df.columns:
+                            df.loc[mask, 'Ceiling'] = df.loc[mask, 'Ceiling'] * adjustment_factor
+                            df.loc[mask, 'Floor'] = df.loc[mask, 'Floor'] * adjustment_factor
+                        
+                        # Track the override in session state
+                        st.session_state.projection_overrides[selected_player] = {
+                            'original': original_fppg,
+                            'new': new_projection,
+                            'position': current_pos,
+                            'adjustment_factor': adjustment_factor
+                        }
+                        
+                        st.success(f"✅ **{selected_player}** projection updated to {new_projection:.1f} FPPG!")
+                        st.rerun()
+            
+            # Show current overrides
+            st.markdown("**💡 Pro Tips for Manual Overrides:**")
+            st.markdown("""
+            - **Weather Impact**: Reduce passing game in heavy wind/rain
+            - **Injury Concerns**: Lower projections for questionable players  
+            - **Coaching Changes**: Adjust for new play-callers or schemes
+            - **Motivation**: Increase for playoff implications, decrease for resting starters
+            - **Matchup Intel**: Boost players facing backup defenders
+            """)
+            
+            st.divider()
+            
+            # Bulk overrides section
+            st.markdown("**⚡ Bulk Adjustments:**")
+            bulk_col1, bulk_col2 = st.columns(2)
+            
+            with bulk_col1:
+                # Team-based adjustments
+                teams = sorted(df['Team'].unique())
+                selected_team = st.selectbox("Adjust Entire Team:", [""] + teams)
+                
+                if selected_team:
+                    team_adjustment = st.slider(
+                        f"Team Adjustment Factor ({selected_team})",
+                        0.0, 2.0, 1.0, 0.05,
+                        key=f"team_adj_{selected_team}"
+                    )
+                    
+                    if st.button(f"Apply to All {selected_team} Players", key=f"apply_team_{selected_team}"):
+                        team_mask = df['Team'] == selected_team
+                        team_players = df[team_mask]['Nickname'].tolist()
+                        
+                        for player in team_players:
+                            current_fppg = df[df['Nickname'] == player]['FPPG'].iloc[0]
+                            new_fppg = current_fppg * team_adjustment
+                            
+                            # Store override
+                            if player not in st.session_state.projection_overrides:
+                                original_fppg = current_fppg
+                            else:
+                                original_fppg = st.session_state.projection_overrides[player]['original']
+                            
+                            st.session_state.projection_overrides[player] = {
+                                'original': original_fppg,
+                                'new': new_fppg,
+                                'position': df[df['Nickname'] == player]['Position'].iloc[0],
+                                'adjustment_factor': team_adjustment
+                            }
+                            
+                            # Apply to dataframe
+                            player_mask = df['Nickname'] == player
+                            df.loc[player_mask, 'FPPG'] = new_fppg
+                            df.loc[player_mask, 'Adjusted_FPPG'] = new_fppg * global_fppg_adjustment
+                        
+                        st.success(f"✅ Applied {team_adjustment:.0%} adjustment to all {selected_team} players!")
+                        st.rerun()
+            
+            with bulk_col2:
+                # Position-based adjustments
+                positions = ['QB', 'RB', 'WR', 'TE']
+                selected_pos = st.selectbox("Adjust by Position:", [""] + positions)
+                
+                if selected_pos:
+                    pos_adjustment = st.slider(
+                        f"Position Adjustment Factor ({selected_pos})",
+                        0.0, 2.0, 1.0, 0.05,
+                        key=f"pos_adj_{selected_pos}"
+                    )
+                    
+                    if st.button(f"Apply to All {selected_pos}s", key=f"apply_pos_{selected_pos}"):
+                        pos_mask = df['Position'] == selected_pos
+                        pos_players = df[pos_mask]['Nickname'].tolist()
+                        
+                        for player in pos_players:
+                            current_fppg = df[df['Nickname'] == player]['FPPG'].iloc[0]
+                            new_fppg = current_fppg * pos_adjustment
+                            
+                            # Store override
+                            if player not in st.session_state.projection_overrides:
+                                original_fppg = current_fppg
+                            else:
+                                original_fppg = st.session_state.projection_overrides[player]['original']
+                            
+                            st.session_state.projection_overrides[player] = {
+                                'original': original_fppg,
+                                'new': new_fppg,
+                                'position': selected_pos,
+                                'adjustment_factor': pos_adjustment
+                            }
+                            
+                            # Apply to dataframe
+                            player_mask = df['Nickname'] == player
+                            df.loc[player_mask, 'FPPG'] = new_fppg
+                            df.loc[player_mask, 'Adjusted_FPPG'] = new_fppg * global_fppg_adjustment
+                        
+                        st.success(f"✅ Applied {pos_adjustment:.0%} adjustment to all {selected_pos}s!")
+                        st.rerun()
+        
+        # Initialize session state for overrides tracking
+        if 'projection_overrides' not in st.session_state:
+            st.session_state.projection_overrides = {}
+        
+        # Apply existing overrides from session state
+        if st.session_state.projection_overrides:
+            st.info(f"📝 **{len(st.session_state.projection_overrides)} projection overrides active**")
+            for player, override_data in st.session_state.projection_overrides.items():
+                if player in df['Nickname'].values:
+                    mask = df['Nickname'] == player
+                    df.loc[mask, 'FPPG'] = override_data['new']
+                    df.loc[mask, 'Adjusted_FPPG'] = override_data['new'] * global_fppg_adjustment
+                    
+                    # Apply to ceiling/floor if they exist
+                    if 'Ceiling' in df.columns and 'Floor' in df.columns:
+                        adjustment_factor = override_data['adjustment_factor']
+                        df.loc[mask, 'Ceiling'] = df.loc[mask, 'Ceiling'] * adjustment_factor
+                        df.loc[mask, 'Floor'] = df.loc[mask, 'Floor'] * adjustment_factor
+        
+        # Display current overrides if any exist
+        if st.session_state.projection_overrides:
+            with st.expander("📊 Current Projection Overrides", expanded=True):
+                override_df = []
+                for player, data in st.session_state.projection_overrides.items():
+                    override_df.append({
+                        'Player': player,
+                        'Position': data['position'],
+                        'Original FPPG': f"{data['original']:.1f}",
+                        'New FPPG': f"{data['new']:.1f}",
+                        'Adjustment': f"{((data['new']/data['original']-1)*100):+.1f}%"
+                    })
+                
+                if override_df:
+                    st.dataframe(override_df, use_container_width=True)
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("🔄 Reset All Overrides", help="Remove all manual projection overrides"):
+                            st.session_state.projection_overrides = {}
+                            st.success("✅ All projection overrides cleared!")
+                            st.rerun()
+                    
+                    with col2:
+                        if st.button("💾 Save Overrides", help="Save current overrides for future sessions"):
+                            st.info("💡 Overrides are automatically saved for this session")
         
         # Display top matchups
         st.markdown("### 🎯 Top 6 Matchups by Position")
@@ -1135,128 +1898,8 @@ def main():
         else:
             st.info("Top matchups will appear here once data is loaded")
         
-        # Manual Projection Override Section (Always Available)
-        st.markdown("---")
-        st.markdown("### 📝 Manual Projection Overrides")
-        st.markdown("*Adjust player projections for injuries, weather, or personal insights*")
-        
-        # Create editable dataframe for projection overrides
-        if 'edited_projections' not in st.session_state:
-            st.session_state.edited_projections = {}
-        
-        # Create a subset of data for editing - show key players
-        # Use the actual column names from the CSV
-        edit_cols = ['Nickname', 'Position', 'Team', 'Salary', 'FPPG', 'Adjusted_FPPG']
-        
-        # Show top players by position for easy editing
-        edit_df = df[edit_cols].copy()
-        edit_df = edit_df.sort_values(['Position', 'Salary'], ascending=[True, False])
-        edit_df = edit_df.groupby('Position').head(10).reset_index(drop=True)
-        
-        # Add editable column for new projections
-        edit_df['New_FPPG'] = edit_df['FPPG']
-        
-        # Create data editor
-        edited_data = st.data_editor(
-            edit_df,
-            column_config={
-                "Nickname": st.column_config.TextColumn("Player", disabled=True),
-                "Position": st.column_config.TextColumn("Pos", disabled=True, width="small"),
-                "Team": st.column_config.TextColumn("Team", disabled=True, width="small"),
-                "Salary": st.column_config.NumberColumn("Salary", disabled=True, format="$%d"),
-                "FPPG": st.column_config.NumberColumn("Original", disabled=True, format="%.1f"),
-                "Adjusted_FPPG": st.column_config.NumberColumn("Current", disabled=True, format="%.1f"),
-                "New_FPPG": st.column_config.NumberColumn("📝 Edit FPPG", format="%.1f", min_value=0.0, max_value=50.0)
-            },
-            key="projection_editor",
-            hide_index=True,
-            width='stretch'
-        )
-        
-        # Apply manual overrides to main dataframe
-        if edited_data is not None:
-            for idx, row in edited_data.iterrows():
-                player_name = row['Nickname']
-                new_projection = row['New_FPPG']
-                original_projection = row['FPPG']
-                
-                # Only update if there's a significant change (avoid floating point precision issues)
-                if abs(new_projection - original_projection) > 0.1:
-                    # Update the main dataframe
-                    player_mask = df['Nickname'] == player_name
-                    if player_mask.any():
-                        df.loc[player_mask, 'Adjusted_FPPG'] = new_projection
-                        st.session_state.edited_projections[player_name] = new_projection
-            
-            # Show summary of overrides
-            if st.session_state.edited_projections:
-                st.info(f"🎯 {len(st.session_state.edited_projections)} player projections manually adjusted")
-                if st.button("🔄 Reset All Manual Overrides"):
-                    st.session_state.edited_projections = {}
-                    st.rerun()
-        
         # Player Selection Interface
         if enable_player_selection:
-            
-            # Manual Projection Override Section
-            st.markdown("---")
-            st.markdown("### 📝 Manual Projection Overrides")
-            st.markdown("*Adjust player projections for injuries, weather, or personal insights*")
-            
-            # Create editable dataframe for projection overrides
-            if 'edited_projections' not in st.session_state:
-                st.session_state.edited_projections = {}
-            
-            # Create a subset of data for editing - show key players
-            edit_cols = ['Player', 'Position', 'Team', 'Salary', 'FPPG', 'Adjusted_FPPG']
-            if all(col in df.columns for col in edit_cols):
-                # Show top players by position for easy editing
-                edit_df = df[edit_cols].copy()
-                edit_df = edit_df.sort_values(['Position', 'Salary'], ascending=[True, False])
-                edit_df = edit_df.groupby('Position').head(10).reset_index(drop=True)
-                
-                # Add editable column for new projections
-                edit_df['New_FPPG'] = edit_df['FPPG']
-                
-                # Create data editor
-                edited_data = st.data_editor(
-                    edit_df,
-                    column_config={
-                        "Player": st.column_config.TextColumn("Player", disabled=True),
-                        "Position": st.column_config.TextColumn("Pos", disabled=True, width="small"),
-                        "Team": st.column_config.TextColumn("Team", disabled=True, width="small"),
-                        "Salary": st.column_config.NumberColumn("Salary", disabled=True, format="$%d"),
-                        "FPPG": st.column_config.NumberColumn("Original", disabled=True, format="%.1f"),
-                        "Adjusted_FPPG": st.column_config.NumberColumn("Current", disabled=True, format="%.1f"),
-                        "New_FPPG": st.column_config.NumberColumn("📝 Edit FPPG", format="%.1f", min_value=0.0, max_value=50.0)
-                    },
-                    key="projection_editor",
-                    hide_index=True,
-                    width='stretch'
-                )
-                
-                # Apply manual overrides to main dataframe
-                if edited_data is not None:
-                    for idx, row in edited_data.iterrows():
-                        player_name = row['Player']
-                        new_projection = row['New_FPPG']
-                        original_projection = row['FPPG']
-                        
-                        # Only update if there's a significant change (avoid floating point precision issues)
-                        if abs(new_projection - original_projection) > 0.1:
-                            # Update the main dataframe
-                            player_mask = df['Player'] == player_name
-                            if player_mask.any():
-                                df.loc[player_mask, 'Adjusted_FPPG'] = new_projection
-                                st.session_state.edited_projections[player_name] = new_projection
-                
-                # Show summary of overrides
-                if st.session_state.edited_projections:
-                    st.info(f"🎯 {len(st.session_state.edited_projections)} player projections manually adjusted")
-                    if st.button("🔄 Reset All Manual Overrides"):
-                        st.session_state.edited_projections = {}
-                        st.rerun()
-            
             st.markdown('<h2 class="sub-header">👥 Player Selection</h2>', unsafe_allow_html=True)
             
             # Add button to auto-select top matchups
@@ -1520,7 +2163,17 @@ def main():
                 weighted_pools = create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_performance_boosts, qb_performance_boosts, elite_target_boost, great_target_boost, all_forced_players, forced_player_boost)
             
             with st.spinner(f"Generating {num_simulations:,} optimized lineups..."):
-                stacked_lineups = generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, fantasy_data, player_selections, force_mode, forced_player_boost)
+                # Pass tournament parameters to generation function
+                tournament_params = {
+                    'contrarian_boost': contrarian_boost if strategy_type == "Tournament" else 0.05,
+                    'correlation_preference': correlation_preference if strategy_type == "Tournament" else 0.3,
+                    'salary_variance_target': salary_variance_target if strategy_type == "Tournament" else 0.2,
+                    'leverage_focus': leverage_focus if strategy_type == "Tournament" else 0.1,
+                    'global_fppg_adjustment': global_fppg_adjustment,
+                    'ceiling_floor_variance': ceiling_floor_variance
+                }
+                
+                stacked_lineups = generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, fantasy_data, player_selections, force_mode, forced_player_boost, strategy_type, tournament_params)
                 st.session_state.stacked_lineups = stacked_lineups
                 st.session_state.lineups_generated = True
                 
@@ -1577,12 +2230,40 @@ def main():
             # Display lineups
             st.subheader("📋 Generated Lineups")
             for i, (points, lineup, salary, stacked_wrs_count, stacked_tes_count, qb_wr_te_count) in enumerate(top_lineups, 1):
-                with st.expander(f"Lineup #{i}: {points:.2f} points | ${salary:,} | {'QB+' + str(qb_wr_te_count) + ' receivers' if qb_wr_te_count > 0 else 'No stack'}"):
+                # Calculate lineup ceiling for header display
+                ceiling_text = ""
+                if 'Ceiling' in lineup.columns:
+                    lineup_ceiling = lineup['Ceiling'].sum()
+                    ceiling_text = f" | Ceiling: {lineup_ceiling:.1f}"
+                
+                with st.expander(f"Lineup #{i}: {points:.1f} pts{ceiling_text} | ${salary:,} | {'QB+' + str(qb_wr_te_count) + ' receivers' if qb_wr_te_count > 0 else 'No stack'}"):
                     
-                    # Create lineup display
-                    lineup_display = lineup[['Nickname', 'Position', 'Team', 'Salary', 'FPPG', 'Matchup_Quality', 'PosRank']].copy()
+                    # Create lineup display with ceiling and floor
+                    display_columns = ['Nickname', 'Position', 'Team', 'Salary', 'FPPG', 'Matchup_Quality', 'PosRank']
+                    if 'Ceiling' in lineup.columns:
+                        display_columns.extend(['Ceiling', 'Floor'])
+                    
+                    lineup_display = lineup[display_columns].copy()
                     lineup_display['Salary'] = lineup_display['Salary'].apply(lambda x: f"${x:,}")
                     lineup_display['FPPG'] = lineup_display['FPPG'].apply(lambda x: f"{x:.1f}")
+                    
+                    # Format ceiling and floor if they exist
+                    if 'Ceiling' in lineup_display.columns:
+                        lineup_display['Ceiling'] = lineup_display['Ceiling'].apply(lambda x: f"{x:.1f}")
+                        lineup_display['Floor'] = lineup_display['Floor'].apply(lambda x: f"{x:.1f}")
+                    
+                    # Calculate and display total lineup ceiling/floor
+                    if 'Ceiling' in lineup.columns:
+                        lineup_ceiling = lineup['Ceiling'].sum()
+                        lineup_floor = lineup['Floor'].sum()
+                        st.markdown(f"""
+                        **📊 Lineup Projections:**
+                        - **Projection:** {points:.1f} pts
+                        - **Ceiling:** {lineup_ceiling:.1f} pts  
+                        - **Floor:** {lineup_floor:.1f} pts
+                        """)
+                    else:
+                        st.markdown(f"**📊 Projection:** {points:.1f} pts")
                     
                     # Set PosRank as the index for display
                     lineup_display.set_index('PosRank', inplace=True)
@@ -1690,9 +2371,9 @@ def main():
             # Comprehensive Player Usage Analysis - ALL Lineups
             st.markdown("---")
             st.markdown('<h3 class="sub-header">📊 Comprehensive Player Usage - ALL Lineups</h3>', unsafe_allow_html=True)
-            st.markdown("*Analyze player exposure across all generated lineups for optimal tournament strategy*")
+            st.markdown("Analyze player exposure across all generated lineups for optimal tournament strategy")
             
-            # Analyze ALL lineups for comprehensive usage
+            # Analyze ALL lineups for comprehensive player usage
             all_player_usage = {}
             total_lineups = len(stacked_lineups)
             
@@ -1703,122 +2384,319 @@ def main():
                     if position == 'D':
                         position = 'DEF'
                     
-                    key = f"{player_name}"
+                    key = f"{player_name} ({position})"
                     if key not in all_player_usage:
                         all_player_usage[key] = {
                             'count': 0,
                             'position': position,
                             'salary': player['Salary'],
-                            'team': player['Team'],
-                            'fppg': player.get('Adjusted_FPPG', player.get('FPPG', 0))
+                            'nickname': player_name,
+                            'fppg': player.get('FPPG', 0),
+                            'team': player.get('Team', ''),
+                            'opponent': player.get('Opponent', ''),
+                            'matchup_quality': player.get('Matchup_Quality', '')
                         }
                     all_player_usage[key]['count'] += 1
             
-            # Create comprehensive usage data
-            all_usage_data = []
-            for player_name, data in all_player_usage.items():
+            # Create comprehensive usage data with enhanced metrics
+            comprehensive_usage_data = []
+            for player_key, data in all_player_usage.items():
                 usage_percentage = (data['count'] / total_lineups) * 100
-                all_usage_data.append({
-                    'Player': player_name,
+                
+                # Calculate additional metrics
+                points_per_dollar = (data['fppg'] / data['salary']) * 1000 if data['salary'] > 0 else 0
+                
+                # Determine value tier
+                if data['salary'] >= 8000:
+                    value_tier = "Premium"
+                elif data['salary'] >= 6000:
+                    value_tier = "Mid-Tier"
+                else:
+                    value_tier = "Value"
+                
+                # Calculate leverage score (higher FPPG with lower usage = more leverage)
+                if usage_percentage > 0:
+                    leverage_score = (data['fppg'] * 100) / (usage_percentage + 1)  # +1 to avoid division by zero
+                else:
+                    leverage_score = data['fppg'] * 100
+                
+                # Enhanced tournament ownership projection
+                base_ownership = usage_percentage * 0.6  # Assume public is less optimal than your model
+                
+                # Adjust based on salary tier and position
+                if data['position'] == 'QB':
+                    multiplier = 1.2  # QBs get more attention
+                elif data['position'] in ['RB', 'WR']:
+                    multiplier = 1.0
+                elif data['position'] == 'TE':
+                    multiplier = 0.8  # Less attention on TEs
+                else:  # DEF
+                    multiplier = 0.7
+                
+                # Adjust for salary tier
+                if data['salary'] >= 9000:
+                    multiplier *= 1.3  # Expensive players get more attention
+                elif data['salary'] <= 5000:
+                    multiplier *= 0.7  # Cheap players less noticed
+                
+                projected_ownership_pct = min(base_ownership * multiplier, 85)  # Cap at 85%
+                
+                if projected_ownership_pct >= 40:
+                    projected_ownership = f"High ({projected_ownership_pct:.1f}%)"
+                elif projected_ownership_pct >= 15:
+                    projected_ownership = f"Medium ({projected_ownership_pct:.1f}%)"
+                elif projected_ownership_pct >= 5:
+                    projected_ownership = f"Low ({projected_ownership_pct:.1f}%)"
+                else:
+                    projected_ownership = f"Contrarian ({projected_ownership_pct:.1f}%)"
+                
+                # Calculate ceiling/floor estimates
+                ceiling_multiplier = 1.4 if data['matchup_quality'] in ['ELITE TARGET', 'Great Target'] else 1.2
+                floor_multiplier = 0.6 if data['position'] in ['WR', 'TE'] else 0.7
+                
+                ceiling = data['fppg'] * ceiling_multiplier
+                floor = data['fppg'] * floor_multiplier
+                
+                # Calculate variance (upside vs consistency)
+                variance = ceiling - floor
+                upside_rating = "High" if variance >= 8 else "Medium" if variance >= 5 else "Low"
+                
+                # GPP score (combines leverage, upside, and value)
+                gpp_score = (leverage_score * 0.4) + (variance * 0.3) + (points_per_dollar * 0.3)
+                
+                comprehensive_usage_data.append({
+                    'Player': data['nickname'],
                     'Position': data['position'],
                     'Team': data['team'],
+                    'vs': data['opponent'],
+                    'Matchup': data['matchup_quality'],
                     'Salary': data['salary'],
                     'FPPG': data['fppg'],
-                    'Usage Count': data['count'],
-                    'Total Lineups': total_lineups,
-                    'Usage %': usage_percentage
+                    'Ceiling': ceiling,
+                    'Floor': floor,
+                    'Upside': upside_rating,
+                    'Count': data['count'],
+                    'Usage %': usage_percentage,
+                    'Points/$': points_per_dollar,
+                    'Value Tier': value_tier,
+                    'Leverage': leverage_score,
+                    'GPP Score': gpp_score,
+                    'Proj Own': projected_ownership,
+                    'Salary_Display': f"${data['salary']:,}",
+                    'Usage_Display': f"{usage_percentage:.1f}%",
+                    'Points_Per_Dollar_Display': f"{points_per_dollar:.2f}",
+                    'Leverage_Display': f"{leverage_score:.1f}",
+                    'Ceiling_Display': f"{ceiling:.1f}",
+                    'Floor_Display': f"{floor:.1f}",
+                    'GPP_Score_Display': f"{gpp_score:.1f}"
                 })
             
             # Sort by usage percentage descending
-            all_usage_data.sort(key=lambda x: x['Usage %'], reverse=True)
+            comprehensive_usage_data.sort(key=lambda x: x['Usage %'], reverse=True)
             
-            # Convert to DataFrame for display
-            usage_display_df = pd.DataFrame([{
-                'Player': d['Player'],
-                'Pos': d['Position'],
-                'Team': d['Team'],
-                'Salary': f"${d['Salary']:,}",
-                'FPPG': f"{d['FPPG']:.1f}",
-                'Count': d['Usage Count'],
-                'Total': d['Total Lineups'],
-                'Usage %': f"{d['Usage %']:.1f}%"
-            } for d in all_usage_data])
+            # Display comprehensive usage analysis - TABLE ONLY
+            st.subheader("🎯 Complete Player Usage Breakdown")
             
-            # Add filtering options
-            col_filter1, col_filter2, col_filter3 = st.columns(3)
+            # QB Stack Filtering
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                st.markdown("**Filter by QB Stack:**")
+                
+                # Get all QBs from lineups for filter options
+                all_qbs = set()
+                for points, lineup, salary, _, _, _ in stacked_lineups:
+                    qb_row = lineup[lineup['Position'] == 'QB']
+                    if not qb_row.empty:
+                        qb_name = qb_row.iloc[0]['Nickname']
+                        qb_team = qb_row.iloc[0]['Team']
+                        all_qbs.add(f"{qb_name} ({qb_team})")
+                
+                qb_filter_options = ['All Players'] + sorted(list(all_qbs))
+                selected_qb = st.selectbox("Select QB Stack:", qb_filter_options, key="usage_qb_filter")
             
-            with col_filter1:
-                position_filter = st.selectbox(
-                    "Filter by Position:",
-                    options=['All'] + sorted(usage_display_df['Pos'].unique().tolist()),
-                    key="usage_pos_filter"
-                )
+            with col2:
+                if selected_qb != 'All Players':
+                    qb_name = selected_qb.split(' (')[0]  # Extract QB name from "Name (Team)" format
+                    st.info(f"🎯 Showing players who appeared in lineups with **{selected_qb}**")
             
-            with col_filter2:
-                min_usage = st.slider(
-                    "Minimum Usage %:",
-                    min_value=0.0,
-                    max_value=100.0,
-                    value=0.0,
-                    step=1.0,
-                    key="usage_min_filter"
-                )
+            # Filter data based on QB selection
+            if selected_qb != 'All Players':
+                qb_name = selected_qb.split(' (')[0]
+                
+                # Get lineups that contain this QB
+                qb_lineups = []
+                for points, lineup, salary, _, _, _ in stacked_lineups:
+                    qb_row = lineup[lineup['Position'] == 'QB']
+                    if not qb_row.empty and qb_row.iloc[0]['Nickname'] == qb_name:
+                        qb_lineups.append((points, lineup, salary))
+                
+                # Recalculate usage stats for QB-filtered lineups
+                filtered_usage_data = []
+                qb_total_lineups = len(qb_lineups)
+                
+                if qb_total_lineups > 0:
+                    # Count usage in QB-filtered lineups only
+                    player_counts = {}
+                    for points, lineup, salary in qb_lineups:
+                        for _, player in lineup.iterrows():
+                            player_key = f"{player['Nickname']}_{player['Position']}_{player['Team']}"
+                            if player_key not in player_counts:
+                                player_counts[player_key] = {
+                                    'count': 0,
+                                    'player_info': player
+                                }
+                            player_counts[player_key]['count'] += 1
+                    
+                    # Create filtered usage data
+                    for player_key, data in player_counts.items():
+                        player = data['player_info']
+                        count = data['count']
+                        usage_pct = (count / qb_total_lineups) * 100
+                        
+                        filtered_usage_data.append({
+                            'Player': player['Nickname'],
+                            'Position': player['Position'],
+                            'Team': player['Team'],
+                            'vs': player.get('Opponent', 'N/A'),
+                            'Matchup': player.get('Matchup_Quality', 'N/A'),
+                            'Salary_Display': f"${player['Salary']:,}",
+                            'FPPG': player['FPPG'],
+                            'Ceiling_Display': f"{player.get('Ceiling', player['FPPG'] * 1.25):.1f}",
+                            'Floor_Display': f"{player.get('Floor', player['FPPG'] * 0.75):.1f}",
+                            'Upside': f"{((player.get('Ceiling', player['FPPG'] * 1.25) / player['FPPG']) - 1) * 100:.0f}%",
+                            'Points_Per_Dollar_Display': f"{(player['FPPG'] / player['Salary']) * 1000:.2f}",
+                            'Value Tier': 'Premium' if player['Salary'] >= 8000 else 'Mid' if player['Salary'] >= 6000 else 'Value',
+                            'Count': count,
+                            'Usage %': usage_pct,
+                            'Usage_Display': f"{usage_pct:.1f}%",
+                            'Leverage_Display': f"{max(0, 15 - usage_pct):.1f}%",  # Simple leverage calc
+                            'GPP_Score_Display': f"{(usage_pct * 0.3 + (player['FPPG'] / player['Salary'] * 1000) * 0.7):.1f}",
+                            'Proj Own': f"{min(usage_pct * 1.5, 50):.0f}%"  # Estimated ownership
+                        })
+                    
+                    # Sort filtered data
+                    filtered_usage_data.sort(key=lambda x: x['Usage %'], reverse=True)
+                    comprehensive_usage_data = filtered_usage_data
+                    total_lineups = qb_total_lineups
+                else:
+                    st.warning(f"No lineups found with {selected_qb}")
+                    comprehensive_usage_data = []
             
-            with col_filter3:
-                sort_by = st.selectbox(
-                    "Sort by:",
-                    options=['Usage %', 'Count', 'Salary', 'FPPG'],
-                    key="usage_sort"
-                )
+            # Create display dataframe with enhanced tournament columns
+            display_df = pd.DataFrame([{
+                'Player': data['Player'],
+                'Pos': data['Position'],
+                'Team': data['Team'],
+                'vs': data['vs'],
+                'Matchup': data['Matchup'],
+                'Salary': data['Salary_Display'],
+                'FPPG': f"{data['FPPG']:.1f}",
+                'Ceiling': data['Ceiling_Display'],
+                'Floor': data['Floor_Display'],
+                'Upside': data['Upside'],
+                'Pts/$': data['Points_Per_Dollar_Display'],
+                'Value Tier': data['Value Tier'],
+                'Count': f"{data['Count']}/{total_lineups}",
+                'Usage %': data['Usage_Display'],
+                'Leverage': data['Leverage_Display'],
+                'GPP Score': data['GPP_Score_Display'],
+                'Proj Own': data['Proj Own']
+            } for data in comprehensive_usage_data])
             
-            # Apply filters
-            filtered_df = usage_display_df.copy()
+            st.dataframe(display_df, use_container_width=True, hide_index=True, height=600)
             
-            if position_filter != 'All':
-                filtered_df = filtered_df[filtered_df['Pos'] == position_filter]
-            
-            if min_usage > 0:
-                filtered_df = filtered_df[filtered_df['Usage %'].str.rstrip('%').astype(float) >= min_usage]
-            
-            # Sort
-            if sort_by == 'Usage %':
-                filtered_df = filtered_df.sort_values('Usage %', key=lambda x: x.str.rstrip('%').astype(float), ascending=False)
-            elif sort_by == 'Count':
-                filtered_df = filtered_df.sort_values('Count', ascending=False)
-            elif sort_by == 'Salary':
-                filtered_df = filtered_df.sort_values('Salary', key=lambda x: x.str.replace('$', '').str.replace(',', '').astype(int), ascending=False)
-            elif sort_by == 'FPPG':
-                filtered_df = filtered_df.sort_values('FPPG', key=lambda x: x.astype(float), ascending=False)
-            
-            # Display the table
-            st.dataframe(
-                filtered_df,
-                use_container_width=True,
-                hide_index=True
-            )
-            
-            # Summary statistics
-            col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
-            
-            with col_stat1:
-                avg_usage = filtered_df['Usage %'].str.rstrip('%').astype(float).mean()
-                st.metric("Average Usage", f"{avg_usage:.1f}%")
-            
-            with col_stat2:
-                max_usage = filtered_df['Usage %'].str.rstrip('%').astype(float).max()
-                st.metric("Max Usage", f"{max_usage:.1f}%")
-            
-            with col_stat3:
-                total_unique_players = len(filtered_df)
-                st.metric("Unique Players", total_unique_players)
-            
-            with col_stat4:
-                high_usage_players = len(filtered_df[filtered_df['Usage %'].str.rstrip('%').astype(float) >= 50])
-                st.metric("High Usage (≥50%)", high_usage_players)
+            # Tournament Metrics Explanation
+            with st.expander("🎯 Tournament Metrics Guide - Click to Learn How to Use Each Column"):
+                st.markdown("### 📊 **Understanding Your Tournament Analysis Table**")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("#### 🏆 **Key Tournament Metrics:**")
+                    st.markdown("""
+                    **GPP Score:**
+                    - **> 15**: 🔥 Elite tournament plays - highest priority
+                    - **10-15**: ⭐ Good tournament options
+                    - **< 10**: ⚠️ Risky plays, use sparingly
+                    
+                    **Leverage Score:**
+                    - **> 50**: 📈 Good leverage opportunities
+                    - **30-50**: 📊 Moderate leverage potential
+                    - **< 30**: 📉 Low leverage, likely popular
+                    
+                    **Ceiling Points:**
+                    - **> 25**: 🚀 Tournament-winning upside
+                    - **20-25**: 💪 Solid ceiling, good for GPPs
+                    - **< 20**: 😐 Limited upside potential
+                    
+                    **Projected Ownership:**
+                    - **< 10%**: 💎 Massive leverage potential
+                    - **10-25%**: ⚡ Good differentiation
+                    - **> 40%**: ⚠️ Chalk plays, use carefully
+                    """)
+                
+                with col2:
+                    st.markdown("#### 💡 **How to Use This Data:**")
+                    st.markdown("""
+                    **🎯 Tournament Strategy:**
+                    
+                    **Core Plays (60-70% of lineup):**
+                    - High GPP Score (>15) + Medium ownership (15-40%)
+                    - Players you're most confident in
+                    
+                    **Leverage Plays (20-30% of lineup):**
+                    - High Ceiling (>25) + Low ownership (<15%)
+                    - Tournament differentiators
+                    
+                    **Contrarian Plays (5-10% of lineup):**
+                    - Very Low ownership (<5%) + High upside
+                    - Massive leverage if they hit
+                    
+                    **💰 Value Identification:**
+                    - **Pts/$**: Higher = better salary efficiency
+                    - **Value Tier**: Premium/Mid/Value for roster balance
+                    - **Floor**: Minimum expected points (safety)
+                    
+                    **📈 Upside Categories:**
+                    - **High**: Boom/bust players, great for tournaments
+                    - **Medium**: Steady with upside potential
+                    - **Low**: Consistent, better for cash games
+                    """)
+                
+                st.markdown("---")
+                st.markdown("#### 🔍 **Quick Filters for Tournament Success:**")
+                
+                col3, col4, col5 = st.columns(3)
+                
+                with col3:
+                    st.markdown("""
+                    **🔥 Elite GPP Targets:**
+                    - GPP Score > 15
+                    - Leverage Score > 40
+                    - Ceiling > 22
+                    """)
+                
+                with col4:
+                    st.markdown("""
+                    **💎 Leverage Gems:**
+                    - Proj Own < 15%
+                    - Ceiling > 20
+                    - Value Tier: Any
+                    """)
+                
+                with col5:
+                    st.markdown("""
+                    **⚡ Contrarian Bombs:**
+                    - Proj Own < 8%
+                    - Upside: High
+                    - GPP Score > 12
+                    """)
+                
+                st.info("💡 **Pro Tip**: Sort the table by different columns to find players that match these criteria!")
             
             # Enhanced Multi-Platform Export Section
             st.markdown("---")
-            
+
             if ENHANCED_FEATURES_AVAILABLE:
                 st.subheader("📥 Multi-Platform Export")
                 
@@ -1837,6 +2715,34 @@ def main():
                     
                     num_export = st.slider("Number of lineups to export", 1, min(len(stacked_lineups), 150), min(20, len(stacked_lineups)))
                     
+                    # Entry ID Configuration
+                    with st.expander("🎯 Contest Entry Settings"):
+                        st.markdown("**Configure contest details for CSV export:**")
+                        
+                        col_a, col_b = st.columns(2)
+                        with col_a:
+                            base_entry_id = st.number_input(
+                                "Base Entry ID", 
+                                value=3584175604, 
+                                help="Starting entry ID (will increment for each lineup)"
+                            )
+                            contest_id = st.text_input(
+                                "Contest ID", 
+                                value="121309-276916553",
+                                help="Contest identifier from DFS platform"
+                            )
+                        with col_b:
+                            contest_name = st.text_input(
+                                "Contest Name", 
+                                value="$60K Sun NFL Hail Mary",
+                                help="Name of the contest"
+                            )
+                            entry_fee = st.text_input(
+                                "Entry Fee", 
+                                value="0.25",
+                                help="Fee per entry (e.g., 0.25, 5.00, 100)"
+                            )
+
                 with col2:
                     if st.button("📋 Generate Multi-Platform Export", type="primary"):
                         if platforms:
@@ -1873,6 +2779,38 @@ def main():
                     st.subheader("📥 Export Lineups")
                     num_export = st.slider("Number of lineups to export", 1, min(len(stacked_lineups), 150), min(20, len(stacked_lineups)))
                     st.caption(f"Export top {num_export} lineups for FanDuel upload")
+                    
+                    # Entry ID Configuration (Fallback)
+                    with st.expander("🎯 Contest Entry Settings"):
+                        st.markdown("**Configure contest details for CSV export:**")
+                        
+                        col_a, col_b = st.columns(2)
+                        with col_a:
+                            fallback_base_entry_id = st.number_input(
+                                "Base Entry ID ", 
+                                value=3584175604, 
+                                help="Starting entry ID (will increment for each lineup)",
+                                key="fallback_entry_id"
+                            )
+                            fallback_contest_id = st.text_input(
+                                "Contest ID ", 
+                                value="121309-276916553",
+                                help="Contest identifier from DFS platform",
+                                key="fallback_contest_id"
+                            )
+                        with col_b:
+                            fallback_contest_name = st.text_input(
+                                "Contest Name ", 
+                                value="$60K Sun NFL Hail Mary",
+                                help="Name of the contest",
+                                key="fallback_contest_name"
+                            )
+                            fallback_entry_fee = st.text_input(
+                                "Entry Fee ", 
+                                value="0.25",
+                                help="Fee per entry (e.g., 0.25, 5.00, 100)",
+                                key="fallback_entry_fee"
+                            )
                 
                 with col2:
                     if st.button("📋 Prepare CSV Download", type="primary"):
@@ -1957,3 +2895,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

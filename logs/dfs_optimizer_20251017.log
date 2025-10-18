@@ -1,0 +1,872 @@
+2025-10-17 14:01:09,558 | INFO | info:124 | Logging system initialized
+2025-10-17 14:01:09,560 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:01:09,585 | INFO | info:124 | Starting operation: load_player_data
+2025-10-17 14:01:09,698 | INFO | info:124 | Loaded 164 players with enhanced features
+2025-10-17 14:01:09,698 | INFO | info:124 | Completed operation: load_player_data in 0.113s
+2025-10-17 14:01:30,975 | INFO | info:124 | Logging system initialized
+2025-10-17 14:01:30,976 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:03:00,213 | INFO | info:124 | Logging system initialized
+2025-10-17 14:03:00,215 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:03:07,847 | INFO | info:124 | Logging system initialized
+2025-10-17 14:03:07,852 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:05:49,070 | INFO | info:124 | Logging system initialized
+2025-10-17 14:05:49,072 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:05:49,089 | INFO | info:124 | Starting operation: load_player_data
+2025-10-17 14:05:49,152 | INFO | info:124 | Loaded 164 players with enhanced features
+2025-10-17 14:05:49,152 | INFO | info:124 | Completed operation: load_player_data in 0.063s
+2025-10-17 14:06:02,355 | INFO | info:124 | Logging system initialized
+2025-10-17 14:06:02,356 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:13:37,025 | INFO | info:124 | Logging system initialized
+2025-10-17 14:13:37,026 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:13:37,047 | INFO | info:124 | Starting operation: load_player_data
+2025-10-17 14:13:37,096 | INFO | info:124 | Loaded 164 players with enhanced features
+2025-10-17 14:13:37,096 | INFO | info:124 | Completed operation: load_player_data in 0.049s
+2025-10-17 14:13:58,729 | INFO | info:124 | Logging system initialized
+2025-10-17 14:13:58,732 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:14:22,605 | INFO | info:124 | Logging system initialized
+2025-10-17 14:14:22,606 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:14:22,764 | INFO | info:124 | Logging system initialized
+2025-10-17 14:14:22,765 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:14:22,792 | INFO | info:124 | Starting operation: load_player_data
+2025-10-17 14:14:22,867 | INFO | info:124 | Loaded 164 players with enhanced features
+2025-10-17 14:14:22,868 | INFO | info:124 | Completed operation: load_player_data in 0.076s
+2025-10-17 14:14:33,058 | INFO | info:124 | Logging system initialized
+2025-10-17 14:14:33,060 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:14:33,204 | INFO | info:124 | Logging system initialized
+2025-10-17 14:14:33,205 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:14:33,230 | INFO | info:124 | Starting operation: load_player_data
+2025-10-17 14:14:33,291 | INFO | info:124 | Loaded 164 players with enhanced features
+2025-10-17 14:14:33,291 | INFO | info:124 | Completed operation: load_player_data in 0.060s
+2025-10-17 14:14:47,507 | INFO | info:124 | Logging system initialized
+2025-10-17 14:14:47,509 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:17:00,669 | INFO | info:124 | Logging system initialized
+2025-10-17 14:17:00,669 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:17:00,693 | INFO | info:124 | Starting operation: load_player_data
+2025-10-17 14:17:00,728 | INFO | info:124 | Loaded 164 players with enhanced features
+2025-10-17 14:17:00,728 | INFO | info:124 | Completed operation: load_player_data in 0.035s
+2025-10-17 14:17:52,889 | INFO | info:124 | Logging system initialized
+2025-10-17 14:17:52,890 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:17:53,017 | INFO | info:124 | Logging system initialized
+2025-10-17 14:17:53,018 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:17:53,049 | INFO | info:124 | Starting operation: load_player_data
+2025-10-17 14:17:53,091 | INFO | info:124 | Loaded 164 players with enhanced features
+2025-10-17 14:17:53,092 | INFO | info:124 | Completed operation: load_player_data in 0.042s
+2025-10-17 14:17:59,799 | INFO | info:124 | Logging system initialized
+2025-10-17 14:17:59,804 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:22:31,272 | INFO | info:124 | Logging system initialized
+2025-10-17 14:22:31,273 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:22:31,290 | INFO | info:124 | Starting operation: load_player_data
+2025-10-17 14:22:31,331 | INFO | info:124 | Loaded 164 players with enhanced features
+2025-10-17 14:22:31,331 | INFO | info:124 | Completed operation: load_player_data in 0.041s
+2025-10-17 14:22:38,302 | INFO | info:124 | Logging system initialized
+2025-10-17 14:22:38,303 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:22:38,461 | INFO | info:124 | Logging system initialized
+2025-10-17 14:22:38,463 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:22:38,506 | INFO | info:124 | Starting operation: load_player_data
+2025-10-17 14:22:38,582 | INFO | info:124 | Loaded 164 players with enhanced features
+2025-10-17 14:22:38,583 | INFO | info:124 | Completed operation: load_player_data in 0.077s
+2025-10-17 14:23:14,418 | INFO | info:124 | Logging system initialized
+2025-10-17 14:23:14,420 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:23:18,117 | INFO | info:124 | Logging system initialized
+2025-10-17 14:23:18,118 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:23:28,623 | INFO | info:124 | Logging system initialized
+2025-10-17 14:23:28,624 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:31:04,784 | INFO | info:124 | Logging system initialized
+2025-10-17 14:31:04,786 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:31:04,810 | INFO | info:124 | Starting operation: load_player_data
+2025-10-17 14:31:04,876 | INFO | info:124 | Loaded 164 players with enhanced features
+2025-10-17 14:31:04,876 | INFO | info:124 | Completed operation: load_player_data in 0.066s
+2025-10-17 14:31:18,363 | INFO | info:124 | Logging system initialized
+2025-10-17 14:31:18,366 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:31:39,699 | INFO | info:124 | Logging system initialized
+2025-10-17 14:31:39,701 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:32:11,754 | INFO | info:124 | Logging system initialized
+2025-10-17 14:32:11,757 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:33:42,853 | INFO | info:124 | Logging system initialized
+2025-10-17 14:33:42,855 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:38:31,070 | INFO | info:124 | Logging system initialized
+2025-10-17 14:38:31,071 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 14:40:59,117 | INFO | info:124 | Logging system initialized
+2025-10-17 14:40:59,119 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:02:01,004 | INFO | info:124 | Logging system initialized
+2025-10-17 20:02:01,014 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:02:31,327 | INFO | info:124 | Logging system initialized
+2025-10-17 20:02:31,333 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:03:32,175 | INFO | info:124 | Logging system initialized
+2025-10-17 20:03:32,180 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:03:46,222 | INFO | info:124 | Logging system initialized
+2025-10-17 20:03:46,227 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:03:55,922 | INFO | info:124 | Logging system initialized
+2025-10-17 20:03:55,923 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:03:57,920 | INFO | info:124 | Logging system initialized
+2025-10-17 20:03:57,922 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:04:00,222 | INFO | info:124 | Logging system initialized
+2025-10-17 20:04:00,225 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:04:37,240 | INFO | info:124 | Logging system initialized
+2025-10-17 20:04:37,243 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:04:43,517 | INFO | info:124 | Logging system initialized
+2025-10-17 20:04:43,519 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:04:47,207 | INFO | info:124 | Logging system initialized
+2025-10-17 20:04:47,216 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:04:49,225 | INFO | info:124 | Logging system initialized
+2025-10-17 20:04:49,229 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:04:59,911 | INFO | info:124 | Logging system initialized
+2025-10-17 20:04:59,916 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:05:06,465 | INFO | info:124 | Logging system initialized
+2025-10-17 20:05:06,470 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:05:07,504 | INFO | info:124 | Logging system initialized
+2025-10-17 20:05:07,609 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:05:10,169 | INFO | info:124 | Logging system initialized
+2025-10-17 20:05:10,171 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:07:59,379 | INFO | info:124 | Logging system initialized
+2025-10-17 20:07:59,382 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:01,115 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:01,117 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:01,925 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:02,036 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:02,802 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:02,808 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:02,938 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:02,941 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:04,277 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:04,418 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:04,733 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:04,741 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:05,830 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:05,835 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:06,109 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:06,206 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:07,716 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:07,745 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:09,445 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:10,003 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:10,273 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:10,719 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:10,954 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:11,103 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:11,111 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:12,681 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:12,686 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:12,849 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:12,855 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:13,090 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:13,093 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:14,281 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:14,413 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:14,847 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:14,849 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:16,205 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:16,483 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:16,782 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:16,784 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:20,034 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:20,037 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:21,036 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:21,037 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:21,871 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:21,880 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:22,925 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:22,965 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:24,159 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:24,193 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:25,289 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:25,294 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:25,880 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:26,050 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:26,705 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:26,706 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:27,668 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:27,944 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:28,745 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:28,750 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:29,189 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:29,196 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:30,358 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:30,394 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:31,478 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:31,488 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:32,440 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:32,469 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:33,648 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:33,796 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:33,957 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:33,963 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:35,100 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:35,102 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:35,686 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:35,881 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:38,707 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:38,709 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:48,233 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:48,234 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:08:59,315 | INFO | info:124 | Logging system initialized
+2025-10-17 20:08:59,316 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:22,856 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:22,859 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:24,138 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:24,139 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:24,885 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:24,888 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:25,105 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:25,108 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:26,611 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:26,621 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:28,627 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:28,638 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:29,254 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:29,482 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:30,979 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:31,095 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:32,962 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:33,099 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:33,324 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:33,410 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:34,501 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:34,501 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:34,507 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:34,507 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:34,569 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:34,569 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:34,585 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:34,585 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:35,957 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:36,303 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:37,373 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:37,561 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:39,155 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:39,342 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:39,784 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:39,906 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:40,780 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:40,783 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:41,020 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:41,030 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:42,230 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:42,500 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:43,615 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:43,919 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:44,423 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:44,430 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:45,953 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:45,954 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:46,891 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:46,909 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:47,798 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:48,078 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:48,259 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:48,270 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:49,599 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:49,792 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:51,132 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:51,291 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:52,692 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:52,921 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:53,990 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:54,041 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:54,332 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:54,542 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:55,782 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:55,793 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:58,059 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:58,237 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:09:59,047 | INFO | info:124 | Logging system initialized
+2025-10-17 20:09:59,067 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:00,378 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:00,584 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:00,794 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:00,799 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:01,657 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:01,848 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:02,499 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:02,741 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:03,277 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:03,285 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:04,977 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:05,022 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:06,093 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:06,314 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:07,260 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:07,265 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:08,484 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:08,492 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:09,623 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:09,811 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:10,094 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:10,115 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:11,618 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:11,620 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:12,025 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:12,032 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:13,182 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:13,188 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:14,260 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:14,263 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:15,265 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:15,489 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:16,652 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:16,732 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:17,082 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:17,086 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:18,143 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:18,145 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:18,316 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:18,350 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:19,524 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:19,532 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:21,973 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:21,974 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:23,164 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:23,327 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:24,171 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:24,175 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:24,433 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:24,435 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:25,993 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:25,996 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:26,350 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:26,352 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:27,634 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:27,636 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:29,247 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:29,248 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:30,355 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:30,503 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:31,526 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:31,754 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:35,324 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:35,326 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:36,519 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:36,520 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:38,004 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:38,005 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:38,936 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:39,108 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:40,206 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:40,209 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:40,638 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:40,647 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:10:43,700 | INFO | info:124 | Logging system initialized
+2025-10-17 20:10:43,701 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:11:12,827 | INFO | info:124 | Logging system initialized
+2025-10-17 20:11:12,830 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:26:44,083 | INFO | info:124 | Logging system initialized
+2025-10-17 20:26:44,086 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:26:54,010 | INFO | info:124 | Logging system initialized
+2025-10-17 20:26:54,013 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:26:59,880 | INFO | info:124 | Logging system initialized
+2025-10-17 20:26:59,884 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:27:07,889 | INFO | info:124 | Logging system initialized
+2025-10-17 20:27:07,890 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:27:15,249 | INFO | info:124 | Logging system initialized
+2025-10-17 20:27:15,253 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:27:16,531 | INFO | info:124 | Logging system initialized
+2025-10-17 20:27:16,533 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:27:26,590 | INFO | info:124 | Logging system initialized
+2025-10-17 20:27:26,597 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:27:34,475 | INFO | info:124 | Logging system initialized
+2025-10-17 20:27:34,478 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:27:37,278 | INFO | info:124 | Logging system initialized
+2025-10-17 20:27:37,283 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:27:38,303 | INFO | info:124 | Logging system initialized
+2025-10-17 20:27:38,306 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:27:46,444 | INFO | info:124 | Logging system initialized
+2025-10-17 20:27:46,448 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:27:51,673 | INFO | info:124 | Logging system initialized
+2025-10-17 20:27:51,675 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:27:58,692 | INFO | info:124 | Logging system initialized
+2025-10-17 20:27:58,695 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:27:59,654 | INFO | info:124 | Logging system initialized
+2025-10-17 20:27:59,656 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:18,998 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:19,001 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:31,244 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:31,247 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:32,412 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:32,414 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:33,774 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:33,775 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:34,608 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:34,610 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:35,181 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:35,382 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:35,652 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:35,659 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:36,497 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:36,529 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:37,927 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:37,928 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:38,759 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:38,761 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:39,480 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:39,483 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:40,295 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:40,297 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:40,556 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:40,557 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:41,541 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:41,543 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:42,265 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:42,266 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:42,951 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:42,953 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:44,116 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:44,118 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:45,005 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:45,202 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:46,052 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:46,054 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:46,761 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:46,762 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:47,614 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:47,618 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:48,037 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:48,041 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:48,839 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:48,846 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:49,858 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:49,895 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:50,083 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:50,178 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:51,782 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:51,789 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:52,482 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:52,491 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:52,791 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:52,833 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:54,166 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:54,246 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:55,342 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:55,517 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:56,309 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:56,311 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:57,253 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:57,257 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:57,496 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:57,507 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:58,287 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:58,290 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:28:58,991 | INFO | info:124 | Logging system initialized
+2025-10-17 20:28:58,993 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:00,401 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:00,402 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:00,544 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:00,547 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:01,332 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:01,343 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:03,806 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:03,807 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:04,804 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:04,805 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:08,891 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:08,892 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:20,971 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:20,972 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:29,589 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:29,594 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:30,935 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:30,936 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:31,791 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:31,792 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:32,681 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:32,683 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:32,947 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:32,948 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:33,735 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:33,737 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:34,621 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:34,623 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:35,263 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:35,317 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:35,777 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:35,778 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:36,830 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:36,831 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:39,170 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:39,171 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:29:53,551 | INFO | info:124 | Logging system initialized
+2025-10-17 20:29:53,556 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:30:07,345 | INFO | info:124 | Logging system initialized
+2025-10-17 20:30:07,348 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:30:12,630 | INFO | info:124 | Logging system initialized
+2025-10-17 20:30:12,632 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:30:15,820 | INFO | info:124 | Logging system initialized
+2025-10-17 20:30:15,822 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:30:16,752 | INFO | info:124 | Logging system initialized
+2025-10-17 20:30:16,753 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:30:30,882 | INFO | info:124 | Logging system initialized
+2025-10-17 20:30:30,888 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:36:42,588 | INFO | info:124 | Logging system initialized
+2025-10-17 20:36:42,594 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:52:36,278 | INFO | info:124 | Logging system initialized
+2025-10-17 20:52:36,282 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:53:04,932 | INFO | info:124 | Logging system initialized
+2025-10-17 20:53:04,936 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:54:32,551 | INFO | info:124 | Logging system initialized
+2025-10-17 20:54:32,554 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 20:54:42,958 | INFO | info:124 | Logging system initialized
+2025-10-17 20:54:42,963 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:06:33,961 | INFO | info:124 | Logging system initialized
+2025-10-17 21:06:33,965 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:06:40,822 | INFO | info:124 | Logging system initialized
+2025-10-17 21:06:40,829 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:06:44,286 | INFO | info:124 | Logging system initialized
+2025-10-17 21:06:44,288 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:06:50,934 | INFO | info:124 | Logging system initialized
+2025-10-17 21:06:50,936 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:06:57,905 | INFO | info:124 | Logging system initialized
+2025-10-17 21:06:57,910 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:06:59,747 | INFO | info:124 | Logging system initialized
+2025-10-17 21:06:59,748 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:07:06,741 | INFO | info:124 | Logging system initialized
+2025-10-17 21:07:06,745 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:07:13,333 | INFO | info:124 | Logging system initialized
+2025-10-17 21:07:13,338 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:07:13,817 | INFO | info:124 | Logging system initialized
+2025-10-17 21:07:13,826 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:07:18,307 | INFO | info:124 | Logging system initialized
+2025-10-17 21:07:18,314 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:07:25,544 | INFO | info:124 | Logging system initialized
+2025-10-17 21:07:25,549 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:07:30,702 | INFO | info:124 | Logging system initialized
+2025-10-17 21:07:30,711 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:07:33,494 | INFO | info:124 | Logging system initialized
+2025-10-17 21:07:33,497 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:07:35,370 | INFO | info:124 | Logging system initialized
+2025-10-17 21:07:35,376 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:07:48,127 | INFO | info:124 | Logging system initialized
+2025-10-17 21:07:48,132 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:08:03,702 | INFO | info:124 | Logging system initialized
+2025-10-17 21:08:03,707 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:08:13,513 | INFO | info:124 | Logging system initialized
+2025-10-17 21:08:13,518 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:08:16,514 | INFO | info:124 | Logging system initialized
+2025-10-17 21:08:16,520 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:08:21,070 | INFO | info:124 | Logging system initialized
+2025-10-17 21:08:21,075 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:08:23,724 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:08:24,758 | INFO | info:124 | Logging system initialized
+2025-10-17 21:08:24,768 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:08:38,317 | INFO | info:124 | Logging system initialized
+2025-10-17 21:08:41,948 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:09:01,103 | INFO | info:124 | Logging system initialized
+2025-10-17 21:09:01,106 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:09:07,267 | INFO | info:124 | Logging system initialized
+2025-10-17 21:09:07,271 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:09:09,468 | INFO | info:124 | Logging system initialized
+2025-10-17 21:09:09,477 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:09:11,948 | INFO | info:124 | Logging system initialized
+2025-10-17 21:09:11,953 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:09:41,528 | INFO | info:124 | Logging system initialized
+2025-10-17 21:09:41,533 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:09:43,807 | INFO | info:124 | Logging system initialized
+2025-10-17 21:09:44,629 | INFO | info:124 | Logging system initialized
+2025-10-17 21:09:44,631 | INFO | info:124 | Logging system initialized
+2025-10-17 21:09:44,635 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:09:44,635 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:09:52,928 | INFO | info:124 | Logging system initialized
+2025-10-17 21:09:52,932 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:10:03,212 | INFO | info:124 | Logging system initialized
+2025-10-17 21:10:03,220 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:19:49,898 | INFO | info:124 | Logging system initialized
+2025-10-17 21:19:49,903 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:21:33,504 | INFO | info:124 | Logging system initialized
+2025-10-17 21:21:33,510 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:21:45,852 | INFO | info:124 | Logging system initialized
+2025-10-17 21:21:45,894 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:21:53,146 | INFO | info:124 | Logging system initialized
+2025-10-17 21:21:53,282 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:22:15,796 | INFO | info:124 | Logging system initialized
+2025-10-17 21:22:15,803 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:22:32,897 | INFO | info:124 | Logging system initialized
+2025-10-17 21:22:33,057 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:22:47,608 | INFO | info:124 | Logging system initialized
+2025-10-17 21:22:47,612 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:22:50,093 | INFO | info:124 | Logging system initialized
+2025-10-17 21:22:50,098 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:24:34,636 | INFO | info:124 | Logging system initialized
+2025-10-17 21:24:34,641 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:24:55,243 | INFO | info:124 | Logging system initialized
+2025-10-17 21:24:55,402 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:25:11,966 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:25:13,653 | INFO | info:124 | Logging system initialized
+2025-10-17 21:25:13,701 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:25:20,949 | INFO | info:124 | Logging system initialized
+2025-10-17 21:25:21,105 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:25:36,607 | INFO | info:124 | Logging system initialized
+2025-10-17 21:25:36,639 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:25:53,594 | INFO | info:124 | Logging system initialized
+2025-10-17 21:25:53,760 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:26:05,206 | INFO | info:124 | Logging system initialized
+2025-10-17 21:26:05,209 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:26:08,189 | INFO | info:124 | Logging system initialized
+2025-10-17 21:26:08,193 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:26:59,042 | INFO | info:124 | Logging system initialized
+2025-10-17 21:26:59,046 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:37:50,383 | INFO | info:124 | Logging system initialized
+2025-10-17 21:37:50,384 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:39:00,967 | INFO | info:124 | Logging system initialized
+2025-10-17 21:39:00,972 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:39:07,904 | INFO | info:124 | Logging system initialized
+2025-10-17 21:39:08,090 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:39:25,877 | INFO | info:124 | Logging system initialized
+2025-10-17 21:39:25,879 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:39:25,879 | INFO | info:124 | Logging system initialized
+2025-10-17 21:39:27,922 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:39:30,736 | INFO | info:124 | Logging system initialized
+2025-10-17 21:39:30,738 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:40:19,862 | INFO | info:124 | Logging system initialized
+2025-10-17 21:40:19,863 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:40:34,380 | INFO | info:124 | Logging system initialized
+2025-10-17 21:40:34,495 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:40:43,384 | INFO | info:124 | Logging system initialized
+2025-10-17 21:40:43,386 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:40:49,640 | INFO | info:124 | Logging system initialized
+2025-10-17 21:40:49,979 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:40:53,711 | INFO | info:124 | Logging system initialized
+2025-10-17 21:40:54,081 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:41:13,813 | INFO | info:124 | Logging system initialized
+2025-10-17 21:41:13,874 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:57:11,713 | INFO | info:124 | Logging system initialized
+2025-10-17 21:57:11,715 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:57:20,499 | INFO | info:124 | Logging system initialized
+2025-10-17 21:57:20,502 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:57:24,218 | INFO | info:124 | Logging system initialized
+2025-10-17 21:57:24,220 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:57:32,631 | INFO | info:124 | Logging system initialized
+2025-10-17 21:57:32,632 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:57:37,469 | INFO | info:124 | Logging system initialized
+2025-10-17 21:57:37,470 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:57:40,949 | INFO | info:124 | Logging system initialized
+2025-10-17 21:57:40,951 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:57:46,063 | INFO | info:124 | Logging system initialized
+2025-10-17 21:57:46,068 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:57:55,349 | INFO | info:124 | Logging system initialized
+2025-10-17 21:57:55,350 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:57:59,083 | INFO | info:124 | Logging system initialized
+2025-10-17 21:57:59,084 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:58:05,801 | INFO | info:124 | Logging system initialized
+2025-10-17 21:58:05,802 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:58:09,248 | INFO | info:124 | Logging system initialized
+2025-10-17 21:58:09,249 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:58:12,704 | INFO | info:124 | Logging system initialized
+2025-10-17 21:58:12,706 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:58:19,907 | INFO | info:124 | Logging system initialized
+2025-10-17 21:58:19,908 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:58:27,875 | INFO | info:124 | Logging system initialized
+2025-10-17 21:58:27,877 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:58:33,645 | INFO | info:124 | Logging system initialized
+2025-10-17 21:58:33,647 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:58:36,973 | INFO | info:124 | Logging system initialized
+2025-10-17 21:58:36,975 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:58:47,035 | INFO | info:124 | Logging system initialized
+2025-10-17 21:58:47,039 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:58:54,059 | INFO | info:124 | Logging system initialized
+2025-10-17 21:58:54,060 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:58:54,350 | INFO | info:124 | Logging system initialized
+2025-10-17 21:58:57,543 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:59:00,611 | INFO | info:124 | Logging system initialized
+2025-10-17 21:59:00,613 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:59:12,521 | INFO | info:124 | Logging system initialized
+2025-10-17 21:59:12,522 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:59:18,459 | INFO | info:124 | Logging system initialized
+2025-10-17 21:59:18,460 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:59:23,636 | INFO | info:124 | Logging system initialized
+2025-10-17 21:59:23,637 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 21:59:27,093 | INFO | info:124 | Logging system initialized
+2025-10-17 21:59:27,099 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:00:06,578 | INFO | info:124 | Logging system initialized
+2025-10-17 22:00:06,583 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:00:12,414 | INFO | info:124 | Logging system initialized
+2025-10-17 22:00:12,415 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:00:16,095 | INFO | info:124 | Logging system initialized
+2025-10-17 22:00:16,097 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:00:22,374 | INFO | info:124 | Logging system initialized
+2025-10-17 22:00:22,376 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:00:27,242 | INFO | info:124 | Logging system initialized
+2025-10-17 22:00:27,243 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:00:30,627 | INFO | info:124 | Logging system initialized
+2025-10-17 22:00:30,629 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:00:38,372 | INFO | info:124 | Logging system initialized
+2025-10-17 22:00:38,373 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:00:44,790 | INFO | info:124 | Logging system initialized
+2025-10-17 22:00:44,792 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:00:49,651 | INFO | info:124 | Logging system initialized
+2025-10-17 22:00:49,653 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:00:53,113 | INFO | info:124 | Logging system initialized
+2025-10-17 22:00:53,115 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:01:16,347 | INFO | info:124 | Logging system initialized
+2025-10-17 22:01:16,349 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:01:31,699 | INFO | info:124 | Logging system initialized
+2025-10-17 22:01:31,700 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:03:30,058 | INFO | info:124 | Logging system initialized
+2025-10-17 22:03:30,060 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:04:23,653 | INFO | info:124 | Logging system initialized
+2025-10-17 22:04:23,655 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:04:53,136 | INFO | info:124 | Logging system initialized
+2025-10-17 22:04:53,138 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:05:01,451 | INFO | info:124 | Logging system initialized
+2025-10-17 22:05:01,453 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:05:07,203 | INFO | info:124 | Logging system initialized
+2025-10-17 22:05:07,204 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:05:23,567 | INFO | info:124 | Logging system initialized
+2025-10-17 22:05:23,572 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:05:35,388 | INFO | info:124 | Logging system initialized
+2025-10-17 22:05:35,392 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:05:39,338 | INFO | info:124 | Logging system initialized
+2025-10-17 22:05:39,340 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:05:50,532 | INFO | info:124 | Logging system initialized
+2025-10-17 22:05:50,534 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:06:03,636 | INFO | info:124 | Logging system initialized
+2025-10-17 22:06:03,640 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:06:09,354 | INFO | info:124 | Logging system initialized
+2025-10-17 22:06:09,357 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:20:49,946 | INFO | info:124 | Logging system initialized
+2025-10-17 22:20:49,948 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:21:18,054 | INFO | info:124 | Logging system initialized
+2025-10-17 22:21:18,264 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:22:13,969 | INFO | info:124 | Logging system initialized
+2025-10-17 22:22:13,971 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:22:17,429 | INFO | info:124 | Logging system initialized
+2025-10-17 22:22:17,435 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:22:46,304 | INFO | info:124 | Logging system initialized
+2025-10-17 22:22:46,324 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:22:48,185 | INFO | info:124 | Logging system initialized
+2025-10-17 22:22:48,248 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:23:03,289 | INFO | info:124 | Logging system initialized
+2025-10-17 22:23:03,414 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:23:48,979 | INFO | info:124 | Logging system initialized
+2025-10-17 22:23:48,982 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:36:45,248 | INFO | info:124 | Logging system initialized
+2025-10-17 22:36:45,249 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:37:25,311 | INFO | info:124 | Logging system initialized
+2025-10-17 22:37:25,312 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:38:29,190 | INFO | info:124 | Logging system initialized
+2025-10-17 22:38:29,192 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:39:19,211 | INFO | info:124 | Logging system initialized
+2025-10-17 22:39:19,213 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:41:15,236 | INFO | info:124 | Logging system initialized
+2025-10-17 22:41:15,237 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:41:23,256 | INFO | info:124 | Logging system initialized
+2025-10-17 22:41:23,529 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:42:18,294 | INFO | info:124 | Logging system initialized
+2025-10-17 22:42:18,295 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:43:07,613 | INFO | info:124 | Logging system initialized
+2025-10-17 22:43:07,615 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:51:50,034 | INFO | info:124 | Logging system initialized
+2025-10-17 22:51:50,036 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:52:11,215 | INFO | info:124 | Logging system initialized
+2025-10-17 22:52:11,217 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:52:15,368 | INFO | info:124 | Logging system initialized
+2025-10-17 22:52:15,370 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:52:26,954 | INFO | info:124 | Logging system initialized
+2025-10-17 22:52:26,956 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:52:28,898 | INFO | info:124 | Logging system initialized
+2025-10-17 22:52:28,900 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:52:30,818 | INFO | info:124 | Logging system initialized
+2025-10-17 22:52:30,819 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:52:38,194 | INFO | info:124 | Logging system initialized
+2025-10-17 22:52:38,201 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:52:45,669 | INFO | info:124 | Logging system initialized
+2025-10-17 22:52:45,671 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:52:49,558 | INFO | info:124 | Logging system initialized
+2025-10-17 22:52:49,559 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:52:51,591 | INFO | info:124 | Logging system initialized
+2025-10-17 22:52:51,593 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:53:04,032 | INFO | info:124 | Logging system initialized
+2025-10-17 22:53:04,033 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:53:14,421 | INFO | info:124 | Logging system initialized
+2025-10-17 22:53:14,422 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:53:19,015 | INFO | info:124 | Logging system initialized
+2025-10-17 22:53:19,018 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:53:21,026 | INFO | info:124 | Logging system initialized
+2025-10-17 22:53:21,029 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:53:32,518 | INFO | info:124 | Logging system initialized
+2025-10-17 22:53:32,520 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:53:41,629 | INFO | info:124 | Logging system initialized
+2025-10-17 22:53:41,630 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:53:48,935 | INFO | info:124 | Logging system initialized
+2025-10-17 22:53:48,937 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:53:50,898 | INFO | info:124 | Logging system initialized
+2025-10-17 22:53:50,901 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:54:00,548 | INFO | info:124 | Logging system initialized
+2025-10-17 22:54:00,549 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:54:04,535 | INFO | info:124 | Logging system initialized
+2025-10-17 22:54:04,537 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:54:08,134 | INFO | info:124 | Logging system initialized
+2025-10-17 22:54:08,141 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:54:10,152 | INFO | info:124 | Logging system initialized
+2025-10-17 22:54:10,154 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:54:19,365 | INFO | info:124 | Logging system initialized
+2025-10-17 22:54:19,367 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:54:26,221 | INFO | info:124 | Logging system initialized
+2025-10-17 22:54:26,224 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:54:28,858 | INFO | info:124 | Logging system initialized
+2025-10-17 22:54:28,860 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:54:30,848 | INFO | info:124 | Logging system initialized
+2025-10-17 22:54:30,850 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:54:49,998 | INFO | info:124 | Logging system initialized
+2025-10-17 22:54:49,999 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:54:56,901 | INFO | info:124 | Logging system initialized
+2025-10-17 22:54:56,904 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:55:01,227 | INFO | info:124 | Logging system initialized
+2025-10-17 22:55:01,229 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:55:03,244 | INFO | info:124 | Logging system initialized
+2025-10-17 22:55:03,247 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:55:09,561 | INFO | info:124 | Logging system initialized
+2025-10-17 22:55:09,562 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:55:17,665 | INFO | info:124 | Logging system initialized
+2025-10-17 22:55:17,667 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:55:22,049 | INFO | info:124 | Logging system initialized
+2025-10-17 22:55:22,050 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:55:23,995 | INFO | info:124 | Logging system initialized
+2025-10-17 22:55:23,997 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:55:27,391 | INFO | info:124 | Logging system initialized
+2025-10-17 22:55:27,398 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:55:32,762 | INFO | info:124 | Logging system initialized
+2025-10-17 22:55:32,766 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:55:39,301 | INFO | info:124 | Logging system initialized
+2025-10-17 22:55:39,305 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:55:56,230 | INFO | info:124 | Logging system initialized
+2025-10-17 22:55:56,232 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:56:54,950 | INFO | info:124 | Logging system initialized
+2025-10-17 22:56:54,952 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:57:04,644 | INFO | info:124 | Logging system initialized
+2025-10-17 22:57:04,647 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:57:11,066 | INFO | info:124 | Logging system initialized
+2025-10-17 22:57:11,067 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:57:26,621 | INFO | info:124 | Logging system initialized
+2025-10-17 22:57:26,624 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 22:57:41,222 | INFO | info:124 | Logging system initialized
+2025-10-17 22:57:41,223 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 23:07:58,036 | INFO | info:124 | Logging system initialized
+2025-10-17 23:07:58,072 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 23:10:55,497 | INFO | info:124 | Logging system initialized
+2025-10-17 23:10:55,501 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 23:11:02,014 | INFO | info:124 | Logging system initialized
+2025-10-17 23:11:02,067 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 23:11:11,898 | INFO | info:124 | Logging system initialized
+2025-10-17 23:11:11,953 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 23:11:30,252 | INFO | info:124 | Logging system initialized
+2025-10-17 23:11:30,357 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 23:11:36,916 | INFO | info:124 | Logging system initialized
+2025-10-17 23:11:39,468 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 23:11:57,644 | INFO | info:124 | Logging system initialized
+2025-10-17 23:11:57,843 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 23:12:02,919 | INFO | info:124 | Logging system initialized
+2025-10-17 23:12:03,230 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 23:12:08,381 | INFO | info:124 | Logging system initialized
+2025-10-17 23:12:08,550 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 23:14:46,306 | INFO | info:124 | Logging system initialized
+2025-10-17 23:14:46,391 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 23:35:00,572 | INFO | info:124 | Logging system initialized
+2025-10-17 23:35:00,575 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 23:37:01,893 | INFO | info:124 | Logging system initialized
+2025-10-17 23:37:01,895 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 23:40:14,782 | INFO | info:124 | Logging system initialized
+2025-10-17 23:40:14,785 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 23:40:19,054 | INFO | info:124 | Logging system initialized
+2025-10-17 23:40:19,061 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 23:40:19,224 | INFO | info:124 | Logging system initialized
+2025-10-17 23:40:19,252 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features
+2025-10-17 23:41:45,848 | INFO | info:124 | Logging system initialized
+2025-10-17 23:41:45,853 | INFO | info:124 | DFS Optimizer v2.1 started with enhanced features

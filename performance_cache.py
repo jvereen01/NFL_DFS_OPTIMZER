@@ -54,29 +54,61 @@ def cached_load_player_data():
     """Cached version of load_player_data with enhanced error handling"""
     import os
     
-    target_file = 'FanDuel-NFL-2025 EDT-10 EDT-19 EDT-121559-players-list.csv'
+    target_file = 'FanDuel-NFL-2025 EDT-10 EDT-19 EDT-121559-players-list (2).csv'
     
+    # Force specific directory path to avoid confusion
+    base_dir = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER"
     current_dir = os.getcwd()
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
     possible_paths = [
+        os.path.join(base_dir, target_file),
         os.path.join(current_dir, target_file),
         os.path.join(script_dir, target_file),
         target_file
     ]
     
     csv_path = None
-    for path in possible_paths:
-        if os.path.exists(path):
+    st.write("🔍 **CSV File Search Debug:**")
+    for i, path in enumerate(possible_paths):
+        exists = os.path.exists(path)
+        st.write(f"  {i+1}. {path} - {'✅ EXISTS' if exists else '❌ Not found'}")
+        if exists and csv_path is None:
             csv_path = path
-            break
+            st.write(f"     **🎯 USING THIS FILE**")
     
     if csv_path is None:
+        st.error(f"❌ Required CSV file not found: {target_file}")
+        st.write("All CSV files in base directory:")
+        try:
+            for file in os.listdir(base_dir):
+                if file.endswith('.csv'):
+                    st.write(f"  - {file}")
+        except Exception as e:
+            st.write(f"Error listing directory: {e}")
         raise FileNotFoundError(f"Required CSV file not found: {target_file}")
     
     try:
+        st.write(f"📂 Loading CSV from: {csv_path}")
+        file_size = os.path.getsize(csv_path)
+        file_modified = os.path.getmtime(csv_path)
+        st.write(f"📊 File size: {file_size:,} bytes")
+        st.write(f"📅 Last modified: {pd.to_datetime(file_modified, unit='s')}")
+        
         df = pd.read_csv(csv_path)
         df.columns = [col.strip() for col in df.columns]
+        
+        st.write(f"🔢 Total rows loaded: {len(df)}")
+        
+        # Check for CeeDee Lamb specifically
+        cedee_check = df[df['Nickname'].str.contains('CeeDee', case=False, na=False)]
+        if not cedee_check.empty:
+            st.write(f"🎯 **Found CeeDee Lamb in loaded data:**")
+            st.write(f"  - Salary: ${cedee_check.iloc[0]['Salary']:,}")
+            st.write(f"  - Injury Status: '{cedee_check.iloc[0].get('Injury Indicator', 'N/A')}'")
+            st.write(f"  - Position: {cedee_check.iloc[0].get('Position', 'N/A')}")
+        else:
+            st.write("❌ **CeeDee Lamb NOT found in loaded CSV data**")
         
         # Validate required columns
         required_columns = ['Nickname', 'Position', 'Team', 'Salary', 'FPPG', 'Opponent', 'Injury Indicator', 'Id']
@@ -84,16 +116,55 @@ def cached_load_player_data():
         if missing_columns:
             st.warning(f"Missing columns in CSV: {missing_columns}")
         
-        # Apply filters with validation
+        # Apply injury filters with debugging
+        st.write(f"🏥 **Before injury filter:** {len(df)} players")
         injury_exclusions = ['Q', 'IR', 'O', 'D']
         if 'Injury Indicator' in df.columns:
+            # Check CeeDee before filter
+            cedee_before = df[df['Nickname'].str.contains('CeeDee', case=False, na=False)]
+            if not cedee_before.empty:
+                injury_status = cedee_before.iloc[0].get('Injury Indicator', 'N/A')
+                st.write(f"🎯 CeeDee injury status before filter: '{injury_status}'")
+                if injury_status in injury_exclusions:
+                    st.write(f"⚠️ **CeeDee will be REMOVED by injury filter** (status '{injury_status}' in {injury_exclusions})")
+                else:
+                    st.write(f"✅ CeeDee will survive injury filter (status '{injury_status}' not in exclusions)")
+            
             df = df[~df['Injury Indicator'].isin(injury_exclusions)]
+            st.write(f"🏥 **After injury filter:** {len(df)} players")
+            
+            # Check CeeDee after filter
+            cedee_after = df[df['Nickname'].str.contains('CeeDee', case=False, na=False)]
+            if cedee_after.empty:
+                st.write("❌ **CeeDee Lamb REMOVED by injury filter!**")
+            else:
+                st.write(f"✅ **CeeDee Lamb survived injury filter**")
         
-        # Salary filters with validation
+        # Apply salary filters with debugging
+        st.write(f"💰 **Before salary filter:** {len(df)} players")
         if 'Salary' in df.columns and 'Position' in df.columns:
+            # Check CeeDee before salary filter
+            cedee_salary_check = df[df['Nickname'].str.contains('CeeDee', case=False, na=False)]
+            if not cedee_salary_check.empty:
+                salary = cedee_salary_check.iloc[0]['Salary']
+                position = cedee_salary_check.iloc[0]['Position']
+                st.write(f"🎯 CeeDee before salary filter: ${salary:,} ({position})")
+                if position != 'D' and salary >= 5000:
+                    st.write(f"✅ CeeDee meets salary requirements (${salary:,} >= $5,000 for {position})")
+                else:
+                    st.write(f"❌ CeeDee will be REMOVED by salary filter")
+            
             defense_mask = (df['Position'] == 'D') & (df['Salary'] >= 3000) & (df['Salary'] <= 5000)
             other_positions_mask = (df['Position'] != 'D') & (df['Salary'] >= 5000)
             df = df[defense_mask | other_positions_mask]
+            st.write(f"💰 **After salary filter:** {len(df)} players")
+            
+            # Final CeeDee check
+            cedee_final = df[df['Nickname'].str.contains('CeeDee', case=False, na=False)]
+            if cedee_final.empty:
+                st.write("❌ **CeeDee Lamb NOT in final dataset!**")
+            else:
+                st.write(f"✅ **CeeDee Lamb in final dataset:** ${cedee_final.iloc[0]['Salary']:,}")
         
         return df
         
