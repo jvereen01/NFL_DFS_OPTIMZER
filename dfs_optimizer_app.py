@@ -103,15 +103,40 @@ if 'stacked_lineups' not in st.session_state:
 def load_player_data():
     """Load and process player data with enhanced validation and optimization"""
     
-    # DIRECT CSV LOADING - NO CACHING, NO FALLBACKS
+    # FLEXIBLE CSV LOADING - Works locally and on Streamlit Cloud
     import pandas as pd
     import os
     
-    # Direct path to the exact file we want
-    csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-19 EDT-121559-players-list (2).csv"
+    # Target CSV filename
+    target_file = 'FanDuel-NFL-2025 EDT-10 EDT-19 EDT-121559-players-list (2).csv'
     
-    if not os.path.exists(csv_file):
-        st.error(f"CSV file not found: {csv_file}")
+    # Try multiple possible locations
+    possible_paths = [
+        # Local development path
+        r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-19 EDT-121559-players-list (2).csv",
+        # Relative paths for deployment
+        target_file,
+        os.path.join('.', target_file),
+        os.path.join(os.getcwd(), target_file),
+        os.path.join(os.path.dirname(__file__), target_file)
+    ]
+    
+    csv_file = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            csv_file = path
+            break
+    
+    if csv_file is None:
+        st.error(f"CSV file not found. Looking for: {target_file}")
+        st.write("Available files in directory:")
+        try:
+            current_dir = os.getcwd()
+            for file in os.listdir(current_dir):
+                if file.endswith('.csv'):
+                    st.write(f"  - {file}")
+        except Exception as e:
+            st.write(f"Error listing files: {e}")
         return pd.DataFrame()
     
     try:
@@ -1545,17 +1570,24 @@ def main():
         with st.spinner("Loading fantasy performance data..."):
             fantasy_data = load_fantasy_data()
         
-        # Merge PosRank data from fantasy data
-        if fantasy_data is not None:
-            with st.spinner("Adding position rankings..."):
-                # Create a mapping of player names to PosRank
-                posrank_mapping = fantasy_data.set_index('Player')['PosRank'].to_dict()
-                df['PosRank'] = df['Nickname'].map(posrank_mapping)
-                # Fill missing PosRank with 999 for players not in fantasy data
-                df['PosRank'] = df['PosRank'].fillna(999).astype(int)
+        # Merge PosRank data from fantasy data (only if df has data and required columns)
+        if not df.empty and 'Nickname' in df.columns:
+            if fantasy_data is not None:
+                with st.spinner("Adding position rankings..."):
+                    # Create a mapping of player names to PosRank
+                    posrank_mapping = fantasy_data.set_index('Player')['PosRank'].to_dict()
+                    df['PosRank'] = df['Nickname'].map(posrank_mapping)
+                    # Fill missing PosRank with 999 for players not in fantasy data
+                    df['PosRank'] = df['PosRank'].fillna(999).astype(int)
+            else:
+                # If no fantasy data, use default ranking
+                df['PosRank'] = 999
+        elif df.empty:
+            st.error("❌ No player data loaded. Cannot proceed without CSV data.")
+            st.stop()
         else:
-            # If no fantasy data, use default ranking
-            df['PosRank'] = 999
+            st.error("❌ CSV file missing required 'Nickname' column.")
+            st.stop()
         
         # Apply analysis
         with st.spinner("Applying matchup analysis..."):
