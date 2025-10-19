@@ -2497,14 +2497,25 @@ def main():
             # Display comprehensive usage analysis - TABLE ONLY
             st.subheader("🎯 Complete Player Usage Breakdown")
             
-            # QB Stack Filtering
-            col1, col2 = st.columns([1, 3])
+            # Analysis Controls
+            col1, col2, col3 = st.columns([1, 1, 2])
+            
             with col1:
-                st.markdown("**Filter by QB Stack:**")
+                st.markdown("**📊 Lineup Analysis Scope:**")
+                analysis_scope = st.selectbox(
+                    "Analysis Type:",
+                    ["All Generated Lineups", "Top 150 Export Lineups"],
+                    key="analysis_scope"
+                )
+            
+            with col2:
+                st.markdown("**🎯 Filter by QB Stack:**")
                 
                 # Get all QBs from lineups for filter options
                 all_qbs = set()
-                for points, lineup, salary, _, _, _ in stacked_lineups:
+                analysis_lineups = stacked_lineups[:150] if analysis_scope == "Top 150 Export Lineups" else stacked_lineups
+                
+                for points, lineup, salary, _, _, _ in analysis_lineups:
                     qb_row = lineup[lineup['Position'] == 'QB']
                     if not qb_row.empty:
                         qb_name = qb_row.iloc[0]['Nickname']
@@ -2514,18 +2525,22 @@ def main():
                 qb_filter_options = ['All Players'] + sorted(list(all_qbs))
                 selected_qb = st.selectbox("Select QB Stack:", qb_filter_options, key="usage_qb_filter")
             
-            with col2:
-                if selected_qb != 'All Players':
+            with col3:
+                if analysis_scope == "Top 150 Export Lineups":
+                    st.info("🎯 **Analyzing your actual 150-lineup portfolio** - this matches what you'll submit to FanDuel!")
+                elif selected_qb != 'All Players':
                     qb_name = selected_qb.split(' (')[0]  # Extract QB name from "Name (Team)" format
                     st.info(f"🎯 Showing players who appeared in lineups with **{selected_qb}**")
             
-            # Filter data based on QB selection
+            # Apply analysis scope and QB filtering
+            working_lineups = stacked_lineups[:150] if analysis_scope == "Top 150 Export Lineups" else stacked_lineups
+            
             if selected_qb != 'All Players':
                 qb_name = selected_qb.split(' (')[0]
                 
-                # Get lineups that contain this QB
+                # Get lineups that contain this QB from working set
                 qb_lineups = []
-                for points, lineup, salary, _, _, _ in stacked_lineups:
+                for points, lineup, salary, _, _, _ in working_lineups:
                     qb_row = lineup[lineup['Position'] == 'QB']
                     if not qb_row.empty and qb_row.iloc[0]['Nickname'] == qb_name:
                         qb_lineups.append((points, lineup, salary))
@@ -2533,11 +2548,12 @@ def main():
                 # Recalculate usage stats for QB-filtered lineups
                 filtered_usage_data = []
                 qb_total_lineups = len(qb_lineups)
+                working_lineups = qb_lineups
                 
-                if qb_total_lineups > 0:
-                    # Count usage in QB-filtered lineups only
+                if len(working_lineups) > 0:
+                    # Count usage in filtered lineups
                     player_counts = {}
-                    for points, lineup, salary in qb_lineups:
+                    for points, lineup, salary in working_lineups:
                         for _, player in lineup.iterrows():
                             player_key = f"{player['Nickname']}_{player['Position']}_{player['Team']}"
                             if player_key not in player_counts:
@@ -2551,7 +2567,7 @@ def main():
                     for player_key, data in player_counts.items():
                         player = data['player_info']
                         count = data['count']
-                        usage_pct = (count / qb_total_lineups) * 100
+                        usage_pct = (count / len(working_lineups)) * 100
                         
                         filtered_usage_data.append({
                             'Player': player['Nickname'],
@@ -2577,10 +2593,59 @@ def main():
                     # Sort filtered data
                     filtered_usage_data.sort(key=lambda x: x['Usage %'], reverse=True)
                     comprehensive_usage_data = filtered_usage_data
-                    total_lineups = qb_total_lineups
+                    total_lineups = len(working_lineups)
                 else:
-                    st.warning(f"No lineups found with {selected_qb}")
+                    if selected_qb != 'All Players':
+                        st.warning(f"No lineups found with {selected_qb}")
                     comprehensive_usage_data = []
+            else:
+                # No QB filtering, just apply scope filtering  
+                if analysis_scope == "Top 150 Export Lineups":
+                    # Recalculate comprehensive usage for top 150 only
+                    top_150_usage_data = []
+                    top_150_lineups = stacked_lineups[:150]
+                    
+                    if top_150_lineups:
+                        player_counts = {}
+                        for points, lineup, salary, _, _, _ in top_150_lineups:
+                            for _, player in lineup.iterrows():
+                                player_key = f"{player['Nickname']}_{player['Position']}_{player['Team']}"
+                                if player_key not in player_counts:
+                                    player_counts[player_key] = {
+                                        'count': 0,
+                                        'player_info': player
+                                    }
+                                player_counts[player_key]['count'] += 1
+                        
+                        for player_key, data in player_counts.items():
+                            player = data['player_info']
+                            count = data['count']
+                            usage_pct = (count / 150) * 100
+                            
+                            top_150_usage_data.append({
+                                'Player': player['Nickname'],
+                                'Position': player['Position'],
+                                'Team': player['Team'],
+                                'vs': player.get('Opponent', 'N/A'),
+                                'Matchup': player.get('Matchup_Quality', 'N/A'),
+                                'Salary_Display': f"${player['Salary']:,}",
+                                'FPPG': player['FPPG'],
+                                'Ceiling_Display': f"{player.get('Ceiling', player['FPPG'] * 1.25):.1f}",
+                                'Floor_Display': f"{player.get('Floor', player['FPPG'] * 0.75):.1f}",
+                                'Upside': f"{((player.get('Ceiling', player['FPPG'] * 1.25) / player['FPPG']) - 1) * 100:.0f}%",
+                                'Points_Per_Dollar_Display': f"{(player['FPPG'] / player['Salary']) * 1000:.2f}",
+                                'Value Tier': 'Premium' if player['Salary'] >= 8000 else 'Mid' if player['Salary'] >= 6000 else 'Value',
+                                'Count': count,
+                                'Usage %': usage_pct,
+                                'Usage_Display': f"{usage_pct:.1f}%",
+                                'Leverage_Display': f"{max(0, 15 - usage_pct):.1f}%",
+                                'GPP_Score_Display': f"{(usage_pct * 0.3 + (player['FPPG'] / player['Salary'] * 1000) * 0.7):.1f}",
+                                'Proj Own': f"{min(usage_pct * 1.5, 50):.0f}%"
+                            })
+                        
+                        top_150_usage_data.sort(key=lambda x: x['Usage %'], reverse=True)
+                        comprehensive_usage_data = top_150_usage_data
+                        total_lineups = 150
             
             # Create display dataframe with enhanced tournament columns
             display_df = pd.DataFrame([{
@@ -2604,6 +2669,82 @@ def main():
             } for data in comprehensive_usage_data])
             
             st.dataframe(display_df, use_container_width=True, hide_index=True, height=600)
+            
+            # Dynamic Usage Adjustment Feature
+            if analysis_scope == "Top 150 Export Lineups" and comprehensive_usage_data:
+                st.markdown("---")
+                st.subheader("🎛️ Dynamic Usage Adjustment")
+                st.markdown("**Adjust player exposure in your Top 150 lineup portfolio without regenerating:**")
+                
+                # Get players with >5% usage for adjustment controls
+                adjustable_players = [p for p in comprehensive_usage_data if p['Usage %'] >= 5.0]
+                
+                if adjustable_players:
+                    col1, col2 = st.columns([2, 1])
+                    
+                    with col1:
+                        st.markdown("**🎯 Player Exposure Controls:**")
+                        
+                        # Show top 10 most used players for adjustment
+                        for i, player_data in enumerate(adjustable_players[:10]):
+                            player_name = player_data['Player']
+                            current_usage = player_data['Usage %']
+                            
+                            col_a, col_b, col_c = st.columns([2, 1, 1])
+                            
+                            with col_a:
+                                st.write(f"**{player_name}** ({player_data['Position']}) - ${player_data['Salary_Display']}")
+                            
+                            with col_b:
+                                st.write(f"Current: {current_usage:.1f}%")
+                            
+                            with col_c:
+                                target_usage = st.slider(
+                                    f"Target %", 
+                                    min_value=0.0, 
+                                    max_value=30.0, 
+                                    value=min(current_usage, 30.0),
+                                    step=1.0,
+                                    key=f"usage_adj_{i}",
+                                    label_visibility="collapsed"
+                                )
+                                
+                                # Show change indicator
+                                if abs(target_usage - current_usage) > 1:
+                                    change = target_usage - current_usage
+                                    direction = "📈" if change > 0 else "📉"
+                                    st.write(f"{direction} {change:+.1f}%")
+                    
+                    with col2:
+                        st.markdown("**📊 Portfolio Impact:**")
+                        
+                        # Calculate total adjustments
+                        total_increases = sum(max(0, st.session_state.get(f"usage_adj_{i}", adjustable_players[i]['Usage %']) - adjustable_players[i]['Usage %']) 
+                                            for i in range(min(10, len(adjustable_players))))
+                        total_decreases = sum(max(0, adjustable_players[i]['Usage %'] - st.session_state.get(f"usage_adj_{i}", adjustable_players[i]['Usage %'])) 
+                                            for i in range(min(10, len(adjustable_players))))
+                        
+                        st.metric("Total Exposure Increases", f"+{total_increases:.1f}%")
+                        st.metric("Total Exposure Decreases", f"-{total_decreases:.1f}%")
+                        
+                        if abs(total_increases - total_decreases) > 5:
+                            st.warning("⚖️ Large imbalance - consider balancing increases/decreases")
+                        else:
+                            st.success("✅ Balanced adjustments")
+                        
+                        # Apply adjustments button
+                        if st.button("🔄 Apply Usage Adjustments", type="primary"):
+                            st.success("✅ **Feature Preview**: Usage adjustments would be applied to regenerate your Top 150 lineup portfolio!")
+                            st.info("""
+                            **Next Implementation Phase:**
+                            - Smart lineup swapping algorithm
+                            - Preserve high-scoring core lineups  
+                            - Maintain salary cap compliance
+                            - Keep correlation/stacking logic
+                            """)
+                
+                else:
+                    st.info("📊 Generate lineups with players >5% usage to enable dynamic adjustments")
             
             # Tournament Metrics Explanation
             with st.expander("🎯 Tournament Metrics Guide - Click to Learn How to Use Each Column"):
