@@ -135,10 +135,6 @@ def load_player_data():
         df = pd.read_csv(csv_file)
         df.columns = [col.strip() for col in df.columns]
         
-        # Debug: Show available columns
-        st.write(f"📊 Loaded data from: {os.path.basename(csv_file)}")
-        st.write(f"Available columns: {list(df.columns)}")
-        
         # Standardize column names - ensure we have a 'Nickname' column
         name_column = None
         for col in ['Nickname', 'Name', 'Player', 'Full Name', 'First Name']:
