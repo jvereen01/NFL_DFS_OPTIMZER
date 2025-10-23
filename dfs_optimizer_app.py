@@ -111,20 +111,25 @@ def load_player_data():
     # Try multiple approaches to find the CSV file
     csv_file = None
     
-    # First try: Direct path (local development)
-    direct_path = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list.csv"
-    if os.path.exists(direct_path):
-        csv_file = direct_path
+    # First try: Updated file with injuries (priority)
+    updated_file = "FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (1).csv"
+    if os.path.exists(updated_file):
+        csv_file = updated_file
     else:
-        # Second try: Look in current directory (Streamlit Cloud)
-        current_dir_file = "FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list.csv"
-        if os.path.exists(current_dir_file):
-            csv_file = current_dir_file
+        # Second try: Direct path (local development)
+        direct_path = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (1).csv"
+        if os.path.exists(direct_path):
+            csv_file = direct_path
         else:
-            # Third try: Find any FanDuel CSV file in current directory
-            csv_files = glob.glob("FanDuel-NFL-*.csv")
-            if csv_files:
-                csv_file = sorted(csv_files)[-1]  # Get the most recent one
+            # Third try: Original file without (1)
+            original_file = "FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list.csv"
+            if os.path.exists(original_file):
+                csv_file = original_file
+            else:
+                # Fourth try: Find any FanDuel CSV file in current directory
+                csv_files = glob.glob("FanDuel-NFL-*.csv")
+                if csv_files:
+                    csv_file = sorted(csv_files)[-1]  # Get the most recent one
     
     if not csv_file:
         st.error("No FanDuel CSV file found. Please upload a FanDuel player list CSV file.")
