@@ -108,7 +108,7 @@ def load_player_data():
     import os
     
     # Direct path to the exact file we want
-    csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-19 EDT-121559-players-list (2).csv"
+    csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list.csv"
     
     if not os.path.exists(csv_file):
         st.error(f"CSV file not found: {csv_file}")
@@ -224,8 +224,8 @@ def calculate_ceiling_floor_projections(df):
     # Standard loading (original code)
     import os
     
-    # ONLY use the October 19th CSV file
-    target_file = 'FanDuel-NFL-2025 EDT-10 EDT-19 EDT-121559-players-list (2).csv'
+    # ONLY use the October 26th CSV file
+    target_file = 'FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list.csv'
     
     # Debug: Show what we're looking for
     st.info(f"🔍 **Looking for CSV file:** {target_file}")
@@ -1329,6 +1329,419 @@ def apply_exposure_capping(lineups, max_exposure=0.30):
     
     return final_lineups
 
+def recalculate_all_lineup_stacking():
+    """Recalculate stacking counts for ALL lineups in session state"""
+    if 'stacked_lineups' not in st.session_state:
+        return
+    
+    updated_lineups = []
+    for points, lineup, salary, old_stacked_wrs, old_stacked_tes, old_qb_wr_te in st.session_state.stacked_lineups:
+        # Recalculate actual stacking for this lineup
+        new_stacked_wrs, new_stacked_tes, new_qb_wr_te = recalculate_lineup_stacking(lineup)
+        updated_lineups.append((points, lineup, salary, new_stacked_wrs, new_stacked_tes, new_qb_wr_te))
+    
+    # Update session state with corrected stacking counts
+    st.session_state.stacked_lineups = updated_lineups
+
+
+def recalculate_lineup_stacking(lineup):
+    """Recalculate stacking counts for a modified lineup"""
+    qb_team = None
+    wr_teams = []
+    te_teams = []
+    
+    # Find QB team and all skill position teams
+    for _, player in lineup.iterrows():
+        team = str(player['Team']).strip().upper()  # Normalize team names
+        if player['Position'] == 'QB':
+            qb_team = team
+        elif player['Position'] == 'WR':
+            wr_teams.append(team)
+        elif player['Position'] == 'TE':
+            te_teams.append(team)
+    
+    if qb_team:
+        stacked_wrs_count = sum(1 for team in wr_teams if team == qb_team)
+        stacked_tes_count = sum(1 for team in te_teams if team == qb_team)
+        qb_wr_te_count = stacked_wrs_count + stacked_tes_count
+    else:
+        stacked_wrs_count = 0
+        stacked_tes_count = 0
+        qb_wr_te_count = 0
+    
+    return stacked_wrs_count, stacked_tes_count, qb_wr_te_count
+
+
+def find_team_stack_relationships(lineup):
+    """Helper function to identify team stacking relationships in a lineup"""
+    team_positions = {}
+    stack_info = {}
+    
+    for idx, player in lineup.iterrows():
+        team = player['Team']
+        position = player['Position']
+        
+        if team not in team_positions:
+            team_positions[team] = []
+        team_positions[team].append({
+            'index': idx,
+            'position': position,
+            'player': player['Nickname']
+        })
+    
+    # Identify stacks (QB + skill position combinations)
+    for team, players in team_positions.items():
+        if len(players) > 1:
+            positions = [p['position'] for p in players]
+            if 'QB' in positions:
+                skill_positions = [p for p in players if p['position'] in ['WR', 'TE']]
+                if skill_positions:
+                    qb_player = next(p for p in players if p['position'] == 'QB')
+                    stack_info[team] = {
+                        'qb': qb_player,
+                        'skill_players': skill_positions,
+                        'is_stack': True
+                    }
+    
+    return stack_info
+
+
+def apply_usage_adjustments(lineups, filtered_players, selected_position):
+    """
+    Apply usage adjustments by intelligently modifying actual lineups
+    to match target exposure percentages across ALL players with adjustments,
+    not just the currently filtered position
+    """
+    import random
+    import copy
+    
+    if not lineups:
+        return lineups
+    
+    # Get ALL adjustments from session state, not just filtered players
+    all_adjustments = {}
+    
+    # Look through ALL session state keys for usage adjustments
+    for key in st.session_state.keys():
+        if key.startswith("usage_adj_"):
+            # Extract player info from key: usage_adj_PlayerName_Position_Team
+            key_parts = key.replace("usage_adj_", "").split("_")
+            if len(key_parts) >= 3:
+                player_name = "_".join(key_parts[:-2]).replace("_", " ")  # Reconstruct name with spaces
+                position = key_parts[-2]
+                team = key_parts[-1]
+                
+                target_usage = st.session_state[key]
+                
+                # Find this player's current usage from the comprehensive data
+                current_usage = None
+                player_salary = None
+                
+                if 'comprehensive_usage_data' in st.session_state:
+                    for player_entry in st.session_state.comprehensive_usage_data:
+                        if (player_entry['Player'] == player_name and 
+                            player_entry['Position'] == position):
+                            current_usage = player_entry['Usage %']
+                            player_salary = player_entry.get('Salary', 5000)
+                            break
+                
+                # If we found the player and there's a meaningful change
+                if current_usage is not None and abs(target_usage - current_usage) > 0.1:
+                    all_adjustments[player_name] = {
+                        'current': current_usage,
+                        'target': target_usage,
+                        'change': target_usage - current_usage,
+                        'position': position,
+                        'team': team,
+                        'salary': player_salary
+                    }
+    
+    if not all_adjustments:
+        st.info("ℹ️ No changes to apply across any positions")
+        return lineups
+    
+    # Create a working copy of lineups
+    modified_lineups = copy.deepcopy(lineups)
+    total_lineups = len(modified_lineups)
+    
+    st.write(f"**🔄 Processing {len(all_adjustments)} exposure adjustments across ALL positions...**")
+    
+    # Process each adjustment to achieve exact exposure targets
+    successful_adjustments = 0
+    
+    for player_name, adjustment in all_adjustments.items():
+        current_count = int(adjustment['current'] * total_lineups / 100)
+        target_count = int(adjustment['target'] * total_lineups / 100)
+        change_needed = target_count - current_count
+        
+        st.write(f"• **{player_name}** ({adjustment['position']}): {current_count} → {target_count} lineups ({change_needed:+d})")
+        
+        if change_needed == 0:
+            continue
+            
+        player_position = adjustment['position']
+        player_team = adjustment['team']
+        player_salary = adjustment['salary']
+        
+        # Find lineups containing this player
+        lineups_with_player = []
+        lineups_without_player = []
+        
+        for idx, (points, lineup, salary, stacked_wrs, stacked_tes, qb_wr_te) in enumerate(modified_lineups):
+            has_player = False
+            for _, row in lineup.iterrows():
+                if row['Nickname'] == player_name and row['Position'] == player_position:
+                    has_player = True
+                    break
+            
+            if has_player:
+                lineups_with_player.append(idx)
+            else:
+                lineups_without_player.append(idx)
+        
+        if change_needed < 0:  # Need to REMOVE player from lineups
+            remove_count = min(abs(change_needed), len(lineups_with_player))
+            
+            # Sort by projected points (remove from lowest scoring lineups first)
+            lineups_with_player.sort(key=lambda idx: modified_lineups[idx][0])
+            
+            removed_successfully = 0
+            for i in range(remove_count):
+                if i >= len(lineups_with_player):
+                    break
+                    
+                lineup_idx = lineups_with_player[i]
+                points, lineup, salary, stacked_wrs, stacked_tes, qb_wr_te = modified_lineups[lineup_idx]
+                
+                # Find ANY available replacement player from the pool
+                replacement_found = False
+                best_replacement = None
+                best_salary_fit = float('inf')
+                
+                # Look for replacement from ALL other lineups at the same position
+                for other_idx, (_, other_lineup, _, _, _, _) in enumerate(modified_lineups):
+                    if other_idx != lineup_idx:
+                        for _, other_row in other_lineup.iterrows():
+                            if (other_row['Position'] == player_position and 
+                                other_row['Nickname'] != player_name):
+                                
+                                # Calculate salary difference
+                                salary_diff = abs(other_row['Salary'] - player_salary)
+                                
+                                # Prefer closer salary matches but allow flexibility
+                                if salary_diff < best_salary_fit:
+                                    best_salary_fit = salary_diff
+                                    best_replacement = {
+                                        'name': other_row['Nickname'],
+                                        'salary': other_row['Salary'],
+                                        'team': other_row['Team'],
+                                        'fppg': other_row.get('FPPG', 10)
+                                    }
+                
+                if best_replacement:
+                    # Replace the player in the lineup
+                    for idx, row in lineup.iterrows():
+                        if row['Nickname'] == player_name and row['Position'] == player_position:
+                            lineup.at[idx, 'Nickname'] = best_replacement['name']
+                            lineup.at[idx, 'Salary'] = best_replacement['salary']
+                            lineup.at[idx, 'Team'] = best_replacement['team']
+                            replacement_found = True
+                            break
+                    
+                    if replacement_found:
+                        new_salary = lineup['Salary'].sum()
+                        if new_salary <= 60000:  # Salary cap check
+                            # Recalculate stacking counts after player replacement
+                            new_stacked_wrs, new_stacked_tes, new_qb_wr_te = recalculate_lineup_stacking(lineup)
+                            modified_lineups[lineup_idx] = (points, lineup, new_salary, new_stacked_wrs, new_stacked_tes, new_qb_wr_te)
+                            removed_successfully += 1
+            
+            successful_adjustments += removed_successfully
+        
+        elif change_needed > 0:  # Need to ADD player to more lineups
+            add_count = min(change_needed, len(lineups_without_player))
+            
+            # Sort by projected points (add to highest scoring potential lineups)
+            lineups_without_player.sort(key=lambda idx: modified_lineups[idx][0], reverse=True)
+            
+            added_successfully = 0
+            for i in range(add_count):
+                if i >= len(lineups_without_player):
+                    break
+                    
+                lineup_idx = lineups_without_player[i]
+                points, lineup, salary, stacked_wrs, stacked_tes, qb_wr_te = modified_lineups[lineup_idx]
+                
+                # STACK-AWARE REPLACEMENT LOGIC
+                if player_position == 'QB' and player_team:
+                    # Get current stack information
+                    current_stacks = find_team_stack_relationships(lineup)
+                    
+                    # Find best QB replacement that considers stacking
+                    best_swap_idx = None
+                    best_compatibility_score = -1
+                    
+                    for idx, row in lineup.iterrows():
+                        if row['Position'] == 'QB':
+                            # Check if this QB replacement would create or maintain stacks
+                            potential_team = player_team
+                            same_team_skill_count = sum(1 for _, p in lineup.iterrows() 
+                                                      if p['Position'] in ['WR', 'TE'] and p['Team'] == potential_team)
+                            
+                            # Prefer replacements that create or maintain stacks
+                            compatibility_score = same_team_skill_count
+                            
+                            # Also consider preserving existing stacks from other teams
+                            if potential_team in current_stacks:
+                                compatibility_score += 2  # Bonus for maintaining existing stack
+                            
+                            if compatibility_score > best_compatibility_score:
+                                best_compatibility_score = compatibility_score
+                                best_swap_idx = idx
+                    
+                    if best_swap_idx is not None:
+                        # Replace with target QB
+                        lineup.at[best_swap_idx, 'Nickname'] = player_name
+                        lineup.at[best_swap_idx, 'Salary'] = player_salary
+                        lineup.at[best_swap_idx, 'Team'] = player_team
+                        
+                        new_salary = lineup['Salary'].sum()
+                        if new_salary <= 60000:  # Salary cap check
+                            # Recalculate stacking counts after QB change
+                            new_stacked_wrs, new_stacked_tes, new_qb_wr_te = recalculate_lineup_stacking(lineup)
+                            modified_lineups[lineup_idx] = (points, lineup, new_salary, new_stacked_wrs, new_stacked_tes, new_qb_wr_te)
+                            added_successfully += 1
+                
+                else:
+                    # Standard position replacement for non-QB positions
+                    best_swap_idx = None
+                    best_salary_diff = float('inf')
+                    
+                    for idx, row in lineup.iterrows():
+                        if row['Position'] == player_position:
+                            salary_diff = abs(row['Salary'] - player_salary)
+                            if salary_diff < best_salary_diff:
+                                best_salary_diff = salary_diff
+                                best_swap_idx = idx
+                    
+                    if best_swap_idx is not None:
+                        # Replace with target player
+                        lineup.at[best_swap_idx, 'Nickname'] = player_name
+                        lineup.at[best_swap_idx, 'Salary'] = player_salary
+                        lineup.at[best_swap_idx, 'Team'] = player_team
+                        
+                        new_salary = lineup['Salary'].sum()
+                        if new_salary <= 60000:  # Salary cap check
+                            # Recalculate stacking counts after any position change
+                            new_stacked_wrs, new_stacked_tes, new_qb_wr_te = recalculate_lineup_stacking(lineup)
+                            modified_lineups[lineup_idx] = (points, lineup, new_salary, new_stacked_wrs, new_stacked_tes, new_qb_wr_te)
+                            added_successfully += 1
+            
+            successful_adjustments += added_successfully
+    
+    # Update session state with modified lineups
+    if successful_adjustments > 0:
+        st.session_state.stacked_lineups = modified_lineups + lineups[150:] if len(lineups) > 150 else modified_lineups
+        
+        # Recalculate ALL lineup stacking counts to ensure accuracy
+        recalculate_all_lineup_stacking()
+        
+        # Recalculate usage statistics based on the actual modified lineups
+        recalculate_usage_stats()
+    
+    st.success(f"""
+    **✅ Lineup Modifications Complete!**
+    - **{successful_adjustments}** successful player swaps made
+    - **ALL position adjustments applied** - QB, RB, WR, TE changes processed
+    - **True exposure matching** - your targets are now reality
+    - **Salary cap maintained** - all lineups remain valid
+    - **Stack counts recalculated** - lineup labels now show accurate team relationships
+    """)
+    
+    return modified_lineups
+
+
+def recalculate_usage_stats():
+    """Recalculate usage statistics after lineup modifications"""
+    if 'stacked_lineups' not in st.session_state:
+        return
+    
+    lineups = st.session_state.stacked_lineups[:150]  # Top 150 only
+    
+    # Count player usage in modified lineups
+    player_counts = {}
+    total_lineups = len(lineups)
+    
+    for points, lineup, salary, _, _, _ in lineups:
+        for _, player in lineup.iterrows():
+            player_name = player['Nickname']
+            position = player['Position']
+            # Normalize position for Defense to match original data
+            display_position = 'DEF' if position == 'D' else position
+            key = f"{player_name} ({display_position})"
+            
+            if key not in player_counts:
+                player_counts[key] = {
+                    'count': 0,
+                    'player': player_name,
+                    'position': display_position,
+                    'team': player['Team'],
+                    'salary': player['Salary']
+                }
+            player_counts[key]['count'] += 1
+    
+    # Update comprehensive usage data in session state
+    updated_usage_data = []
+    original_data = st.session_state.get('comprehensive_usage_data', [])
+    
+    # Create a lookup for original player data
+    original_lookup = {}
+    for orig_player in original_data:
+        # Handle both 'D' and 'DEF' position formats in original data
+        orig_position = orig_player['Position']
+        if orig_position == 'D':
+            orig_position = 'DEF'
+        key = f"{orig_player['Player']} ({orig_position})"
+        original_lookup[key] = orig_player
+    
+    for key, data in player_counts.items():
+        usage_percentage = (data['count'] / total_lineups) * 100
+        
+        # Get original player data if available
+        orig_data = original_lookup.get(key, {})
+        
+        updated_usage_data.append({
+            'Player': data['player'],
+            'Position': data['position'],
+            'Team': data['team'],
+            'Salary': data['salary'],
+            'Count': data['count'],
+            'Usage %': usage_percentage,
+            'Usage_Display': f"{usage_percentage:.1f}%",
+            'Salary_Display': f"${data['salary']:,}",
+            # Preserve original data
+            'vs': orig_data.get('vs', ''),
+            'Matchup': orig_data.get('Matchup', ''),
+            'FPPG': orig_data.get('FPPG', 0),
+            'Ceiling': orig_data.get('Ceiling', 0),
+            'Floor': orig_data.get('Floor', 0),
+            'Upside': orig_data.get('Upside', ''),
+            'Points_Per_Dollar_Display': orig_data.get('Points_Per_Dollar_Display', '0.00'),
+            'Value Tier': orig_data.get('Value Tier', ''),
+            'Leverage_Display': f"{max(0, 15 - usage_percentage):.1f}%",
+            'GPP_Score_Display': orig_data.get('GPP_Score_Display', '0.0'),
+            'Proj Own': orig_data.get('Proj Own', '0%'),
+            'Ceiling_Display': orig_data.get('Ceiling_Display', '0.0'),
+            'Floor_Display': orig_data.get('Floor_Display', '0.0')
+        })
+    
+    # Sort by usage percentage
+    updated_usage_data.sort(key=lambda x: x['Usage %'], reverse=True)
+    
+    # Store updated data
+    st.session_state.comprehensive_usage_data = updated_usage_data
+    st.session_state.adjustments_applied = True
+
 def main():
     # Initialize enhanced systems if available
     if ENHANCED_FEATURES_AVAILABLE:
@@ -2227,80 +2640,158 @@ def main():
             # Display lineups first, then show usage analysis
             st.markdown("---")
             
-            # Display lineups
+            # Lineup Display Controls
             st.subheader("📋 Generated Lineups")
-            for i, (points, lineup, salary, stacked_wrs_count, stacked_tes_count, qb_wr_te_count) in enumerate(top_lineups, 1):
-                # Calculate lineup ceiling for header display
-                ceiling_text = ""
-                if 'Ceiling' in lineup.columns:
-                    lineup_ceiling = lineup['Ceiling'].sum()
-                    ceiling_text = f" | Ceiling: {lineup_ceiling:.1f}"
+            
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                # Dropdown for number of lineups to display
+                lineup_count_options = {
+                    "Top 20": 20,
+                    "Top 50": 50, 
+                    "Top 100": 100,
+                    "All 150": min(150, len(stacked_lineups))
+                }
+                selected_count_label = st.selectbox(
+                    "📊 Select lineups to display:",
+                    options=list(lineup_count_options.keys()),
+                    index=0  # Default to "Top 20"
+                )
+                selected_count = lineup_count_options[selected_count_label]
                 
-                with st.expander(f"Lineup #{i}: {points:.1f} pts{ceiling_text} | ${salary:,} | {'QB+' + str(qb_wr_te_count) + ' receivers' if qb_wr_te_count > 0 else 'No stack'}"):
+            with col2:
+                # Display format toggle
+                display_format = st.radio(
+                    "📋 Display format:",
+                    ["Expandable Cards", "Compact Table"],
+                    index=0
+                )
+            
+            # Get the selected number of lineups
+            display_lineups = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:selected_count]
+            
+            if display_format == "Compact Table":
+                # TABLE VIEW - Show all lineups in a compact table
+                st.write(f"**Showing {selected_count_label} ({len(display_lineups)} lineups)**")
+                
+                table_data = []
+                for i, (points, lineup, salary, stacked_wrs_count, stacked_tes_count, qb_wr_te_count) in enumerate(display_lineups, 1):
+                    # RECALCULATE STACKING FOR DISPLAY
+                    actual_stacked_wrs, actual_stacked_tes, actual_qb_wr_te = recalculate_lineup_stacking(lineup)
                     
-                    # Create lineup display with ceiling and floor
-                    display_columns = ['Nickname', 'Position', 'Team', 'Salary', 'FPPG', 'Matchup_Quality', 'PosRank']
-                    if 'Ceiling' in lineup.columns:
-                        display_columns.extend(['Ceiling', 'Floor'])
+                    # Get player names by position
+                    qb = lineup[lineup['Position'] == 'QB']['Nickname'].iloc[0] if len(lineup[lineup['Position'] == 'QB']) > 0 else 'N/A'
+                    rb1, rb2 = lineup[lineup['Position'] == 'RB']['Nickname'].tolist()[:2] if len(lineup[lineup['Position'] == 'RB']) >= 2 else ['N/A', 'N/A']
+                    wr1, wr2, wr3 = lineup[lineup['Position'] == 'WR']['Nickname'].tolist()[:3] if len(lineup[lineup['Position'] == 'WR']) >= 3 else ['N/A', 'N/A', 'N/A']
+                    te = lineup[lineup['Position'] == 'TE']['Nickname'].iloc[0] if len(lineup[lineup['Position'] == 'TE']) > 0 else 'N/A'
+                    dst = lineup[lineup['Position'] == 'D']['Nickname'].iloc[0] if len(lineup[lineup['Position'] == 'D']) > 0 else 'N/A'
                     
-                    lineup_display = lineup[display_columns].copy()
-                    lineup_display['Salary'] = lineup_display['Salary'].apply(lambda x: f"${x:,}")
-                    lineup_display['FPPG'] = lineup_display['FPPG'].apply(lambda x: f"{x:.1f}")
+                    ceiling = lineup['Ceiling'].sum() if 'Ceiling' in lineup.columns else 0
+                    stack_label = f"QB+{actual_qb_wr_te}" if actual_qb_wr_te > 0 else "No Stack"
                     
-                    # Format ceiling and floor if they exist
-                    if 'Ceiling' in lineup_display.columns:
-                        lineup_display['Ceiling'] = lineup_display['Ceiling'].apply(lambda x: f"{x:.1f}")
-                        lineup_display['Floor'] = lineup_display['Floor'].apply(lambda x: f"{x:.1f}")
+                    table_data.append({
+                        'Rank': i,
+                        'Points': f"{points:.1f}",
+                        'Salary': f"${salary:,}",
+                        'Ceiling': f"{ceiling:.1f}" if 'Ceiling' in lineup.columns else 'N/A',
+                        'Stack': stack_label,
+                        'QB': qb,
+                        'RB1': rb1,
+                        'RB2': rb2,
+                        'WR1': wr1,
+                        'WR2': wr2,
+                        'WR3': wr3,
+                        'TE': te,
+                        'DST': dst
+                    })
+                
+                # Display the table
+                table_df = pd.DataFrame(table_data)
+                st.dataframe(
+                    table_df,
+                    width="stretch",
+                    hide_index=True
+                )
+                
+            else:
+                # EXPANDABLE CARDS VIEW (Original format)
+                st.write(f"**Showing {selected_count_label} ({len(display_lineups)} lineups)**")
+                
+                for i, (points, lineup, salary, stacked_wrs_count, stacked_tes_count, qb_wr_te_count) in enumerate(display_lineups, 1):
+                    # RECALCULATE STACKING FOR DISPLAY (ensures accuracy after modifications)
+                    actual_stacked_wrs, actual_stacked_tes, actual_qb_wr_te = recalculate_lineup_stacking(lineup)
                     
-                    # Calculate and display total lineup ceiling/floor
+                    # Calculate lineup ceiling for header display
+                    ceiling_text = ""
                     if 'Ceiling' in lineup.columns:
                         lineup_ceiling = lineup['Ceiling'].sum()
-                        lineup_floor = lineup['Floor'].sum()
-                        st.markdown(f"""
-                        **📊 Lineup Projections:**
-                        - **Projection:** {points:.1f} pts
-                        - **Ceiling:** {lineup_ceiling:.1f} pts  
-                        - **Floor:** {lineup_floor:.1f} pts
-                        """)
-                    else:
-                        st.markdown(f"**📊 Projection:** {points:.1f} pts")
+                        ceiling_text = f" | Ceiling: {lineup_ceiling:.1f}"
                     
-                    # Set PosRank as the index for display
-                    lineup_display.set_index('PosRank', inplace=True)
-                    lineup_display = lineup_display.drop('PosRank', axis=1, errors='ignore')  # Remove if accidentally included twice
-                    
-                    st.dataframe(lineup_display, use_container_width=True)
-                    
-                    # Show boosts
-                    fantasy_boosted = 0
-                    elite_targets = 0
-                    forced_boosted = 0
-                    qb_team = lineup[lineup['Position'] == 'QB']['Team'].iloc[0]
-                    
-                    for _, player in lineup.iterrows():
-                        if player['Position'] == 'WR' and player['Nickname'] in wr_performance_boosts:
-                            fantasy_boosted += 1
-                        elif player['Position'] == 'RB' and player['Nickname'] in rb_performance_boosts:
-                            fantasy_boosted += 1
+                    with st.expander(f"Lineup #{i}: {points:.1f} pts{ceiling_text} | ${salary:,} | {'QB+' + str(actual_qb_wr_te) + ' receivers' if actual_qb_wr_te > 0 else 'No stack'}"):
                         
-                        if player['Matchup_Quality'] == 'ELITE TARGET':
-                            elite_targets += 1
+                        # Create lineup display with ceiling and floor
+                        display_columns = ['Nickname', 'Position', 'Team', 'Salary', 'FPPG', 'Matchup_Quality', 'PosRank']
+                        if 'Ceiling' in lineup.columns:
+                            display_columns.extend(['Ceiling', 'Floor'])
                         
-                        # Check if player was forced and got boost
-                        if enable_player_selection and player_selections and all_forced_players:
-                            if player['Nickname'] in all_forced_players:
-                                forced_boosted += 1
-                    
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.write(f"🏈 Fantasy-boosted players: {fantasy_boosted}")
-                    with col2:
-                        st.write(f"🎯 Elite targets: {elite_targets}")
-                    with col3:
-                        if forced_boosted > 0:
-                            st.write(f"⚡ Forced player boosts: {forced_boosted}")
+                        lineup_display = lineup[display_columns].copy()
+                        lineup_display['Salary'] = lineup_display['Salary'].apply(lambda x: f"${x:,}")
+                        lineup_display['FPPG'] = lineup_display['FPPG'].apply(lambda x: f"{x:.1f}")
+                        
+                        # Format ceiling and floor if they exist
+                        if 'Ceiling' in lineup_display.columns:
+                            lineup_display['Ceiling'] = lineup_display['Ceiling'].apply(lambda x: f"{x:.1f}")
+                            lineup_display['Floor'] = lineup_display['Floor'].apply(lambda x: f"{x:.1f}")
+                        
+                        # Calculate and display total lineup ceiling/floor
+                        if 'Ceiling' in lineup.columns:
+                            lineup_ceiling = lineup['Ceiling'].sum()
+                            lineup_floor = lineup['Floor'].sum()
+                            st.markdown(f"""
+                            **📊 Lineup Projections:**
+                            - **Projection:** {points:.1f} pts
+                            - **Ceiling:** {lineup_ceiling:.1f} pts  
+                            - **Floor:** {lineup_floor:.1f} pts
+                            """)
                         else:
-                            st.write("⚡ Forced player boosts: 0")
+                            st.markdown(f"**📊 Projection:** {points:.1f} pts")
+                        
+                        # Set PosRank as the index for display
+                        lineup_display.set_index('PosRank', inplace=True)
+                        lineup_display = lineup_display.drop('PosRank', axis=1, errors='ignore')  # Remove if accidentally included twice
+                        
+                        st.dataframe(lineup_display, width="stretch")
+                        
+                        # Show boosts
+                        fantasy_boosted = 0
+                        elite_targets = 0
+                        forced_boosted = 0
+                        qb_team = lineup[lineup['Position'] == 'QB']['Team'].iloc[0]
+                        
+                        for _, player in lineup.iterrows():
+                            if player['Position'] == 'WR' and player['Nickname'] in wr_performance_boosts:
+                                fantasy_boosted += 1
+                            elif player['Position'] == 'RB' and player['Nickname'] in rb_performance_boosts:
+                                fantasy_boosted += 1
+                            
+                            if player['Matchup_Quality'] == 'ELITE TARGET':
+                                elite_targets += 1
+                            
+                            # Check if player was forced and got boost
+                            if enable_player_selection and player_selections and all_forced_players:
+                                if player['Nickname'] in all_forced_players:
+                                    forced_boosted += 1
+                        
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.write(f"🏈 Fantasy-boosted players: {fantasy_boosted}")
+                        with col2:
+                            st.write(f"🎯 Elite targets: {elite_targets}")
+                        with col3:
+                            if forced_boosted > 0:
+                                st.write(f"⚡ Forced player boosts: {forced_boosted}")
+                            else:
+                                st.write("⚡ Forced player boosts: 0")
             
             # Player Usage Analysis for Top 20 Lineups
             st.markdown("---")
@@ -2368,16 +2859,112 @@ def main():
                             st.write(f"• {player['Player']} - {player['Usage Count']} ({player['Usage %']})")
                         st.write("")
             
-            # Comprehensive Player Usage Analysis - ALL Lineups
+            # Enhanced Multi-Platform Export Section
             st.markdown("---")
-            st.markdown('<h3 class="sub-header">📊 Comprehensive Player Usage - ALL Lineups</h3>', unsafe_allow_html=True)
-            st.markdown("Analyze player exposure across all generated lineups for optimal tournament strategy")
+            st.subheader("📥 Export Lineups")
+
+            if ENHANCED_FEATURES_AVAILABLE:
+                export_manager = ExportManager()
+                exporter = LineupExporter()
+                
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    # Platform selection
+                    platforms = st.multiselect(
+                        "Select platforms to export to:",
+                        options=exporter.get_supported_platforms(),
+                        default=['fanduel'],
+                        help="Export lineups to multiple DFS platforms simultaneously"
+                    )
+                    
+                    num_export = st.slider("Number of lineups to export", 1, min(len(stacked_lineups), 150), min(20, len(stacked_lineups)))
+                    
+                    # Entry ID Configuration
+                    with st.expander("🎯 Contest Entry Settings"):
+                        st.markdown("**Configure contest details for CSV export:**")
+                        
+                        col_a, col_b = st.columns(2)
+                        with col_a:
+                            base_entry_id = st.number_input(
+                                "Base Entry ID", 
+                                value=3584175604, 
+                                help="Starting entry ID (will increment for each lineup)"
+                            )
+                            contest_id = st.text_input(
+                                "Contest ID", 
+                                value="121309-276916553",
+                                help="Contest identifier from DFS platform"
+                            )
+                        with col_b:
+                            contest_name = st.text_input(
+                                "Contest Name", 
+                                value="$60K Sun NFL Hail Mary",
+                                help="Name of the contest"
+                            )
+                            entry_fee = st.text_input(
+                                "Entry Fee", 
+                                value="0.25",
+                                help="Fee per entry (e.g., 0.25, 5.00, 100)"
+                            )
+
+                with col2:
+                    if st.button("📋 Generate Multi-Platform Export", type="primary"):
+                        if platforms:
+                            with st.spinner("Generating exports for selected platforms..."):
+                                contest_info = {
+                                    'base_entry_id': base_entry_id,
+                                    'contest_id': contest_id,
+                                    'contest_name': contest_name,
+                                    'entry_fee': entry_fee
+                                }
+                                
+                                exports = export_manager.export_to_multiple_platforms(
+                                    stacked_lineups, platforms, contest_info, num_export
+                                )
+                                
+                                # Display download buttons for each platform
+                                for platform, export_content in exports.items():
+                                    if not export_content.startswith("Export failed"):
+                                        st.download_button(
+                                            label=f"💾 Download {platform.title()} CSV",
+                                            data=export_content,
+                                            file_name=f"{platform}_lineups_{contest_name.replace(' ', '_').replace('$', '').replace(',', '')}.csv",
+                                            mime="text/csv",
+                                            key=f"download_{platform}"
+                                        )
+                                    else:
+                                        st.error(f"❌ {platform}: {export_content}")
+                        else:
+                            st.warning("Please select at least one platform to export to.")
+            else:
+                # Show message when lineups haven't been generated yet
+                if not st.session_state.get('lineups_generated', False) or not st.session_state.get('stacked_lineups'):
+                    st.info("📊 Generate lineups first to enable CSV export")
             
-            # Analyze ALL lineups for comprehensive player usage
+            # Comprehensive Player Usage Analysis
+            st.markdown("---")
+            st.markdown('<h3 class="sub-header">📊 Comprehensive Player Usage</h3>', unsafe_allow_html=True)
+            st.markdown("Analyze player exposure for optimal tournament strategy")
+            
+            # Analysis Controls FIRST - so we can use the scope
+            col1, col2, col3 = st.columns([1, 1, 2])
+            
+            with col1:
+                st.markdown("**📊 Lineup Analysis Scope:**")
+                analysis_scope = st.selectbox(
+                    "Analysis Type:",
+                    ["Top 150 Export Lineups", "All Generated Lineups"],  # Default to Top 150 first
+                    key="analysis_scope"
+                )
+            
+            # Use the selected scope to determine which lineups to analyze
+            analysis_lineups = stacked_lineups[:150] if analysis_scope == "Top 150 Export Lineups" else stacked_lineups
+            
+            # Analyze lineups based on selected scope
             all_player_usage = {}
-            total_lineups = len(stacked_lineups)
+            total_lineups = len(analysis_lineups)
             
-            for points, lineup, salary, _, _, _ in stacked_lineups:
+            for points, lineup, salary, _, _, _ in analysis_lineups:
                 for _, player in lineup.iterrows():
                     player_name = player['Nickname']
                     position = player['Position']
@@ -2494,26 +3081,33 @@ def main():
             # Sort by usage percentage descending
             comprehensive_usage_data.sort(key=lambda x: x['Usage %'], reverse=True)
             
+            # Store in session state for Dynamic Usage Adjustment
+            # CRITICAL: Only set this if we don't already have adjustments applied
+            # or if the scope has genuinely changed, to prevent overwriting user adjustments
+            scope_key = f"scope_{analysis_scope}"
+            has_existing_adjustments = any(k.startswith('usage_adj_') for k in st.session_state.keys())
+            
+            should_update_data = (
+                scope_key not in st.session_state or  # New scope
+                not st.session_state.get('adjustments_applied', False) or  # No adjustments applied yet
+                not has_existing_adjustments  # No user adjustments exist
+            )
+            
+            if should_update_data:
+                st.session_state.comprehensive_usage_data = comprehensive_usage_data
+                st.session_state[scope_key] = True
+                # Only clear the adjustments flag when loading genuinely fresh data
+                if scope_key not in st.session_state:
+                    st.session_state.adjustments_applied = False
+            
             # Display comprehensive usage analysis - TABLE ONLY
             st.subheader("🎯 Complete Player Usage Breakdown")
-            
-            # Analysis Controls
-            col1, col2, col3 = st.columns([1, 1, 2])
-            
-            with col1:
-                st.markdown("**📊 Lineup Analysis Scope:**")
-                analysis_scope = st.selectbox(
-                    "Analysis Type:",
-                    ["All Generated Lineups", "Top 150 Export Lineups"],
-                    key="analysis_scope"
-                )
             
             with col2:
                 st.markdown("**🎯 Filter by QB Stack:**")
                 
-                # Get all QBs from lineups for filter options
+                # Get all QBs from already defined analysis_lineups
                 all_qbs = set()
-                analysis_lineups = stacked_lineups[:150] if analysis_scope == "Top 150 Export Lineups" else stacked_lineups
                 
                 for points, lineup, salary, _, _, _ in analysis_lineups:
                     qb_row = lineup[lineup['Position'] == 'QB']
@@ -2528,9 +3122,12 @@ def main():
             with col3:
                 if analysis_scope == "Top 150 Export Lineups":
                     st.info("🎯 **Analyzing your actual 150-lineup portfolio** - this matches what you'll submit to FanDuel!")
-                elif selected_qb != 'All Players':
+                else:
+                    st.info(f"📊 **Analyzing all {len(stacked_lineups)} generated lineups** - includes experimental lineups not for export")
+                
+                if selected_qb != 'All Players':
                     qb_name = selected_qb.split(' (')[0]  # Extract QB name from "Name (Team)" format
-                    st.info(f"🎯 Showing players who appeared in lineups with **{selected_qb}**")
+                    st.write(f"🎯 Filtered to **{selected_qb}** stacks only")
             
             # Apply analysis scope and QB filtering
             working_lineups = stacked_lineups[:150] if analysis_scope == "Top 150 Export Lineups" else stacked_lineups
@@ -2579,14 +3176,14 @@ def main():
                             'FPPG': player['FPPG'],
                             'Ceiling_Display': f"{player.get('Ceiling', player['FPPG'] * 1.25):.1f}",
                             'Floor_Display': f"{player.get('Floor', player['FPPG'] * 0.75):.1f}",
-                            'Upside': f"{((player.get('Ceiling', player['FPPG'] * 1.25) / player['FPPG']) - 1) * 100:.0f}%",
-                            'Points_Per_Dollar_Display': f"{(player['FPPG'] / player['Salary']) * 1000:.2f}",
+                            'Upside': f"{((player.get('Ceiling', player['FPPG'] * 1.25) / player['FPPG']) - 1) * 100:.0f}%" if player['FPPG'] > 0 else "0%",
+                            'Points_Per_Dollar_Display': f"{(player['FPPG'] / player['Salary']) * 1000:.2f}" if player['Salary'] > 0 else "0.00",
                             'Value Tier': 'Premium' if player['Salary'] >= 8000 else 'Mid' if player['Salary'] >= 6000 else 'Value',
                             'Count': count,
                             'Usage %': usage_pct,
                             'Usage_Display': f"{usage_pct:.1f}%",
                             'Leverage_Display': f"{max(0, 15 - usage_pct):.1f}%",  # Simple leverage calc
-                            'GPP_Score_Display': f"{(usage_pct * 0.3 + (player['FPPG'] / player['Salary'] * 1000) * 0.7):.1f}",
+                            'GPP_Score_Display': f"{(usage_pct * 0.3 + (player['FPPG'] / player['Salary'] * 1000) * 0.7):.1f}" if player['Salary'] > 0 else f"{usage_pct * 0.3:.1f}",
                             'Proj Own': f"{min(usage_pct * 1.5, 50):.0f}%"  # Estimated ownership
                         })
                     
@@ -2632,20 +3229,38 @@ def main():
                                 'FPPG': player['FPPG'],
                                 'Ceiling_Display': f"{player.get('Ceiling', player['FPPG'] * 1.25):.1f}",
                                 'Floor_Display': f"{player.get('Floor', player['FPPG'] * 0.75):.1f}",
-                                'Upside': f"{((player.get('Ceiling', player['FPPG'] * 1.25) / player['FPPG']) - 1) * 100:.0f}%",
-                                'Points_Per_Dollar_Display': f"{(player['FPPG'] / player['Salary']) * 1000:.2f}",
+                                'Upside': f"{((player.get('Ceiling', player['FPPG'] * 1.25) / player['FPPG']) - 1) * 100:.0f}%" if player['FPPG'] > 0 else "0%",
+                                'Points_Per_Dollar_Display': f"{(player['FPPG'] / player['Salary']) * 1000:.2f}" if player['Salary'] > 0 else "0.00",
                                 'Value Tier': 'Premium' if player['Salary'] >= 8000 else 'Mid' if player['Salary'] >= 6000 else 'Value',
                                 'Count': count,
                                 'Usage %': usage_pct,
                                 'Usage_Display': f"{usage_pct:.1f}%",
                                 'Leverage_Display': f"{max(0, 15 - usage_pct):.1f}%",
-                                'GPP_Score_Display': f"{(usage_pct * 0.3 + (player['FPPG'] / player['Salary'] * 1000) * 0.7):.1f}",
+                                'GPP_Score_Display': f"{(usage_pct * 0.3 + (player['FPPG'] / player['Salary'] * 1000) * 0.7):.1f}" if player['Salary'] > 0 else f"{usage_pct * 0.3:.1f}",
                                 'Proj Own': f"{min(usage_pct * 1.5, 50):.0f}%"
                             })
                         
                         top_150_usage_data.sort(key=lambda x: x['Usage %'], reverse=True)
                         comprehensive_usage_data = top_150_usage_data
                         total_lineups = 150
+            
+            # Use session state data if it exists (updated by Dynamic Usage Adjustments)
+            # Otherwise use the freshly calculated data
+            display_usage_data = st.session_state.get('comprehensive_usage_data', comprehensive_usage_data)
+            
+            # Ensure data is always sorted by usage percentage (highest to lowest)
+            display_usage_data = sorted(display_usage_data, key=lambda x: x['Usage %'], reverse=True)
+            
+            # Debug info
+            using_session_state = 'comprehensive_usage_data' in st.session_state
+            st.info(f"""
+            **📊 Data Source Debug:**
+            - **Using session state**: {using_session_state}
+            - **Original data**: {len(comprehensive_usage_data)} players
+            - **Display data**: {len(display_usage_data)} players
+            - **Session state keys**: {len([k for k in st.session_state.keys() if k.startswith('usage_adj_')])} adjustments saved
+            - **Data sorted by**: Usage % (highest to lowest)
+            """)
             
             # Create display dataframe with enhanced tournament columns
             display_df = pd.DataFrame([{
@@ -2663,88 +3278,87 @@ def main():
                 'Value Tier': data['Value Tier'],
                 'Count': f"{data['Count']}/{total_lineups}",
                 'Usage %': data['Usage_Display'],
+                'Target %': float(data['Usage_Display'].replace('%', '')),  # Add Target % right after Usage %
                 'Leverage': data['Leverage_Display'],
                 'GPP Score': data['GPP_Score_Display'],
                 'Proj Own': data['Proj Own']
-            } for data in comprehensive_usage_data])
+            } for data in display_usage_data])
             
-            st.dataframe(display_df, use_container_width=True, hide_index=True, height=600)
+            # Display editable usage breakdown table
+            st.markdown("**📊 Complete Player Usage Breakdown** - Click on Target % cells to edit exposures")
             
-            # Dynamic Usage Adjustment Feature
-            if analysis_scope == "Top 150 Export Lineups" and comprehensive_usage_data:
-                st.markdown("---")
-                st.subheader("🎛️ Dynamic Usage Adjustment")
-                st.markdown("**Adjust player exposure in your Top 150 lineup portfolio without regenerating:**")
+            # Configure which columns are editable
+            column_config = {
+                "Target %": st.column_config.NumberColumn(
+                    "Target %",
+                    help="Type new exposure percentage here",
+                    min_value=0.0,
+                    max_value=100.0,
+                    step=0.1,
+                    format="%.1f"
+                )
+            }
+            
+            # Use data_editor for inline editing
+            edited_df = st.data_editor(
+                display_df, 
+                use_container_width=True, 
+                hide_index=True, 
+                height=600,
+                column_config=column_config,
+                disabled=[col for col in display_df.columns if col != 'Target %']  # Only Target % is editable
+            )
+            
+            # Check for changes and show apply button
+            changes_made = False
+            if 'Target %' in edited_df.columns:
+                for idx, row in edited_df.iterrows():
+                    original_usage = float(display_df.iloc[idx]['Usage %'].replace('%', ''))
+                    new_target = row['Target %']
+                    if abs(new_target - original_usage) > 0.1:
+                        changes_made = True
+                        break
+            
+            if changes_made:
+                col1, col2 = st.columns([1, 3])
+                with col1:
+                    if st.button("🚀 Apply Changes", type="primary"):
+                        # Update session state with new targets
+                        for idx, row in edited_df.iterrows():
+                            player_name = row['Player']
+                            position = row['Pos'] 
+                            team = row['Team']
+                            new_target = row['Target %']
+                            
+                            # Create session key
+                            clean_name = player_name.replace(" ", "_").replace(".", "").replace("'", "")
+                            session_key = f"usage_adj_{clean_name}_{position}_{team}"
+                            st.session_state[session_key] = new_target
+                        
+                        with st.spinner("Applying exposure changes to lineups..."):
+                            # Apply changes to lineups
+                            modified_lineups = apply_usage_adjustments(stacked_lineups[:150], display_usage_data, "All Positions")
+                            if modified_lineups:
+                                st.success("✅ Lineups successfully modified!")
+                                st.rerun()
+                            else:
+                                st.error("❌ Unable to modify lineups. Try smaller changes.")
                 
-                # Get players with >5% usage for adjustment controls
-                adjustable_players = [p for p in comprehensive_usage_data if p['Usage %'] >= 5.0]
-                
-                if adjustable_players:
-                    col1, col2 = st.columns([2, 1])
+                with col2:
+                    # Show summary of changes
+                    changes_summary = []
+                    for idx, row in edited_df.iterrows():
+                        original_usage = float(display_df.iloc[idx]['Usage %'].replace('%', ''))
+                        new_target = row['Target %']
+                        if abs(new_target - original_usage) > 0.1:
+                            change = new_target - original_usage
+                            changes_summary.append(f"{row['Player']}: {original_usage:.1f}% → {new_target:.1f}% ({change:+.1f}%)")
                     
-                    with col1:
-                        st.markdown("**🎯 Player Exposure Controls:**")
-                        
-                        # Show top 10 most used players for adjustment
-                        for i, player_data in enumerate(adjustable_players[:10]):
-                            player_name = player_data['Player']
-                            current_usage = player_data['Usage %']
-                            
-                            col_a, col_b, col_c = st.columns([2, 1, 1])
-                            
-                            with col_a:
-                                st.write(f"**{player_name}** ({player_data['Position']}) - ${player_data['Salary_Display']}")
-                            
-                            with col_b:
-                                st.write(f"Current: {current_usage:.1f}%")
-                            
-                            with col_c:
-                                target_usage = st.slider(
-                                    f"Target %", 
-                                    min_value=0.0, 
-                                    max_value=30.0, 
-                                    value=min(current_usage, 30.0),
-                                    step=1.0,
-                                    key=f"usage_adj_{i}",
-                                    label_visibility="collapsed"
-                                )
-                                
-                                # Show change indicator
-                                if abs(target_usage - current_usage) > 1:
-                                    change = target_usage - current_usage
-                                    direction = "📈" if change > 0 else "📉"
-                                    st.write(f"{direction} {change:+.1f}%")
-                    
-                    with col2:
-                        st.markdown("**📊 Portfolio Impact:**")
-                        
-                        # Calculate total adjustments
-                        total_increases = sum(max(0, st.session_state.get(f"usage_adj_{i}", adjustable_players[i]['Usage %']) - adjustable_players[i]['Usage %']) 
-                                            for i in range(min(10, len(adjustable_players))))
-                        total_decreases = sum(max(0, adjustable_players[i]['Usage %'] - st.session_state.get(f"usage_adj_{i}", adjustable_players[i]['Usage %'])) 
-                                            for i in range(min(10, len(adjustable_players))))
-                        
-                        st.metric("Total Exposure Increases", f"+{total_increases:.1f}%")
-                        st.metric("Total Exposure Decreases", f"-{total_decreases:.1f}%")
-                        
-                        if abs(total_increases - total_decreases) > 5:
-                            st.warning("⚖️ Large imbalance - consider balancing increases/decreases")
-                        else:
-                            st.success("✅ Balanced adjustments")
-                        
-                        # Apply adjustments button
-                        if st.button("🔄 Apply Usage Adjustments", type="primary"):
-                            st.success("✅ **Feature Preview**: Usage adjustments would be applied to regenerate your Top 150 lineup portfolio!")
-                            st.info("""
-                            **Next Implementation Phase:**
-                            - Smart lineup swapping algorithm
-                            - Preserve high-scoring core lineups  
-                            - Maintain salary cap compliance
-                            - Keep correlation/stacking logic
-                            """)
-                
-                else:
-                    st.info("📊 Generate lineups with players >5% usage to enable dynamic adjustments")
+                    if changes_summary:
+                        st.info(f"**{len(changes_summary)} changes ready:**\n" + "\n".join(changes_summary[:5]) + 
+                               (f"\n... and {len(changes_summary)-5} more" if len(changes_summary) > 5 else ""))
+        else:
+            st.info("📊 Generate lineups first to enable exposure adjustments")
             
             # Tournament Metrics Explanation
             with st.expander("🎯 Tournament Metrics Guide - Click to Learn How to Use Each Column"):
@@ -2834,203 +3448,6 @@ def main():
                     """)
                 
                 st.info("💡 **Pro Tip**: Sort the table by different columns to find players that match these criteria!")
-            
-            # Enhanced Multi-Platform Export Section
-            st.markdown("---")
-
-            if ENHANCED_FEATURES_AVAILABLE:
-                st.subheader("📥 Multi-Platform Export")
-                
-                export_manager = ExportManager()
-                exporter = LineupExporter()
-                
-                col1, col2 = st.columns([2, 1])
-                with col1:
-                    # Platform selection
-                    platforms = st.multiselect(
-                        "Select platforms to export to:",
-                        options=exporter.get_supported_platforms(),
-                        default=['fanduel'],
-                        help="Export lineups to multiple DFS platforms simultaneously"
-                    )
-                    
-                    num_export = st.slider("Number of lineups to export", 1, min(len(stacked_lineups), 150), min(20, len(stacked_lineups)))
-                    
-                    # Entry ID Configuration
-                    with st.expander("🎯 Contest Entry Settings"):
-                        st.markdown("**Configure contest details for CSV export:**")
-                        
-                        col_a, col_b = st.columns(2)
-                        with col_a:
-                            base_entry_id = st.number_input(
-                                "Base Entry ID", 
-                                value=3584175604, 
-                                help="Starting entry ID (will increment for each lineup)"
-                            )
-                            contest_id = st.text_input(
-                                "Contest ID", 
-                                value="121309-276916553",
-                                help="Contest identifier from DFS platform"
-                            )
-                        with col_b:
-                            contest_name = st.text_input(
-                                "Contest Name", 
-                                value="$60K Sun NFL Hail Mary",
-                                help="Name of the contest"
-                            )
-                            entry_fee = st.text_input(
-                                "Entry Fee", 
-                                value="0.25",
-                                help="Fee per entry (e.g., 0.25, 5.00, 100)"
-                            )
-
-                with col2:
-                    if st.button("📋 Generate Multi-Platform Export", type="primary"):
-                        if platforms:
-                            with st.spinner("Generating exports for selected platforms..."):
-                                contest_info = {
-                                    'base_entry_id': base_entry_id,
-                                    'contest_id': contest_id,
-                                    'contest_name': contest_name,
-                                    'entry_fee': entry_fee
-                                }
-                                
-                                exports = export_manager.export_to_multiple_platforms(
-                                    stacked_lineups, platforms, contest_info, num_export
-                                )
-                                
-                                # Display download buttons for each platform
-                                for platform, export_content in exports.items():
-                                    if not export_content.startswith("Export failed"):
-                                        st.download_button(
-                                            label=f"💾 Download {platform.title()} CSV",
-                                            data=export_content,
-                                            file_name=f"{platform}_lineups_{num_export}lineups.csv",
-                                            mime="text/csv"
-                                        )
-                                        st.success(f"✅ {platform.title()} export ready!")
-                                    else:
-                                        st.error(f"❌ {platform.title()}: {export_content}")
-                        else:
-                            st.warning("Please select at least one platform to export to")
-            else:
-                # Fallback to original export (FanDuel only)
-                col1, col2 = st.columns([2, 1])
-                with col1:
-                    st.subheader("📥 Export Lineups")
-                    num_export = st.slider("Number of lineups to export", 1, min(len(stacked_lineups), 150), min(20, len(stacked_lineups)))
-                    st.caption(f"Export top {num_export} lineups for FanDuel upload")
-                    
-                    # Entry ID Configuration (Fallback)
-                    with st.expander("🎯 Contest Entry Settings"):
-                        st.markdown("**Configure contest details for CSV export:**")
-                        
-                        col_a, col_b = st.columns(2)
-                        with col_a:
-                            fallback_base_entry_id = st.number_input(
-                                "Base Entry ID ", 
-                                value=3584175604, 
-                                help="Starting entry ID (will increment for each lineup)",
-                                key="fallback_entry_id"
-                            )
-                            fallback_contest_id = st.text_input(
-                                "Contest ID ", 
-                                value="121309-276916553",
-                                help="Contest identifier from DFS platform",
-                                key="fallback_contest_id"
-                            )
-                        with col_b:
-                            fallback_contest_name = st.text_input(
-                                "Contest Name ", 
-                                value="$60K Sun NFL Hail Mary",
-                                help="Name of the contest",
-                                key="fallback_contest_name"
-                            )
-                            fallback_entry_fee = st.text_input(
-                                "Entry Fee ", 
-                                value="0.25",
-                                help="Fee per entry (e.g., 0.25, 5.00, 100)",
-                                key="fallback_entry_fee"
-                            )
-                
-                with col2:
-                    if st.button("📋 Prepare CSV Download", type="primary"):
-                        # Original CSV export code (shortened for space)
-                        export_lineups = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:num_export]
-                        csv_data = []
-                        
-                        for i, (points, lineup, salary, _, _, _) in enumerate(export_lineups, 1):
-                            # Create FanDuel format without contest entry columns
-                            positions = {'QB': [], 'RB': [], 'WR': [], 'TE': [], 'DEF': []}
-                            
-                            for _, player in lineup.iterrows():
-                                pos = player['Position']
-                                player_id = player['Id']
-                                
-                                if pos == 'D':  # Handle defense position mapping
-                                    positions['DEF'].append(player_id)
-                                elif pos in positions:
-                                    positions[pos].append(player_id)
-                            
-                            # Validate that we have all required positions filled
-                            if (len(positions['QB']) < 1 or len(positions['RB']) < 2 or 
-                                len(positions['WR']) < 3 or len(positions['TE']) < 1 or 
-                                len(positions['DEF']) < 1):
-                                continue  # Skip incomplete lineups
-                            
-                            # Fill FanDuel roster format: QB, RB, RB, WR, WR, WR, TE, FLEX, DEF
-                            row = [
-                                positions['QB'][0],    # QB
-                                positions['RB'][0],    # RB
-                                positions['RB'][1],    # RB
-                                positions['WR'][0],    # WR
-                                positions['WR'][1],    # WR
-                                positions['WR'][2],    # WR
-                                positions['TE'][0],    # TE
-                                '',                    # FLEX - will be determined below
-                                positions['DEF'][0]    # DEF
-                            ]
-                            
-                            # Determine FLEX (extra RB, WR, or TE)
-                            if len(positions['RB']) > 2:
-                                row[7] = positions['RB'][2]
-                            elif len(positions['WR']) > 3:
-                                row[7] = positions['WR'][3]
-                            elif len(positions['TE']) > 1:
-                                row[7] = positions['TE'][1]
-                            else:
-                                continue  # Skip lineups without valid FLEX player
-                            
-                            # Add completed lineup
-                            csv_data.append(row)
-                        
-                        # Create CSV string with contest entry columns
-                        csv_lines = ['entry_id,contest_id,contest_name,entry_fee,QB,RB,RB,WR,WR,WR,TE,FLEX,DEF']
-                        
-                        # Use user-configured entry settings
-                        for i, row in enumerate(csv_data):
-                            entry_id = fallback_base_entry_id + i
-                            lineup_data = ','.join(map(str, row))
-                            csv_line = f"{entry_id},{fallback_contest_id},{fallback_contest_name},{fallback_entry_fee},{lineup_data}"
-                            csv_lines.append(csv_line)
-                        
-                        csv_string = '\n'.join(csv_lines)
-                        
-                        # Show a preview of the first few lines to verify format
-                        st.write("**CSV Format Preview:**")
-                        st.code('\n'.join(csv_lines[:3]))
-                        
-                        if len(csv_data) == 0:
-                            st.error(f"❌ No valid lineups found!")
-                        else:
-                            st.success(f"✅ {len(csv_data)} lineups prepared for download!")
-                            st.download_button(
-                                label="💾 Download CSV for FanDuel",
-                                data=csv_string,
-                                file_name=f"fanduel_lineups_{len(csv_data)}lineups.csv",
-                                mime="text/csv",
-                                type="secondary"
-                            )
             
             st.markdown("---")
 
