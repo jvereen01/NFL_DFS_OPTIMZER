@@ -108,7 +108,7 @@ def load_player_data():
     import os
     
     # Direct path to the exact file we want
-    csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list.csv"
+    csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (1).csv"
     
     if not os.path.exists(csv_file):
         st.error(f"CSV file not found: {csv_file}")
@@ -1827,6 +1827,50 @@ def main():
             default_elite_boost = preset_elite_boost
             default_great_boost = preset_great_boost
         
+        # Usage Strategy Mode Selection
+        st.subheader("📊 Usage Strategy")
+        usage_mode = st.radio(
+            "Usage Configuration Mode",
+            ["Manual Usage", "Tier Strategy"],
+            index=0,
+            help="Manual: Set individual usage percentages. Tier: Group players into High/Medium/Low usage tiers"
+        )
+        
+        # Tier Strategy Configuration
+        if usage_mode == "Tier Strategy":
+            st.markdown("**🎯 Configure Usage Tiers**")
+            
+            with st.expander("💡 How Tier Strategy Works"):
+                st.markdown("""
+                **🔥 HIGH USAGE (15-25% default):** Your highest conviction plays
+                - Core lineup anchors and stack components
+                - Players you believe are underpriced relative to ceiling
+                
+                **⚖️ MEDIUM USAGE (8-15% default):** Balanced exposure plays  
+                - Solid floor players without massive ownership
+                - Good leverage spots and stack supporting cast
+                
+                **📉 LOW USAGE (2-8% default):** Contrarian and dart throw plays
+                - Super low-owned players with spike potential
+                - Cheap salary savers and tournament differentiators
+                
+                **Benefits:** Fast roster construction, strategic thinking, maintains all existing functionality!
+                """)
+            
+            # Tier range settings
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                high_tier_min = st.number_input("High Min %", 15, 40, 15, step=1)
+                high_tier_max = st.number_input("High Max %", high_tier_min, 50, 25, step=1)
+            with col2:
+                med_tier_min = st.number_input("Med Min %", 5, high_tier_min-1, 8, step=1)
+                med_tier_max = st.number_input("Med Max %", med_tier_min, high_tier_min-1, 15, step=1)
+            with col3:
+                low_tier_min = st.number_input("Low Min %", 1, med_tier_min-1, 2, step=1)
+                low_tier_max = st.number_input("Low Max %", low_tier_min, med_tier_min-1, 8, step=1)
+            
+            st.info(f"🔥 **High Usage:** {high_tier_min}-{high_tier_max}% | ⚖️ **Medium:** {med_tier_min}-{med_tier_max}% | 📉 **Low:** {low_tier_min}-{low_tier_max}%")
+        
         # Configuration sliders (will use strategy presets as defaults)
         num_simulations = st.slider("Number of Simulations", 1000, 20000, default_simulations, step=1000,
                                     help="More simulations = more unique lineups but slower generation. 5000 simulations typically generates 3000-4000 unique lineups.")
@@ -3284,8 +3328,89 @@ def main():
                 'Proj Own': data['Proj Own']
             } for data in display_usage_data])
             
+            # Tier Strategy Interface (if enabled)
+            if 'usage_mode' in locals() and usage_mode == "Tier Strategy":
+                st.markdown("**🎯 Tier Strategy - Select Players by Usage Level**")
+                
+                # Get unique players by position for dropdowns
+                qb_players = [data['Player'] for data in display_usage_data if data['Position'] == 'QB']
+                rb_players = [data['Player'] for data in display_usage_data if data['Position'] == 'RB']
+                wr_players = [data['Player'] for data in display_usage_data if data['Position'] == 'WR']
+                te_players = [data['Player'] for data in display_usage_data if data['Position'] == 'TE']
+                def_players = [data['Player'] for data in display_usage_data if data['Position'] == 'D']
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.markdown(f"**🔥 HIGH USAGE ({high_tier_min}-{high_tier_max}%)**")
+                    high_qbs = st.multiselect("QBs", qb_players, key="high_qbs")
+                    high_rbs = st.multiselect("RBs", rb_players, key="high_rbs")
+                    high_wrs = st.multiselect("WRs", wr_players, key="high_wrs")
+                    high_tes = st.multiselect("TEs", te_players, key="high_tes")
+                    high_defs = st.multiselect("DEF", def_players, key="high_defs")
+                
+                with col2:
+                    st.markdown(f"**⚖️ MEDIUM USAGE ({med_tier_min}-{med_tier_max}%)**")
+                    med_qbs = st.multiselect("QBs", qb_players, key="med_qbs")
+                    med_rbs = st.multiselect("RBs", rb_players, key="med_rbs")
+                    med_wrs = st.multiselect("WRs", wr_players, key="med_wrs")
+                    med_tes = st.multiselect("TEs", te_players, key="med_tes")
+                    med_defs = st.multiselect("DEF", def_players, key="med_defs")
+                
+                with col3:
+                    st.markdown(f"**📉 LOW USAGE ({low_tier_min}-{low_tier_max}%)**")
+                    low_qbs = st.multiselect("QBs", qb_players, key="low_qbs")
+                    low_rbs = st.multiselect("RBs", rb_players, key="low_rbs")
+                    low_wrs = st.multiselect("WRs", wr_players, key="low_wrs")
+                    low_tes = st.multiselect("TEs", te_players, key="low_tes")
+                    low_defs = st.multiselect("DEF", def_players, key="low_defs")
+                
+                # Apply tier strategy to Target % column
+                if st.button("🎯 Apply Tier Strategy", type="primary"):
+                    # Create tier assignments dictionary
+                    tier_assignments = {}
+                    
+                    # Collect all tier selections
+                    high_players = high_qbs + high_rbs + high_wrs + high_tes + high_defs
+                    med_players = med_qbs + med_rbs + med_wrs + med_tes + med_defs
+                    low_players = low_qbs + low_rbs + low_wrs + low_tes + low_defs
+                    
+                    # Assign random percentages within tier ranges
+                    import random
+                    for player in high_players:
+                        tier_assignments[player] = random.uniform(high_tier_min, high_tier_max)
+                    for player in med_players:
+                        tier_assignments[player] = random.uniform(med_tier_min, med_tier_max)
+                    for player in low_players:
+                        tier_assignments[player] = random.uniform(low_tier_min, low_tier_max)
+                    
+                    # Update the Target % column in display_df
+                    for idx, row in display_df.iterrows():
+                        player_name = row['Player']
+                        if player_name in tier_assignments:
+                            display_df.at[idx, 'Target %'] = round(tier_assignments[player_name], 1)
+                        else:
+                            # Players not in any tier get 0% usage
+                            display_df.at[idx, 'Target %'] = 0.0
+                    
+                    st.success(f"✅ Tier strategy applied! {len(tier_assignments)} players assigned usage percentages.")
+                    
+                    # Show tier summary
+                    if tier_assignments:
+                        st.info(f"""
+                        **Tier Summary:**
+                        🔥 **High Usage:** {len(high_players)} players ({high_tier_min}-{high_tier_max}%)
+                        ⚖️ **Medium Usage:** {len(med_players)} players ({med_tier_min}-{med_tier_max}%)  
+                        📉 **Low Usage:** {len(low_players)} players ({low_tier_min}-{low_tier_max}%)
+                        """)
+                
+                st.markdown("---")
+            
             # Display editable usage breakdown table
-            st.markdown("**📊 Complete Player Usage Breakdown** - Click on Target % cells to edit exposures")
+            if 'usage_mode' in locals() and usage_mode == "Manual Usage":
+                st.markdown("**📊 Manual Usage Configuration** - Click on Target % cells to edit exposures")
+            else:
+                st.markdown("**📊 Complete Player Usage Breakdown** - Click on Target % cells to edit exposures")
             
             # Configure which columns are editable
             column_config = {
