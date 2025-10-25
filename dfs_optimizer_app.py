@@ -107,24 +107,13 @@ def load_player_data():
     import pandas as pd
     import os
     
-    # Try multiple CSV files in order of preference (same as cloud deployment)
-    csv_candidates = [
-        r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (2).csv",
-        r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (1).csv",
-        r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list.csv"
-    ]
+    # Use only the (2).csv file as requested
+    csv_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (2).csv")
     
-    csv_file = None
-    for candidate in csv_candidates:
-        if os.path.exists(candidate):
-            csv_file = candidate
-            break
-    
-    if not csv_file:
-        st.error("CSV file not found! Tried:")
-        for candidate in csv_candidates:
-            st.write(f"❌ {candidate}")
-        return pd.DataFrame()
+    if not os.path.exists(csv_file):
+        st.error(f"CSV file not found: {csv_file}")
+        st.error("Please ensure the (2).csv file exists in the app directory")
+        return None
     
     try:
         # Load the CSV directly - no caching, no complexity
@@ -170,7 +159,7 @@ def load_player_data():
         
     except Exception as e:
         st.error(f"Error loading CSV: {str(e)}")
-        return pd.DataFrame()
+        return None
 
 def calculate_ceiling_floor_projections(df):
     """Calculate ceiling and floor projections for each player"""
@@ -249,48 +238,37 @@ def calculate_ceiling_floor_projections(df):
     # Standard loading (original code)
     import os
     
-    # FALLBACK CSV loading - try multiple files in order of preference
-    csv_candidates = [
-        'FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (2).csv',
-        'FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (1).csv', 
-        'FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list.csv'
-    ]
+    # Use only the (2).csv file as requested
+    target_file = 'FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (2).csv'
     
     # Debug: Show what we're looking for
-    st.info(f"🔍 **Looking for CSV files in order:** {', '.join(csv_candidates)}")
+    st.info(f"🔍 **Looking for CSV file:** {target_file}")
     
     current_dir = os.getcwd()
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
-    # Try each CSV candidate file
-    csv_path = None
-    found_file = None
+    # Try standard locations for the (2).csv file
+    possible_paths = [
+        os.path.join(current_dir, target_file),
+        os.path.join(script_dir, target_file),
+        target_file
+    ]
     
-    for target_file in csv_candidates:
-        possible_paths = [
-            os.path.join(current_dir, target_file),
-            os.path.join(script_dir, target_file),
-            target_file
-        ]
-        
-        for path in possible_paths:
-            if os.path.exists(path):
-                csv_path = path
-                found_file = target_file
-                break
-        
-        if csv_path:
+    csv_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            csv_path = path
+            st.success(f"✅ Found CSV file: {target_file}")
             break
     
-    if csv_path is None:
-        st.error("❌ No CSV file found! Please ensure one of these files exists:")
-        for file in csv_candidates:
-            st.write(f"   - {file}")
+    if not csv_path:
+        st.error(f"❌ CSV file not found: {target_file}")
+        st.error("Please ensure the (2).csv file exists in the app directory")
         return None
     
     try:
         # Load player CSV
-        st.success(f"✅ **Loading CSV file:** {found_file}")
+        st.success(f"✅ **Loading CSV file:** {target_file}")
         df = pd.read_csv(csv_path)
         df.columns = [col.strip() for col in df.columns]
         
@@ -2097,6 +2075,10 @@ def main():
     with st.spinner("Loading player data..."):
         df = load_player_data()
         
+    if df is None or len(df) == 0:
+        st.error("❌ Failed to load player data. Please check the CSV file.")
+        st.stop()  # Stop execution here
+        
     if df is not None:
         with st.spinner("Loading defensive matchup data..."):
             pass_defense, rush_defense = load_defensive_data()
@@ -2107,6 +2089,12 @@ def main():
         # Merge PosRank data from fantasy data
         if fantasy_data is not None:
             with st.spinner("Adding position rankings..."):
+                # Safety check for Nickname column
+                if 'Nickname' not in df.columns:
+                    st.error("❌ Critical Error: 'Nickname' column not found in dataframe!")
+                    st.error(f"Available columns: {df.columns.tolist()}")
+                    return
+                    
                 # Create a mapping of player names to PosRank
                 posrank_mapping = fantasy_data.set_index('Player')['PosRank'].to_dict()
                 df['PosRank'] = df['Nickname'].map(posrank_mapping)
