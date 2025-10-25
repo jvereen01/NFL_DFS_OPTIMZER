@@ -108,7 +108,7 @@ def load_player_data():
     import os
     
     # Direct path to the exact file we want
-    csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (1).csv"
+    csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (2).csv"
     
     if not os.path.exists(csv_file):
         st.error(f"CSV file not found: {csv_file}")
@@ -224,8 +224,8 @@ def calculate_ceiling_floor_projections(df):
     # Standard loading (original code)
     import os
     
-    # ONLY use the October 26th CSV file
-    target_file = 'FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list.csv'
+    # ONLY use the October 26th CSV file (version 2)
+    target_file = 'FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (2).csv'
     
     # Debug: Show what we're looking for
     st.info(f"🔍 **Looking for CSV file:** {target_file}")
@@ -1406,11 +1406,13 @@ def find_team_stack_relationships(lineup):
     return stack_info
 
 
-def apply_usage_adjustments(lineups, filtered_players, selected_position):
+def apply_usage_adjustments(lineups, filtered_players, selected_position, preserve_stacks=True):
     """
     Apply usage adjustments by intelligently modifying actual lineups
     to match target exposure percentages across ALL players with adjustments,
-    not just the currently filtered position
+    not just the currently filtered position.
+    
+    preserve_stacks: If True, tries to preserve QB/WR/TE correlations when making changes
     """
     import random
     import copy
@@ -1513,10 +1515,10 @@ def apply_usage_adjustments(lineups, filtered_players, selected_position):
                 lineup_idx = lineups_with_player[i]
                 points, lineup, salary, stacked_wrs, stacked_tes, qb_wr_te = modified_lineups[lineup_idx]
                 
-                # Find ANY available replacement player from the pool
+                # Find replacement player with stack preservation if enabled
                 replacement_found = False
                 best_replacement = None
-                best_salary_fit = float('inf')
+                best_score = -float('inf')
                 
                 # Look for replacement from ALL other lineups at the same position
                 for other_idx, (_, other_lineup, _, _, _, _) in enumerate(modified_lineups):
@@ -1525,12 +1527,26 @@ def apply_usage_adjustments(lineups, filtered_players, selected_position):
                             if (other_row['Position'] == player_position and 
                                 other_row['Nickname'] != player_name):
                                 
-                                # Calculate salary difference
+                                # Calculate replacement score (higher is better)
                                 salary_diff = abs(other_row['Salary'] - player_salary)
+                                salary_score = max(0, 2000 - salary_diff) / 2000  # 0-1 score for salary fit
                                 
-                                # Prefer closer salary matches but allow flexibility
-                                if salary_diff < best_salary_fit:
-                                    best_salary_fit = salary_diff
+                                stack_score = 0
+                                if preserve_stacks:
+                                    # Bonus for maintaining team stacks
+                                    replacement_team = other_row['Team']
+                                    current_team_count = sum(1 for _, r in lineup.iterrows() 
+                                                           if r['Team'] == replacement_team and r['Nickname'] != player_name)
+                                    
+                                    # Higher score for replacements that maintain/create stacks
+                                    if current_team_count >= 1:  # Already have teammate(s)
+                                        stack_score = 0.5 + (current_team_count * 0.2)
+                                
+                                # Combined score favoring salary fit and stack preservation
+                                total_score = salary_score + stack_score
+                                
+                                if total_score > best_score:
+                                    best_score = total_score
                                     best_replacement = {
                                         'name': other_row['Nickname'],
                                         'salary': other_row['Salary'],
@@ -1666,7 +1682,9 @@ def recalculate_usage_stats():
     if 'stacked_lineups' not in st.session_state:
         return
     
-    lineups = st.session_state.stacked_lineups[:150]  # Top 150 only
+    # Use top 150 by points (sorted descending) for consistent "Top 150" behavior
+    sorted_lineups = sorted(st.session_state.stacked_lineups, key=lambda x: x[0], reverse=True)
+    lineups = sorted_lineups[:150]  # Top 150 only
     
     # Count player usage in modified lineups
     player_counts = {}
@@ -1863,13 +1881,32 @@ def main():
                 high_tier_min = st.number_input("High Min %", 15, 40, 15, step=1)
                 high_tier_max = st.number_input("High Max %", high_tier_min, 50, 25, step=1)
             with col2:
-                med_tier_min = st.number_input("Med Min %", 5, high_tier_min-1, 8, step=1)
-                med_tier_max = st.number_input("Med Max %", med_tier_min, high_tier_min-1, 15, step=1)
+                med_tier_min = st.number_input("Med Min %", 5, min(high_tier_min-1, 14), 8, step=1)
+                med_tier_max = st.number_input("Med Max %", med_tier_min, min(high_tier_min-1, 14), min(14, high_tier_min-1), step=1)
             with col3:
-                low_tier_min = st.number_input("Low Min %", 1, med_tier_min-1, 2, step=1)
-                low_tier_max = st.number_input("Low Max %", low_tier_min, med_tier_min-1, 8, step=1)
+                low_tier_min = st.number_input("Low Min %", 1, min(med_tier_min-1, 7), 2, step=1)
+                low_tier_max = st.number_input("Low Max %", low_tier_min, min(med_tier_min-1, 7), min(7, med_tier_min-1), step=1)
             
             st.info(f"🔥 **High Usage:** {high_tier_min}-{high_tier_max}% | ⚖️ **Medium:** {med_tier_min}-{med_tier_max}% | 📉 **Low:** {low_tier_min}-{low_tier_max}%")
+            
+            # Store tier settings in session state for use later
+            st.session_state['tier_settings'] = {
+                'high_min': high_tier_min, 'high_max': high_tier_max,
+                'med_min': med_tier_min, 'med_max': med_tier_max, 
+                'low_min': low_tier_min, 'low_max': low_tier_max
+            }
+            
+            st.markdown("**🎯 Select Players for Each Tier**")
+            st.caption("After the app loads player data, you'll see player selection dropdowns below.")
+            st.info("💡 **Player selection interface will appear after data loads**")
+            
+            # Initialize tier selections in session state if not exists
+            tier_keys = ['high_qbs', 'high_rbs', 'high_wrs', 'high_tes', 'high_defs',
+                        'med_qbs', 'med_rbs', 'med_wrs', 'med_tes', 'med_defs',
+                        'low_qbs', 'low_rbs', 'low_wrs', 'low_tes', 'low_defs']
+            for key in tier_keys:
+                if key not in st.session_state:
+                    st.session_state[key] = []
         
         # Configuration sliders (will use strategy presets as defaults)
         num_simulations = st.slider("Number of Simulations", 1000, 20000, default_simulations, step=1000,
@@ -2020,6 +2057,192 @@ def main():
             
         with st.spinner("Creating performance boosts..."):
             wr_performance_boosts, rb_performance_boosts, te_performance_boosts, qb_performance_boosts = create_performance_boosts(fantasy_data, wr_boost_multiplier, rb_boost_multiplier)
+        
+        # Tier Strategy Player Selection (if enabled)
+        if 'usage_mode' in locals() and usage_mode == "Tier Strategy":
+            st.markdown("---")
+            st.markdown("## 🎯 **Tier Strategy - Select Your Players**")
+            
+            # Get tier settings from session state
+            tier_settings = st.session_state.get('tier_settings', {
+                'high_min': 15, 'high_max': 25, 'med_min': 8, 'med_max': 14, 'low_min': 2, 'low_max': 7
+            })
+            
+            # Get unique players by position for dropdowns
+            qb_players_all = df[df['Position'] == 'QB']['Nickname'].unique().tolist()
+            rb_players_all = df[df['Position'] == 'RB']['Nickname'].unique().tolist()
+            wr_players_all = df[df['Position'] == 'WR']['Nickname'].unique().tolist()
+            te_players_all = df[df['Position'] == 'TE']['Nickname'].unique().tolist()
+            def_players_all = df[df['Position'] == 'D']['Nickname'].unique().tolist()
+            
+            # Filter out excluded players if they exist in session state
+            def extract_player_name_from_option(options):
+                """Extract player names from 'Player (Salary)' format"""
+                return [opt.split(' (')[0] for opt in options] if options else []
+            
+            excluded_qbs = extract_player_name_from_option(st.session_state.get('exclude_qb', []))
+            excluded_rbs = extract_player_name_from_option(st.session_state.get('exclude_rb', []))
+            excluded_wrs = extract_player_name_from_option(st.session_state.get('exclude_wr', []))
+            excluded_tes = extract_player_name_from_option(st.session_state.get('exclude_te', []))
+            excluded_defs = extract_player_name_from_option(st.session_state.get('exclude_d', []))
+            
+            # Filter available players (remove excluded ones)
+            qb_players = [p for p in qb_players_all if p not in excluded_qbs]
+            rb_players = [p for p in rb_players_all if p not in excluded_rbs]
+            wr_players = [p for p in wr_players_all if p not in excluded_wrs]
+            te_players = [p for p in te_players_all if p not in excluded_tes]
+            def_players = [p for p in def_players_all if p not in excluded_defs]
+            
+            # Show exclusion info if any players are excluded
+            total_excluded = len(excluded_qbs) + len(excluded_rbs) + len(excluded_wrs) + len(excluded_tes) + len(excluded_defs)
+            if total_excluded > 0:
+                st.info(f"🚫 **{total_excluded} excluded players** filtered out from tier selection")
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.markdown(f"### 🔥 **HIGH USAGE** ({tier_settings['high_min']}-{tier_settings['high_max']}%)")
+                st.caption("Your highest conviction plays - core lineup anchors")
+                high_qbs = st.multiselect("QBs", qb_players, key="high_qbs", help="Select QBs for high usage")
+                high_rbs = st.multiselect("RBs", rb_players, key="high_rbs", help="Select RBs for high usage")
+                high_wrs = st.multiselect("WRs", wr_players, key="high_wrs", help="Select WRs for high usage")
+                high_tes = st.multiselect("TEs", te_players, key="high_tes", help="Select TEs for high usage")
+                high_defs = st.multiselect("DEF", def_players, key="high_defs", help="Select defenses for high usage")
+            
+            # Get all high usage selections to filter from other tiers
+            all_high_players = high_qbs + high_rbs + high_wrs + high_tes + high_defs
+            
+            with col2:
+                st.markdown(f"### ⚖️ **MEDIUM USAGE** ({tier_settings['med_min']}-{tier_settings['med_max']}%)")
+                st.caption("Balanced exposure plays - solid floor, good leverage")
+                # Filter out players already selected for high usage
+                available_qbs_med = [p for p in qb_players if p not in all_high_players]
+                available_rbs_med = [p for p in rb_players if p not in all_high_players]
+                available_wrs_med = [p for p in wr_players if p not in all_high_players]
+                available_tes_med = [p for p in te_players if p not in all_high_players]
+                available_defs_med = [p for p in def_players if p not in all_high_players]
+                
+                med_qbs = st.multiselect("QBs", available_qbs_med, key="med_qbs", help="Select QBs for medium usage")
+                med_rbs = st.multiselect("RBs", available_rbs_med, key="med_rbs", help="Select RBs for medium usage")
+                med_wrs = st.multiselect("WRs", available_wrs_med, key="med_wrs", help="Select WRs for medium usage")
+                med_tes = st.multiselect("TEs", available_tes_med, key="med_tes", help="Select TEs for medium usage")
+                med_defs = st.multiselect("DEF", available_defs_med, key="med_defs", help="Select defenses for medium usage")
+            
+            # Get all high and medium usage selections to filter from low tier
+            all_high_med_players = all_high_players + med_qbs + med_rbs + med_wrs + med_tes + med_defs
+            
+            with col3:
+                st.markdown(f"### 📉 **LOW USAGE** ({tier_settings['low_min']}-{tier_settings['low_max']}%)")
+                st.caption("Contrarian plays - low ownership, high upside")
+                # Filter out players already selected for high or medium usage
+                available_qbs_low = [p for p in qb_players if p not in all_high_med_players]
+                available_rbs_low = [p for p in rb_players if p not in all_high_med_players]
+                available_wrs_low = [p for p in wr_players if p not in all_high_med_players]
+                available_tes_low = [p for p in te_players if p not in all_high_med_players]
+                available_defs_low = [p for p in def_players if p not in all_high_med_players]
+                
+                low_qbs = st.multiselect("QBs", available_qbs_low, key="low_qbs", help="Select QBs for low usage")
+                low_rbs = st.multiselect("RBs", available_rbs_low, key="low_rbs", help="Select RBs for low usage")
+                low_wrs = st.multiselect("WRs", available_wrs_low, key="low_wrs", help="Select WRs for low usage")
+                low_tes = st.multiselect("TEs", available_tes_low, key="low_tes", help="Select TEs for low usage")
+                low_defs = st.multiselect("DEF", available_defs_low, key="low_defs", help="Select defenses for low usage")
+            
+            # Store tier selections for later use (with automatic low tier assignment)
+            all_available_players = qb_players + rb_players + wr_players + te_players + def_players
+            explicitly_assigned = high_qbs + high_rbs + high_wrs + high_tes + high_defs + med_qbs + med_rbs + med_wrs + med_tes + med_defs
+            auto_low_players = [p for p in all_available_players if p not in explicitly_assigned]
+            all_low_players = low_qbs + low_rbs + low_wrs + low_tes + low_defs + auto_low_players
+            
+            st.session_state['tier_selections'] = {
+                'high': high_qbs + high_rbs + high_wrs + high_tes + high_defs,
+                'med': med_qbs + med_rbs + med_wrs + med_tes + med_defs,
+                'low': all_low_players  # Includes both explicitly selected AND auto-assigned
+            }
+            
+            # Show summary and apply tier strategy
+            total_high = len(high_qbs) + len(high_rbs) + len(high_wrs) + len(high_tes) + len(high_defs)
+            total_med = len(med_qbs) + len(med_rbs) + len(med_wrs) + len(med_tes) + len(med_defs)
+            total_explicit_low = len(low_qbs) + len(low_rbs) + len(low_wrs) + len(low_tes) + len(low_defs)
+            total_auto_low = len(auto_low_players)
+            total_low = total_explicit_low + total_auto_low
+            
+            st.info(f"""
+            **📊 Tier Assignment:**
+            🔥 **High Usage:** {total_high} players | ⚖️ **Medium Usage:** {total_med} players | 📉 **Low Usage:** {total_low} players
+            
+            *Low tier includes {total_explicit_low} explicitly selected + {total_auto_low} auto-assigned (unselected) players*
+            """)
+            
+            if total_high + total_med + total_explicit_low > 0:
+                if st.button("🎯 Apply Tier Strategy", type="primary", key="apply_tiers"):
+                    # Create tier assignments dictionary using current selections
+                    tier_assignments = {}
+                    import random
+                    
+                    # Apply percentages to all tier selections (including auto-assigned low tier)
+                    for player in high_qbs + high_rbs + high_wrs + high_tes + high_defs:
+                        tier_assignments[player] = random.uniform(tier_settings['high_min'], tier_settings['high_max'])
+                    for player in med_qbs + med_rbs + med_wrs + med_tes + med_defs:
+                        tier_assignments[player] = random.uniform(tier_settings['med_min'], tier_settings['med_max'])
+                    for player in all_low_players:  # Both explicit and auto-assigned
+                        tier_assignments[player] = random.uniform(tier_settings['low_min'], tier_settings['low_max'])
+                    
+                    # Store in session state for the usage table to use
+                    st.session_state['tier_assignments'] = tier_assignments
+                    st.session_state['unassigned_usage'] = 0.0  # No longer needed but keep for compatibility
+                    
+                    # CRITICAL: Also create session state keys for apply_usage_adjustments function
+                    # This ensures tier strategy actually affects lineup generation
+                    for player_name, target_percentage in tier_assignments.items():
+                        # Find player details from the dataframe to create proper session key
+                        player_info = df[df['Nickname'] == player_name]
+                        if not player_info.empty:
+                            position = player_info.iloc[0]['Position']
+                            team = player_info.iloc[0]['Team']
+                            
+                            # Create session key in the format expected by apply_usage_adjustments
+                            clean_name = player_name.replace(" ", "_").replace(".", "").replace("'", "")
+                            session_key = f"usage_adj_{clean_name}_{position}_{team}"
+                            st.session_state[session_key] = target_percentage
+                    
+                    # Check if we have lineups to modify
+                    if 'stacked_lineups' in st.session_state and st.session_state.stacked_lineups:
+                        with st.spinner("Applying tier strategy to existing lineups..."):
+                            # Create dummy display data for apply_usage_adjustments
+                            dummy_display_data = [{'Player': name, 'Position': df[df['Nickname'] == name].iloc[0]['Position'] if not df[df['Nickname'] == name].empty else ''} 
+                                                for name in tier_assignments.keys()]
+                            
+                            # Apply tier strategy to existing lineups with stack preservation
+                            # Use top scoring 150 when applying dummy adjustments
+                            sorted_session_lineups = sorted(st.session_state.stacked_lineups, key=lambda x: x[0], reverse=True)
+                            modified_lineups = apply_usage_adjustments(sorted_session_lineups[:150], dummy_display_data, "All Positions", preserve_stacks=True)
+                            if modified_lineups:
+                                st.session_state.stacked_lineups = modified_lineups + st.session_state.stacked_lineups[150:]  # Keep extra lineups if any
+                                st.success(f"✅ Tier strategy applied to all {len(tier_assignments)} players and lineups modified successfully!")
+                            else:
+                                st.success(f"✅ Tier strategy applied to all {len(tier_assignments)} available players! Usage adjustments ready for lineup generation.")
+                                st.warning("⚠️ Could not modify existing lineups. Generate new lineups to see tier strategy in action.")
+                    else:
+                        st.success(f"✅ Tier strategy applied to all {len(tier_assignments)} available players! Usage adjustments ready for lineup generation.")
+                    
+                    # Show detailed tier summary
+                    st.info(f"""
+                    **Applied Strategy:**
+                    🔥 **High Usage:** {total_high} players ({tier_settings['high_min']}-{tier_settings['high_max']}%)
+                    ⚖️ **Medium Usage:** {total_med} players ({tier_settings['med_min']}-{tier_settings['med_max']}%)  
+                    📉 **Low Usage:** {total_low} players ({tier_settings['low_min']}-{tier_settings['low_max']}%) 
+                    *({total_explicit_low} explicit + {total_auto_low} auto-assigned)*
+                    """)
+                    
+                    # Add note about what happens next
+                    if 'stacked_lineups' in st.session_state and st.session_state.stacked_lineups:
+                        st.info("💡 **Tier strategy has been applied to your existing lineups!** Scroll down to see updated usage rates.")
+                    else:
+                        st.info("💡 **Next Step:** Generate lineups to see your tier strategy in action!")
+            else:
+                st.warning("⚠️ Select some players for High or Medium tiers to use tier strategy.")
+            
+            st.markdown("---")
         
         # Apply global fantasy adjustments
         with st.spinner("Applying fantasy adjustments..."):
@@ -2616,8 +2839,47 @@ def main():
                     all_forced_players.extend(pos_data['must_include'])
         
         if generate_button:
+            # Check if tier strategy has been applied
+            tier_assignments = st.session_state.get('tier_assignments', {})
+            
             with st.spinner("Creating weighted player pools..."):
                 weighted_pools = create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_performance_boosts, qb_performance_boosts, elite_target_boost, great_target_boost, all_forced_players, forced_player_boost)
+            
+            # Apply tier strategy to weighted pools if available
+            if tier_assignments:
+                with st.spinner("Applying tier strategy to player weights..."):
+                    # Modify weighted pools based on tier assignments
+                    for position in ['QB', 'RB', 'WR', 'TE', 'D']:
+                        if position in weighted_pools:
+                            for idx, row in weighted_pools[position].iterrows():
+                                player_name = row['Nickname']
+                                if player_name in tier_assignments:
+                                    target_usage = tier_assignments[player_name]
+                                    # Convert target usage to weight multiplier
+                                    # Higher usage = higher weight in selection (STRONGER multipliers)
+                                    if target_usage >= 15:  # High tier - make much more likely
+                                        weight_multiplier = 5.0  # Increased from 2.5
+                                    elif target_usage >= 8:  # Medium tier  
+                                        weight_multiplier = 2.5  # Increased from 1.5
+                                    else:  # Low tier - make much less likely
+                                        weight_multiplier = 0.3  # Decreased from 0.6
+                                    
+                                    # Apply weight multiplier to existing weights
+                                    weighted_pools[position].at[idx, 'Selection_Weight'] *= weight_multiplier
+                    
+                    st.info(f"🎯 Tier strategy applied to {len(tier_assignments)} players during generation!")
+                    
+                    # Debug info for tier assignments
+                    high_tier_players = [name for name, target in tier_assignments.items() if target >= 15]
+                    med_tier_players = [name for name, target in tier_assignments.items() if 8 <= target < 15]
+                    low_tier_players = [name for name, target in tier_assignments.items() if target < 8]
+                    
+                    if high_tier_players:
+                        st.success(f"🔥 High tier players (5.0x weight): {', '.join(high_tier_players[:5])}{'...' if len(high_tier_players) > 5 else ''}")
+                    if med_tier_players:
+                        st.info(f"⚖️ Medium tier players (2.5x weight): {', '.join(med_tier_players[:3])}{'...' if len(med_tier_players) > 3 else ''}")
+                    if low_tier_players:
+                        st.warning(f"📉 Low tier players (0.3x weight): {len(low_tier_players)} players reduced")
             
             with st.spinner(f"Generating {num_simulations:,} optimized lineups..."):
                 # Pass tournament parameters to generation function
@@ -2633,6 +2895,32 @@ def main():
                 stacked_lineups = generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, fantasy_data, player_selections, force_mode, forced_player_boost, strategy_type, tournament_params)
                 st.session_state.stacked_lineups = stacked_lineups
                 st.session_state.lineups_generated = True
+                
+                # Apply post-generation tier adjustments if tier strategy is active
+                tier_assignments = st.session_state.get('tier_assignments', {})
+                if tier_assignments and len(stacked_lineups) > 0:
+                    with st.spinner("Applying post-generation tier strategy adjustments..."):
+                        # Apply tier strategy to the top 150 lineups for precision
+                        top_150_for_tier = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:150]
+                        
+                        # Create display data for tier adjustments
+                        tier_display_data = []
+                        for player_name in tier_assignments.keys():
+                            player_info = df[df['Nickname'] == player_name]
+                            if not player_info.empty:
+                                tier_display_data.append({
+                                    'Player': player_name,
+                                    'Position': player_info.iloc[0]['Position']
+                                })
+                        
+                        # Apply tier-based usage adjustments
+                        if tier_display_data:
+                            modified_lineups = apply_usage_adjustments(top_150_for_tier, tier_display_data, "All Positions", preserve_stacks=True)
+                            if modified_lineups:
+                                # Replace top 150 with tier-adjusted lineups, keep the rest
+                                st.session_state.stacked_lineups = modified_lineups + stacked_lineups[150:]
+                                stacked_lineups = st.session_state.stacked_lineups
+                                st.success(f"🎯 Post-generation tier adjustments applied to top 150 lineups!")
                 
                 # Debug info
                 if len(stacked_lineups) == 0:
@@ -2686,8 +2974,8 @@ def main():
             
             # Lineup Display Controls
             st.subheader("📋 Generated Lineups")
-            
-            col1, col2 = st.columns([1, 1])
+
+            col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
                 # Dropdown for number of lineups to display
                 lineup_count_options = {
@@ -2711,12 +2999,52 @@ def main():
                     index=0
                 )
             
-            # Get the selected number of lineups
-            display_lineups = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:selected_count]
+            with col3:
+                # QB Filter for lineups
+                st.markdown("**🎯 Filter by QB:**")
+                
+                # Get all QBs from top lineups for filter
+                top_lineups_for_qb_filter = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:selected_count]
+                all_lineup_qbs = set()
+                
+                for points, lineup, salary, _, _, _ in top_lineups_for_qb_filter:
+                    qb_row = lineup[lineup['Position'] == 'QB']
+                    if not qb_row.empty:
+                        qb_name = qb_row.iloc[0]['Nickname']
+                        qb_team = qb_row.iloc[0]['Team']
+                        all_lineup_qbs.add(f"{qb_name} ({qb_team})")
+                
+                qb_filter_options = ['All QBs'] + sorted(list(all_lineup_qbs))
+                selected_lineup_qb = st.selectbox("Select QB:", qb_filter_options, key="lineup_qb_filter")            # Get the selected number of lineups and apply QB filter
+            top_lineups = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:selected_count]
+            
+            # Apply QB filtering if a specific QB is selected
+            if selected_lineup_qb != 'All QBs':
+                qb_name = selected_lineup_qb.split(' (')[0]  # Extract QB name from "Name (Team)" format
+                
+                # Filter lineups that contain this QB
+                filtered_lineups = []
+                for points, lineup, salary, stacked_wrs_count, stacked_tes_count, qb_wr_te_count in top_lineups:
+                    qb_row = lineup[lineup['Position'] == 'QB']
+                    if not qb_row.empty and qb_row.iloc[0]['Nickname'] == qb_name:
+                        filtered_lineups.append((points, lineup, salary, stacked_wrs_count, stacked_tes_count, qb_wr_te_count))
+                
+                display_lineups = filtered_lineups
+                
+                # Show filter status
+                if len(filtered_lineups) > 0:
+                    st.success(f"🎯 Showing {len(filtered_lineups)} lineups with **{selected_lineup_qb}**")
+                else:
+                    st.warning(f"No lineups found with {selected_lineup_qb} in the selected range")
+            else:
+                display_lineups = top_lineups
             
             if display_format == "Compact Table":
                 # TABLE VIEW - Show all lineups in a compact table
-                st.write(f"**Showing {selected_count_label} ({len(display_lineups)} lineups)**")
+                if selected_lineup_qb != 'All QBs':
+                    st.write(f"**Showing {len(display_lineups)} lineups with {selected_lineup_qb}**")
+                else:
+                    st.write(f"**Showing {selected_count_label} ({len(display_lineups)} lineups)**")
                 
                 table_data = []
                 for i, (points, lineup, salary, stacked_wrs_count, stacked_tes_count, qb_wr_te_count) in enumerate(display_lineups, 1):
@@ -2725,10 +3053,39 @@ def main():
                     
                     # Get player names by position
                     qb = lineup[lineup['Position'] == 'QB']['Nickname'].iloc[0] if len(lineup[lineup['Position'] == 'QB']) > 0 else 'N/A'
-                    rb1, rb2 = lineup[lineup['Position'] == 'RB']['Nickname'].tolist()[:2] if len(lineup[lineup['Position'] == 'RB']) >= 2 else ['N/A', 'N/A']
-                    wr1, wr2, wr3 = lineup[lineup['Position'] == 'WR']['Nickname'].tolist()[:3] if len(lineup[lineup['Position'] == 'WR']) >= 3 else ['N/A', 'N/A', 'N/A']
-                    te = lineup[lineup['Position'] == 'TE']['Nickname'].iloc[0] if len(lineup[lineup['Position'] == 'TE']) > 0 else 'N/A'
+                    
+                    # Get RBs
+                    rb_list = lineup[lineup['Position'] == 'RB']['Nickname'].tolist()
+                    rb1 = rb_list[0] if len(rb_list) > 0 else 'N/A'
+                    rb2 = rb_list[1] if len(rb_list) > 1 else 'N/A'
+                    
+                    # Get WRs
+                    wr_list = lineup[lineup['Position'] == 'WR']['Nickname'].tolist()
+                    wr1 = wr_list[0] if len(wr_list) > 0 else 'N/A'
+                    wr2 = wr_list[1] if len(wr_list) > 1 else 'N/A'
+                    wr3 = wr_list[2] if len(wr_list) > 2 else 'N/A'
+                    
+                    # Get TE
+                    te_list = lineup[lineup['Position'] == 'TE']['Nickname'].tolist()
+                    te = te_list[0] if len(te_list) > 0 else 'N/A'
+                    
+                    # Get DST
                     dst = lineup[lineup['Position'] == 'D']['Nickname'].iloc[0] if len(lineup[lineup['Position'] == 'D']) > 0 else 'N/A'
+                    
+                    # Determine FLEX position (the 9th player - could be additional RB, WR, or TE)
+                    all_players = lineup['Nickname'].tolist()
+                    used_core_positions = [qb, rb1, rb2, wr1, wr2, wr3, te, dst]
+                    used_core_positions = [p for p in used_core_positions if p != 'N/A']
+                    
+                    # Find the remaining player who must be FLEX
+                    flex_player = 'N/A'
+                    flex_pos = 'N/A'
+                    for _, player_row in lineup.iterrows():
+                        player_name = player_row['Nickname']
+                        if player_name not in used_core_positions:
+                            flex_player = player_name
+                            flex_pos = player_row['Position']
+                            break
                     
                     ceiling = lineup['Ceiling'].sum() if 'Ceiling' in lineup.columns else 0
                     stack_label = f"QB+{actual_qb_wr_te}" if actual_qb_wr_te > 0 else "No Stack"
@@ -2746,6 +3103,7 @@ def main():
                         'WR2': wr2,
                         'WR3': wr3,
                         'TE': te,
+                        'FLEX': f"{flex_player} ({flex_pos})" if flex_player != 'N/A' else 'N/A',
                         'DST': dst
                     })
                 
@@ -2759,7 +3117,10 @@ def main():
                 
             else:
                 # EXPANDABLE CARDS VIEW (Original format)
-                st.write(f"**Showing {selected_count_label} ({len(display_lineups)} lineups)**")
+                if selected_lineup_qb != 'All QBs':
+                    st.write(f"**Showing {len(display_lineups)} lineups with {selected_lineup_qb}**")
+                else:
+                    st.write(f"**Showing {selected_count_label} ({len(display_lineups)} lineups)**")
                 
                 for i, (points, lineup, salary, stacked_wrs_count, stacked_tes_count, qb_wr_te_count) in enumerate(display_lineups, 1):
                     # RECALCULATE STACKING FOR DISPLAY (ensures accuracy after modifications)
@@ -2836,72 +3197,6 @@ def main():
                                 st.write(f"⚡ Forced player boosts: {forced_boosted}")
                             else:
                                 st.write("⚡ Forced player boosts: 0")
-            
-            # Player Usage Analysis for Top 20 Lineups
-            st.markdown("---")
-            st.markdown('<h3 class="sub-header">📊 Player Usage Analysis (Top 20 Lineups)</h3>', unsafe_allow_html=True)
-            
-            # Analyze top 20 lineups for player usage
-            analysis_lineups = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:20]
-            player_usage = {}
-            
-            for points, lineup, salary, _, _, _ in analysis_lineups:
-                for _, player in lineup.iterrows():
-                    player_name = player['Nickname']
-                    position = player['Position']
-                    if position == 'D':
-                        position = 'DEF'
-                    
-                    key = f"{player_name} ({position})"
-                    if key not in player_usage:
-                        player_usage[key] = {
-                            'count': 0,
-                            'position': position,
-                            'salary': player['Salary'],
-                            'nickname': player_name
-                        }
-                    player_usage[key]['count'] += 1
-            
-            # Create usage breakdown by position
-            usage_data = []
-            for player_key, data in player_usage.items():
-                usage_percentage = (data['count'] / 20) * 100
-                usage_data.append({
-                    'Player': data['nickname'],
-                    'Position': data['position'],
-                    'Salary': f"${data['salary']:,}",
-                    'Usage Count': f"{data['count']}/20",
-                    'Usage %': f"{usage_percentage:.1f}%"
-                })
-            
-            # Sort by usage count descending
-            usage_data.sort(key=lambda x: int(x['Usage Count'].split('/')[0]), reverse=True)
-            
-            # Display in columns by position
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.write("**🎯 Most Used Players:**")
-                top_usage = usage_data[:10]
-                usage_df = pd.DataFrame(top_usage)
-                st.dataframe(usage_df, use_container_width=True, hide_index=True)
-            
-            with col2:
-                st.write("**📈 Usage by Position:**")
-                pos_summary = {}
-                for data in usage_data:
-                    pos = data['Position']
-                    if pos not in pos_summary:
-                        pos_summary[pos] = []
-                    pos_summary[pos].append(data)
-                
-                for pos in ['QB', 'RB', 'WR', 'TE', 'DEF']:
-                    if pos in pos_summary:
-                        pos_players = pos_summary[pos][:3]  # Top 3 per position
-                        st.write(f"**{pos}:**")
-                        for player in pos_players:
-                            st.write(f"• {player['Player']} - {player['Usage Count']} ({player['Usage %']})")
-                        st.write("")
             
             # Enhanced Multi-Platform Export Section
             st.markdown("---")
@@ -2994,15 +3289,21 @@ def main():
             col1, col2, col3 = st.columns([1, 1, 2])
             
             with col1:
-                st.markdown("**📊 Lineup Analysis Scope:**")
+                st.markdown("**📊 Usage Breakdown Analysis Scope:**")
                 analysis_scope = st.selectbox(
-                    "Analysis Type:",
+                    "Select Lineups to Analyze:",
                     ["Top 150 Export Lineups", "All Generated Lineups"],  # Default to Top 150 first
-                    key="analysis_scope"
+                    key="analysis_scope",
+                    help="Choose which set of lineups to analyze in the usage breakdown table below"
                 )
             
             # Use the selected scope to determine which lineups to analyze
-            analysis_lineups = stacked_lineups[:150] if analysis_scope == "Top 150 Export Lineups" else stacked_lineups
+            # Ensure "Top 150" uses the top scoring 150 lineups (sorted by points) to match display
+            if analysis_scope == "Top 150 Export Lineups":
+                sorted_lineups_for_analysis = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)
+                analysis_lineups = sorted_lineups_for_analysis[:150]
+            else:
+                analysis_lineups = stacked_lineups
             
             # Analyze lineups based on selected scope
             all_player_usage = {}
@@ -3165,16 +3466,21 @@ def main():
             
             with col3:
                 if analysis_scope == "Top 150 Export Lineups":
-                    st.info("🎯 **Analyzing your actual 150-lineup portfolio** - this matches what you'll submit to FanDuel!")
+                    st.success("🎯 **Usage Breakdown: Top 150 Lineups Only**")
+                    st.info("Analyzing your actual 150-lineup portfolio that you'll submit to FanDuel. Perfect for final exposure review!")
                 else:
-                    st.info(f"📊 **Analyzing all {len(stacked_lineups)} generated lineups** - includes experimental lineups not for export")
+                    st.success(f"📊 **Usage Breakdown: All {len(stacked_lineups)} Generated Lineups**")
+                    st.info("Analyzing all generated lineups including experimental ones. Great for understanding full player pool coverage!")
                 
                 if selected_qb != 'All Players':
                     qb_name = selected_qb.split(' (')[0]  # Extract QB name from "Name (Team)" format
                     st.write(f"🎯 Filtered to **{selected_qb}** stacks only")
             
             # Apply analysis scope and QB filtering
-            working_lineups = stacked_lineups[:150] if analysis_scope == "Top 150 Export Lineups" else stacked_lineups
+            if analysis_scope == "Top 150 Export Lineups":
+                working_lineups = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:150]
+            else:
+                working_lineups = stacked_lineups
             
             if selected_qb != 'All Players':
                 qb_name = selected_qb.split(' (')[0]
@@ -3242,9 +3548,10 @@ def main():
             else:
                 # No QB filtering, just apply scope filtering  
                 if analysis_scope == "Top 150 Export Lineups":
-                    # Recalculate comprehensive usage for top 150 only
+                    # Recalculate comprehensive usage for top 150 only (use top scoring 150)
                     top_150_usage_data = []
-                    top_150_lineups = stacked_lineups[:150]
+                    sorted_for_top150 = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)
+                    top_150_lineups = sorted_for_top150[:150]
                     
                     if top_150_lineups:
                         player_counts = {}
@@ -3295,18 +3602,10 @@ def main():
             # Ensure data is always sorted by usage percentage (highest to lowest)
             display_usage_data = sorted(display_usage_data, key=lambda x: x['Usage %'], reverse=True)
             
-            # Debug info
-            using_session_state = 'comprehensive_usage_data' in st.session_state
-            st.info(f"""
-            **📊 Data Source Debug:**
-            - **Using session state**: {using_session_state}
-            - **Original data**: {len(comprehensive_usage_data)} players
-            - **Display data**: {len(display_usage_data)} players
-            - **Session state keys**: {len([k for k in st.session_state.keys() if k.startswith('usage_adj_')])} adjustments saved
-            - **Data sorted by**: Usage % (highest to lowest)
-            """)
-            
             # Create display dataframe with enhanced tournament columns
+            # Get tier assignments from session state if they exist
+            tier_assignments = st.session_state.get('tier_assignments', {})
+            
             display_df = pd.DataFrame([{
                 'Player': data['Player'],
                 'Pos': data['Position'],
@@ -3322,95 +3621,23 @@ def main():
                 'Value Tier': data['Value Tier'],
                 'Count': f"{data['Count']}/{total_lineups}",
                 'Usage %': data['Usage_Display'],
-                'Target %': float(data['Usage_Display'].replace('%', '')),  # Add Target % right after Usage %
+                'Target %': (
+                    round(tier_assignments[data['Player']], 1) if data['Player'] in tier_assignments 
+                    else float(data['Usage_Display'].replace('%', ''))
+                ),  # Use tier assignment or current usage
                 'Leverage': data['Leverage_Display'],
                 'GPP Score': data['GPP_Score_Display'],
                 'Proj Own': data['Proj Own']
             } for data in display_usage_data])
             
-            # Tier Strategy Interface (if enabled)
-            if 'usage_mode' in locals() and usage_mode == "Tier Strategy":
-                st.markdown("**🎯 Tier Strategy - Select Players by Usage Level**")
-                
-                # Get unique players by position for dropdowns
-                qb_players = [data['Player'] for data in display_usage_data if data['Position'] == 'QB']
-                rb_players = [data['Player'] for data in display_usage_data if data['Position'] == 'RB']
-                wr_players = [data['Player'] for data in display_usage_data if data['Position'] == 'WR']
-                te_players = [data['Player'] for data in display_usage_data if data['Position'] == 'TE']
-                def_players = [data['Player'] for data in display_usage_data if data['Position'] == 'D']
-                
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    st.markdown(f"**🔥 HIGH USAGE ({high_tier_min}-{high_tier_max}%)**")
-                    high_qbs = st.multiselect("QBs", qb_players, key="high_qbs")
-                    high_rbs = st.multiselect("RBs", rb_players, key="high_rbs")
-                    high_wrs = st.multiselect("WRs", wr_players, key="high_wrs")
-                    high_tes = st.multiselect("TEs", te_players, key="high_tes")
-                    high_defs = st.multiselect("DEF", def_players, key="high_defs")
-                
-                with col2:
-                    st.markdown(f"**⚖️ MEDIUM USAGE ({med_tier_min}-{med_tier_max}%)**")
-                    med_qbs = st.multiselect("QBs", qb_players, key="med_qbs")
-                    med_rbs = st.multiselect("RBs", rb_players, key="med_rbs")
-                    med_wrs = st.multiselect("WRs", wr_players, key="med_wrs")
-                    med_tes = st.multiselect("TEs", te_players, key="med_tes")
-                    med_defs = st.multiselect("DEF", def_players, key="med_defs")
-                
-                with col3:
-                    st.markdown(f"**📉 LOW USAGE ({low_tier_min}-{low_tier_max}%)**")
-                    low_qbs = st.multiselect("QBs", qb_players, key="low_qbs")
-                    low_rbs = st.multiselect("RBs", rb_players, key="low_rbs")
-                    low_wrs = st.multiselect("WRs", wr_players, key="low_wrs")
-                    low_tes = st.multiselect("TEs", te_players, key="low_tes")
-                    low_defs = st.multiselect("DEF", def_players, key="low_defs")
-                
-                # Apply tier strategy to Target % column
-                if st.button("🎯 Apply Tier Strategy", type="primary"):
-                    # Create tier assignments dictionary
-                    tier_assignments = {}
-                    
-                    # Collect all tier selections
-                    high_players = high_qbs + high_rbs + high_wrs + high_tes + high_defs
-                    med_players = med_qbs + med_rbs + med_wrs + med_tes + med_defs
-                    low_players = low_qbs + low_rbs + low_wrs + low_tes + low_defs
-                    
-                    # Assign random percentages within tier ranges
-                    import random
-                    for player in high_players:
-                        tier_assignments[player] = random.uniform(high_tier_min, high_tier_max)
-                    for player in med_players:
-                        tier_assignments[player] = random.uniform(med_tier_min, med_tier_max)
-                    for player in low_players:
-                        tier_assignments[player] = random.uniform(low_tier_min, low_tier_max)
-                    
-                    # Update the Target % column in display_df
-                    for idx, row in display_df.iterrows():
-                        player_name = row['Player']
-                        if player_name in tier_assignments:
-                            display_df.at[idx, 'Target %'] = round(tier_assignments[player_name], 1)
-                        else:
-                            # Players not in any tier get 0% usage
-                            display_df.at[idx, 'Target %'] = 0.0
-                    
-                    st.success(f"✅ Tier strategy applied! {len(tier_assignments)} players assigned usage percentages.")
-                    
-                    # Show tier summary
-                    if tier_assignments:
-                        st.info(f"""
-                        **Tier Summary:**
-                        🔥 **High Usage:** {len(high_players)} players ({high_tier_min}-{high_tier_max}%)
-                        ⚖️ **Medium Usage:** {len(med_players)} players ({med_tier_min}-{med_tier_max}%)  
-                        📉 **Low Usage:** {len(low_players)} players ({low_tier_min}-{low_tier_max}%)
-                        """)
-                
-                st.markdown("---")
-            
             # Display editable usage breakdown table
-            if 'usage_mode' in locals() and usage_mode == "Manual Usage":
-                st.markdown("**📊 Manual Usage Configuration** - Click on Target % cells to edit exposures")
+            tier_applied = bool(st.session_state.get('tier_assignments', {}))
+            scope_text = "Top 150 Lineups" if analysis_scope == "Top 150 Export Lineups" else f"All {len(stacked_lineups)} Lineups"
+            
+            if tier_applied:
+                st.markdown(f"**📊 Complete Player Usage Breakdown ({scope_text})** - 🎯 *Tier Strategy Applied* - Click Target % to edit")
             else:
-                st.markdown("**📊 Complete Player Usage Breakdown** - Click on Target % cells to edit exposures")
+                st.markdown(f"**📊 Complete Player Usage Breakdown ({scope_text})** - Click on Target % cells to edit exposures")
             
             # Configure which columns are editable
             column_config = {
@@ -3461,10 +3688,11 @@ def main():
                             st.session_state[session_key] = new_target
                         
                         with st.spinner("Applying exposure changes to lineups..."):
-                            # Apply changes to lineups
-                            modified_lineups = apply_usage_adjustments(stacked_lineups[:150], display_usage_data, "All Positions")
+                            # Apply changes to lineups with stack preservation
+                            top150_for_apply = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:150]
+                            modified_lineups = apply_usage_adjustments(top150_for_apply, display_usage_data, "All Positions", preserve_stacks=True)
                             if modified_lineups:
-                                st.success("✅ Lineups successfully modified!")
+                                st.success("✅ Lineups successfully modified while preserving stacks and optimization logic!")
                                 st.rerun()
                             else:
                                 st.error("❌ Unable to modify lineups. Try smaller changes.")
