@@ -107,17 +107,42 @@ def load_player_data():
     import pandas as pd
     import os
     
-    # Direct path to the exact file we want
-    csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (2).csv"
+    # Try multiple CSV files in order of preference (same as cloud deployment)
+    csv_candidates = [
+        r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (2).csv",
+        r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (1).csv",
+        r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list.csv"
+    ]
     
-    if not os.path.exists(csv_file):
-        st.error(f"CSV file not found: {csv_file}")
+    csv_file = None
+    for candidate in csv_candidates:
+        if os.path.exists(candidate):
+            csv_file = candidate
+            break
+    
+    if not csv_file:
+        st.error("CSV file not found! Tried:")
+        for candidate in csv_candidates:
+            st.write(f"❌ {candidate}")
         return pd.DataFrame()
     
     try:
         # Load the CSV directly - no caching, no complexity
         df = pd.read_csv(csv_file)
         df.columns = [col.strip() for col in df.columns]
+        
+        # Handle different possible column names (same as cloud deployment)
+        if 'Nickname' not in df.columns:
+            # Try common alternatives
+            nickname_alternatives = ['First Name', 'Player', 'Name', 'Player Name']
+            for alt in nickname_alternatives:
+                if alt in df.columns:
+                    df['Nickname'] = df[alt]
+                    st.warning(f"⚠️ Using '{alt}' column as 'Nickname'")
+                    break
+            else:
+                st.error(f"❌ No nickname/name column found! Available columns: {df.columns.tolist()}")
+                return pd.DataFrame()
         
         # Apply salary filters by position
         if 'Salary' in df.columns and 'Position' in df.columns:
@@ -224,44 +249,84 @@ def calculate_ceiling_floor_projections(df):
     # Standard loading (original code)
     import os
     
-    # ONLY use the October 26th CSV file (version 2)
-    target_file = 'FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (2).csv'
+    # FALLBACK CSV loading - try multiple files in order of preference
+    csv_candidates = [
+        'FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (2).csv',
+        'FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (1).csv', 
+        'FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list.csv'
+    ]
     
     # Debug: Show what we're looking for
-    st.info(f"🔍 **Looking for CSV file:** {target_file}")
+    st.info(f"🔍 **Looking for CSV files in order:** {', '.join(csv_candidates)}")
     
     current_dir = os.getcwd()
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
-    possible_paths = [
-        os.path.join(current_dir, target_file),
-        os.path.join(script_dir, target_file),
-        target_file
-    ]
-    
-    # Debug: Show all possible paths
-    st.write("**Checking paths:**")
-    for i, path in enumerate(possible_paths):
-        exists = os.path.exists(path)
-        st.write(f"{i+1}. `{path}` - {'✅ EXISTS' if exists else '❌ NOT FOUND'}")
-    
+    # Try each CSV candidate file
     csv_path = None
-    for path in possible_paths:
-        if os.path.exists(path):
-            csv_path = path
+    found_file = None
+    
+    for target_file in csv_candidates:
+        possible_paths = [
+            os.path.join(current_dir, target_file),
+            os.path.join(script_dir, target_file),
+            target_file
+        ]
+        
+        for path in possible_paths:
+            if os.path.exists(path):
+                csv_path = path
+                found_file = target_file
+                break
+        
+        if csv_path:
             break
     
     if csv_path is None:
-        st.error(f"❌ Required CSV file not found: {target_file}")
-        st.warning("This app requires the October 12th FanDuel player list file.")
-        st.info("Please upload the correct CSV file to continue.")
+        st.error("❌ No CSV file found! Please ensure one of these files exists:")
+        for file in csv_candidates:
+            st.write(f"   - {file}")
         return None
     
     try:
         # Load player CSV
-        st.info(f"📂 **Loading CSV file:** {os.path.basename(csv_path)}")
+        st.success(f"✅ **Loading CSV file:** {found_file}")
         df = pd.read_csv(csv_path)
         df.columns = [col.strip() for col in df.columns]
+        
+        # Robust column name detection and mapping
+        st.info(f"🔍 **CSV Columns Found:** {', '.join(df.columns.tolist())}")
+        
+        # Map common column name variations to standard names
+        column_mapping = {
+            'First Name': 'FirstName',
+            'Nickname': 'Nickname',
+            'Last Name': 'LastName', 
+            'FPPG': 'FPPG',
+            'Played': 'Played',
+            'Salary': 'Salary',
+            'Game': 'Game',
+            'Team': 'Team',
+            'Opponent': 'Opponent',
+            'Position': 'Position',
+            'Injury Indicator': 'Injury Indicator',
+            'Injury Details': 'Injury Details',
+            'Tier': 'Tier',
+            'Rosterable': 'Rosterable'
+        }
+        
+        # Handle different possible column names
+        if 'Nickname' not in df.columns:
+            # Try common alternatives
+            nickname_alternatives = ['First Name', 'Player', 'Name', 'Player Name']
+            for alt in nickname_alternatives:
+                if alt in df.columns:
+                    df['Nickname'] = df[alt]
+                    st.warning(f"⚠️ Using '{alt}' column as 'Nickname'")
+                    break
+            else:
+                st.error(f"❌ No nickname/name column found! Available columns: {df.columns.tolist()}")
+                return None
         
         # Show file details and timestamp
         import datetime
