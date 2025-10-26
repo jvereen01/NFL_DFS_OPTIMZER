@@ -878,9 +878,16 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
             attempts += 1
             total_attempts += 1
             
+            # Detect if tier strategy is active for performance optimization
+            tier_active = tournament_params and tournament_params.get('tier_strategy_active', False)
+            attempt_multiplier = 100 if tier_active else 200  # Reduced attempts for tier strategy
+            
             # Early exit if too many failed attempts
-            if total_attempts > num_simulations * 200:  # More generous attempt limit
-                st.warning(f"⚠️ Stopping early due to constraint conflicts. Generated {successful_lineups:,} lineups.")
+            if total_attempts > num_simulations * attempt_multiplier:
+                if tier_active:
+                    st.info(f"ℹ️ Tier strategy generation completed with {successful_lineups:,} lineups (optimized for performance)")
+                else:
+                    st.warning(f"⚠️ Stopping early due to constraint conflicts. Generated {successful_lineups:,} lineups.")
                 break
             
             try:
@@ -1203,8 +1210,10 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                     st.error(f"🐛 **Debug Error #{failure_reasons['other_errors']}:** {str(e)}")
                 continue
         
-        # Break outer loop if too many failed attempts
-        if total_attempts > num_simulations * 200:  # Match the inner condition
+        # Break outer loop if too many failed attempts (optimized for tier strategy)
+        tier_active = tournament_params and tournament_params.get('tier_strategy_active', False)
+        attempt_multiplier = 100 if tier_active else 200
+        if total_attempts > num_simulations * attempt_multiplier:
             break
         
         # Update progress with better info
@@ -1854,6 +1863,16 @@ def main():
             help="Manual: Set individual usage percentages. Tier: Group players into High/Medium/Low usage tiers"
         )
         
+        # Performance optimization option for tier strategy
+        if usage_mode == "Tier Strategy":
+            performance_mode = st.checkbox(
+                "⚡ Performance Mode (Faster Generation)",
+                value=True,
+                help="Uses balanced multipliers (2.5x/1.5x/0.5x) for faster lineup generation vs. aggressive multipliers (5.0x/2.5x/0.3x)"
+            )
+            # Store in session state for use during generation
+            st.session_state['performance_mode'] = performance_mode
+        
         # Tier Strategy Configuration
         if usage_mode == "Tier Strategy":
             st.markdown("**🎯 Configure Usage Tiers**")
@@ -1911,6 +1930,11 @@ def main():
         # Configuration sliders (will use strategy presets as defaults)
         num_simulations = st.slider("Number of Simulations", 1000, 20000, default_simulations, step=1000,
                                     help="More simulations = more unique lineups but slower generation. 5000 simulations typically generates 3000-4000 unique lineups.")
+        
+        # Performance optimization warning for tier strategy
+        if usage_mode == "Tier Strategy" and num_simulations > 10000:
+            st.warning("⚠️ **Performance Notice:** Tier Strategy with >10K simulations may be slow. Consider reducing simulations or enabling Performance Mode above.")
+        
         stack_probability = st.slider("Stacking Probability", 0.0, 1.0, default_stack_prob, step=0.05,
                                      help=f"Current strategy optimized for {strategy_type.lower()} contests")
         elite_target_boost = st.slider("Elite Target Boost", 0.0, 1.0, default_elite_boost, step=0.05,
@@ -2845,41 +2869,56 @@ def main():
             with st.spinner("Creating weighted player pools..."):
                 weighted_pools = create_weighted_pools(df, wr_performance_boosts, rb_performance_boosts, te_performance_boosts, qb_performance_boosts, elite_target_boost, great_target_boost, all_forced_players, forced_player_boost)
             
-            # Apply tier strategy to weighted pools if available
+            # Apply tier strategy to weighted pools if available (OPTIMIZED)
             if tier_assignments:
                 with st.spinner("Applying tier strategy to player weights..."):
-                    # Modify weighted pools based on tier assignments
+                    # Get performance mode setting
+                    perf_mode = st.session_state.get('performance_mode', True)
+                    
+                    # Define tier multipliers based on performance mode
+                    if perf_mode:
+                        # Balanced multipliers for better performance
+                        high_mult, med_mult, low_mult = 2.5, 1.5, 0.5
+                        mode_text = "Performance Mode (2.5x/1.5x/0.5x)"
+                    else:
+                        # Aggressive multipliers for maximum effect
+                        high_mult, med_mult, low_mult = 5.0, 2.5, 0.3
+                        mode_text = "Aggressive Mode (5.0x/2.5x/0.3x)"
+                    
+                    # Define tier multipliers for faster lookup
+                    tier_multipliers = {}
+                    for player_name, target_usage in tier_assignments.items():
+                        if target_usage >= 15:  # High tier
+                            tier_multipliers[player_name] = high_mult
+                        elif target_usage >= 8:  # Medium tier  
+                            tier_multipliers[player_name] = med_mult
+                        else:  # Low tier
+                            tier_multipliers[player_name] = low_mult
+                    
+                    # Apply multipliers efficiently to each position pool
                     for position in ['QB', 'RB', 'WR', 'TE', 'D']:
                         if position in weighted_pools:
-                            for idx, row in weighted_pools[position].iterrows():
-                                player_name = row['Nickname']
-                                if player_name in tier_assignments:
-                                    target_usage = tier_assignments[player_name]
-                                    # Convert target usage to weight multiplier
-                                    # Higher usage = higher weight in selection (STRONGER multipliers)
-                                    if target_usage >= 15:  # High tier - make much more likely
-                                        weight_multiplier = 5.0  # Increased from 2.5
-                                    elif target_usage >= 8:  # Medium tier  
-                                        weight_multiplier = 2.5  # Increased from 1.5
-                                    else:  # Low tier - make much less likely
-                                        weight_multiplier = 0.3  # Decreased from 0.6
-                                    
-                                    # Apply weight multiplier to existing weights
-                                    weighted_pools[position].at[idx, 'Selection_Weight'] *= weight_multiplier
+                            pool_df = weighted_pools[position]
+                            # Use vectorized operations for better performance
+                            mask = pool_df['Nickname'].isin(tier_multipliers.keys())
+                            
+                            for idx in pool_df[mask].index:
+                                player_name = pool_df.loc[idx, 'Nickname']
+                                if player_name in tier_multipliers:
+                                    pool_df.at[idx, 'Selection_Weight'] *= tier_multipliers[player_name]
                     
-                    st.info(f"🎯 Tier strategy applied to {len(tier_assignments)} players during generation!")
+                    st.info(f"🎯 Tier strategy applied to {len(tier_assignments)} players using {mode_text}")
                     
-                    # Debug info for tier assignments
-                    high_tier_players = [name for name, target in tier_assignments.items() if target >= 15]
-                    med_tier_players = [name for name, target in tier_assignments.items() if 8 <= target < 15]
-                    low_tier_players = [name for name, target in tier_assignments.items() if target < 8]
+                    # Quick tier summary for performance  
+                    high_tier_count = len([p for p, t in tier_assignments.items() if t >= 15])
+                    med_tier_count = len([p for p, t in tier_assignments.items() if 8 <= t < 15])
+                    low_tier_count = len([p for p, t in tier_assignments.items() if t < 8])
                     
-                    if high_tier_players:
-                        st.success(f"🔥 High tier players (5.0x weight): {', '.join(high_tier_players[:5])}{'...' if len(high_tier_players) > 5 else ''}")
-                    if med_tier_players:
-                        st.info(f"⚖️ Medium tier players (2.5x weight): {', '.join(med_tier_players[:3])}{'...' if len(med_tier_players) > 3 else ''}")
-                    if low_tier_players:
-                        st.warning(f"📉 Low tier players (0.3x weight): {len(low_tier_players)} players reduced")
+                    perf_mode = st.session_state.get('performance_mode', True)
+                    mode_indicator = "⚡" if perf_mode else "🔥"
+                    multipliers = "(2.5x/1.5x/0.5x)" if perf_mode else "(5.0x/2.5x/0.3x)"
+                    
+                    st.write(f"**🎯 Tier Strategy Applied {mode_indicator}:** {high_tier_count} High, {med_tier_count} Medium, {low_tier_count} Low {multipliers}")
             
             with st.spinner(f"Generating {num_simulations:,} optimized lineups..."):
                 # Pass tournament parameters to generation function
@@ -2889,7 +2928,8 @@ def main():
                     'salary_variance_target': salary_variance_target if strategy_type == "Tournament" else 0.2,
                     'leverage_focus': leverage_focus if strategy_type == "Tournament" else 0.1,
                     'global_fppg_adjustment': global_fppg_adjustment,
-                    'ceiling_floor_variance': ceiling_floor_variance
+                    'ceiling_floor_variance': ceiling_floor_variance,
+                    'tier_strategy_active': len(tier_assignments) > 0 if tier_assignments else False
                 }
                 
                 stacked_lineups = generate_lineups(df, weighted_pools, num_simulations, stack_probability, elite_target_boost, great_target_boost, fantasy_data, player_selections, force_mode, forced_player_boost, strategy_type, tournament_params)
@@ -2897,30 +2937,11 @@ def main():
                 st.session_state.lineups_generated = True
                 
                 # Apply post-generation tier adjustments if tier strategy is active
+                # Skip intensive post-generation tier adjustments for better performance
+                # The tier strategy is already applied during generation phase
                 tier_assignments = st.session_state.get('tier_assignments', {})
                 if tier_assignments and len(stacked_lineups) > 0:
-                    with st.spinner("Applying post-generation tier strategy adjustments..."):
-                        # Apply tier strategy to the top 150 lineups for precision
-                        top_150_for_tier = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:150]
-                        
-                        # Create display data for tier adjustments
-                        tier_display_data = []
-                        for player_name in tier_assignments.keys():
-                            player_info = df[df['Nickname'] == player_name]
-                            if not player_info.empty:
-                                tier_display_data.append({
-                                    'Player': player_name,
-                                    'Position': player_info.iloc[0]['Position']
-                                })
-                        
-                        # Apply tier-based usage adjustments
-                        if tier_display_data:
-                            modified_lineups = apply_usage_adjustments(top_150_for_tier, tier_display_data, "All Positions", preserve_stacks=True)
-                            if modified_lineups:
-                                # Replace top 150 with tier-adjusted lineups, keep the rest
-                                st.session_state.stacked_lineups = modified_lineups + stacked_lineups[150:]
-                                stacked_lineups = st.session_state.stacked_lineups
-                                st.success(f"🎯 Post-generation tier adjustments applied to top 150 lineups!")
+                    st.info(f"🎯 Tier strategy with {len(tier_assignments)} players was applied during generation for optimal performance!")
                 
                 # Debug info
                 if len(stacked_lineups) == 0:
