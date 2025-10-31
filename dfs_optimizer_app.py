@@ -355,10 +355,6 @@ def load_player_data():
         # Load the CSV directly
         df = pd.read_csv(csv_file)
         df.columns = [col.strip() for col in df.columns]
-        st.success(f"✅ Loaded data from: {csv_file}")
-        
-        # Debug: Show available columns
-        st.write("📊 Available columns:", list(df.columns))
         
         # Apply salary filters by position
         if 'Salary' in df.columns and 'Position' in df.columns:
@@ -2596,9 +2592,8 @@ def main():
         if csv_file:
             file_time = os.path.getmtime(csv_file)
             import datetime
-            readable_time = datetime.datetime.fromtimestamp(file_time).strftime('%m/%d/%Y %H:%M')
-            st.caption(f"📄 Data file: {os.path.basename(csv_file)}")
-            st.caption(f"🕒 Updated: {readable_time}")
+            readable_time = datetime.datetime.fromtimestamp(file_time).strftime('%m/%d %H:%M')
+            st.caption(f"📄 Data: {readable_time}")
         else:
             st.caption("📄 No data file found")
     
@@ -2630,7 +2625,6 @@ def main():
                     df['PosRank'] = df[player_column].map(posrank_mapping)
                     # Fill missing PosRank with 999 for players not in fantasy data
                     df['PosRank'] = df['PosRank'].fillna(999).astype(int)
-                    st.write(f"✅ Using '{player_column}' column for player mapping")
                 else:
                     st.warning("⚠️ No suitable player name column found. Available columns: " + str(list(df.columns)))
                     df['PosRank'] = 999
