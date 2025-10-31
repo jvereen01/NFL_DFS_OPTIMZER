@@ -327,21 +327,38 @@ if 'stacked_lineups' not in st.session_state:
 def load_player_data():
     """Load and process player data with enhanced validation and optimization"""
     
-    # DIRECT CSV LOADING - NO CACHING, NO FALLBACKS
+    # DYNAMIC CSV LOADING - Works both locally and on Streamlit Cloud
     import pandas as pd
     import os
     
-    # Direct path to the exact file we want
-    csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EST-11 EST-02 EST-122147-players-list.csv"
+    # Try multiple possible file locations
+    possible_files = [
+        "FanDuel-NFL-2025 EST-11 EST-02 EST-122147-players-list.csv",  # Streamlit Cloud relative path
+        r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EST-11 EST-02 EST-122147-players-list.csv",  # Local Windows path
+        "FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (2).csv",  # Fallback old file
+        "FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list.csv"  # Another fallback
+    ]
     
-    if not os.path.exists(csv_file):
-        st.error(f"CSV file not found: {csv_file}")
+    csv_file = None
+    for file_path in possible_files:
+        if os.path.exists(file_path):
+            csv_file = file_path
+            break
+    
+    if csv_file is None:
+        st.error("❌ No CSV file found! Please ensure one of these files exists:")
+        for file_path in possible_files:
+            st.write(f"  - {file_path}")
         return pd.DataFrame()
     
     try:
-        # Load the CSV directly - no caching, no complexity
+        # Load the CSV directly
         df = pd.read_csv(csv_file)
         df.columns = [col.strip() for col in df.columns]
+        st.success(f"✅ Loaded data from: {csv_file}")
+        
+        # Debug: Show available columns
+        st.write("📊 Available columns:", list(df.columns))
         
         # Apply salary filters by position
         if 'Salary' in df.columns and 'Position' in df.columns:
@@ -2563,13 +2580,27 @@ def main():
             st.rerun()
     
     with col2:
-        # Show file info
-        csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EST-11 EST-02 EST-122147-players-list.csv"
-        if os.path.exists(csv_file):
+        # Show file info - try multiple possible file locations
+        possible_files = [
+            "FanDuel-NFL-2025 EST-11 EST-02 EST-122147-players-list.csv",  # Streamlit Cloud
+            r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EST-11 EST-02 EST-122147-players-list.csv",  # Local
+            "FanDuel-NFL-2025 EDT-10 EDT-26 EDT-121824-players-list (2).csv"  # Fallback
+        ]
+        
+        csv_file = None
+        for file_path in possible_files:
+            if os.path.exists(file_path):
+                csv_file = file_path
+                break
+        
+        if csv_file:
             file_time = os.path.getmtime(csv_file)
             import datetime
             readable_time = datetime.datetime.fromtimestamp(file_time).strftime('%m/%d/%Y %H:%M')
-            st.caption(f"📄 Data file updated: {readable_time}")
+            st.caption(f"📄 Data file: {os.path.basename(csv_file)}")
+            st.caption(f"🕒 Updated: {readable_time}")
+        else:
+            st.caption("📄 No data file found")
     
     # Load data
     with st.spinner("Loading player data..."):
@@ -2587,9 +2618,22 @@ def main():
             with st.spinner("Adding position rankings..."):
                 # Create a mapping of player names to PosRank
                 posrank_mapping = fantasy_data.set_index('Player')['PosRank'].to_dict()
-                df['PosRank'] = df['Nickname'].map(posrank_mapping)
-                # Fill missing PosRank with 999 for players not in fantasy data
-                df['PosRank'] = df['PosRank'].fillna(999).astype(int)
+                
+                # Check if 'Nickname' column exists, if not try alternatives
+                player_column = None
+                for col in ['Nickname', 'Player', 'Name', 'Full Name']:
+                    if col in df.columns:
+                        player_column = col
+                        break
+                
+                if player_column:
+                    df['PosRank'] = df[player_column].map(posrank_mapping)
+                    # Fill missing PosRank with 999 for players not in fantasy data
+                    df['PosRank'] = df['PosRank'].fillna(999).astype(int)
+                    st.write(f"✅ Using '{player_column}' column for player mapping")
+                else:
+                    st.warning("⚠️ No suitable player name column found. Available columns: " + str(list(df.columns)))
+                    df['PosRank'] = 999
         else:
             # If no fantasy data, use default ranking
             df['PosRank'] = 999
