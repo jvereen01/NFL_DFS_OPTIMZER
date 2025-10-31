@@ -1,0 +1,441 @@
+{
+  "lineups": [
+    {
+      "id": "lineup_1_20251031_174424",
+      "score": 130.2836915424892,
+      "projected_points": 130.2836915424892,
+      "total_salary": 56900,
+      "saved_date": "2025-10-31T17:44:24.645107",
+      "players": [
+        {
+          "nickname": "Patrick Mahomes",
+          "position": "QB",
+          "team": "KC",
+          "salary": 8500,
+          "fppg": 25.3700008392334
+        },
+        {
+          "nickname": "Rico Dowdle",
+          "position": "RB",
+          "team": "CAR",
+          "salary": 6400,
+          "fppg": 12.887499809265137
+        },
+        {
+          "nickname": "James Cook III",
+          "position": "RB",
+          "team": "BUF",
+          "salary": 8400,
+          "fppg": 20.5999995640346
+        },
+        {
+          "nickname": "Rashee Rice",
+          "position": "WR",
+          "team": "KC",
+          "salary": 8200,
+          "fppg": 20.350000381469727
+        },
+        {
+          "nickname": "Quentin Johnston",
+          "position": "WR",
+          "team": "LAC",
+          "salary": 7000,
+          "fppg": 13.90000025431315
+        },
+        {
+          "nickname": "Tre Tucker",
+          "position": "WR",
+          "team": "LV",
+          "salary": 5500,
+          "fppg": 11.9000004359654
+        },
+        {
+          "nickname": "Jake Tonges",
+          "position": "TE",
+          "team": "SF",
+          "salary": 4700,
+          "fppg": 8.514285496303014
+        },
+        {
+          "nickname": "Houston Texans",
+          "position": "D",
+          "team": "HOU",
+          "salary": 3900,
+          "fppg": 9.428571428571429
+        },
+        {
+          "nickname": "Brock Wright",
+          "position": "TE",
+          "team": "DET",
+          "salary": 4300,
+          "fppg": 7.333333333333333
+        }
+      ]
+    },
+    {
+      "id": "lineup_2_20251031_174509",
+      "score": 128.7717865308126,
+      "projected_points": 128.7717865308126,
+      "total_salary": 60000,
+      "saved_date": "2025-10-31T17:45:09.577810",
+      "players": [
+        {
+          "nickname": "Patrick Mahomes",
+          "position": "QB",
+          "team": "KC",
+          "salary": 8500,
+          "fppg": 25.3700008392334
+        },
+        {
+          "nickname": "James Cook III",
+          "position": "RB",
+          "team": "BUF",
+          "salary": 8400,
+          "fppg": 20.5999995640346
+        },
+        {
+          "nickname": "Jahmyr Gibbs",
+          "position": "RB",
+          "team": "DET",
+          "salary": 8900,
+          "fppg": 18.571428571428573
+        },
+        {
+          "nickname": "Rashee Rice",
+          "position": "WR",
+          "team": "KC",
+          "salary": 8200,
+          "fppg": 20.350000381469727
+        },
+        {
+          "nickname": "Tyquan Thornton",
+          "position": "WR",
+          "team": "KC",
+          "salary": 4900,
+          "fppg": 9.34999974568685
+        },
+        {
+          "nickname": "Romeo Doubs",
+          "position": "WR",
+          "team": "GB",
+          "salary": 6300,
+          "fppg": 10.642857142857142
+        },
+        {
+          "nickname": "Travis Kelce",
+          "position": "TE",
+          "team": "KC",
+          "salary": 5800,
+          "fppg": 10.487500190734863
+        },
+        {
+          "nickname": "Atlanta Falcons",
+          "position": "D",
+          "team": "ATL",
+          "salary": 3600,
+          "fppg": 6.0
+        },
+        {
+          "nickname": "Tyjae Spears",
+          "position": "RB",
+          "team": "TEN",
+          "salary": 5400,
+          "fppg": 7.400000095367432
+        }
+      ]
+    },
+    {
+      "id": "lineup_3_20251031_174550",
+      "score": 125.9,
+      "projected_points": 125.9,
+      "total_salary": 59700,
+      "saved_date": "2025-10-31T17:45:50.114881",
+      "players": [
+        {
+          "nickname": "Patrick Mahomes",
+          "position": "QB",
+          "team": "KC",
+          "salary": 8500,
+          "fppg": 25.3700008392334
+        },
+        {
+          "nickname": "Christian McCaffrey",
+          "position": "RB",
+          "team": "SF",
+          "salary": 9500,
+          "fppg": 21.487499237060547
+        },
+        {
+          "nickname": "Rico Dowdle",
+          "position": "RB",
+          "team": "CAR",
+          "salary": 6400,
+          "fppg": 12.887499809265137
+        },
+        {
+          "nickname": "Rashee Rice",
+          "position": "WR",
+          "team": "KC",
+          "salary": 8200,
+          "fppg": 20.350000381469727
+        },
+        {
+          "nickname": "Tyquan Thornton",
+          "position": "WR",
+          "team": "KC",
+          "salary": 4900,
+          "fppg": 9.34999974568685
+        },
+        {
+          "nickname": "Chris Olave",
+          "position": "WR",
+          "team": "NO",
+          "salary": 7100,
+          "fppg": 11.625
+        },
+        {
+          "nickname": "Sam LaPorta",
+          "position": "TE",
+          "team": "DET",
+          "salary": 5500,
+          "fppg": 8.62857164655413
+        },
+        {
+          "nickname": "New Orleans Saints",
+          "position": "D",
+          "team": "NO",
+          "salary": 3200,
+          "fppg": 5.375
+        },
+        {
+          "nickname": "Oronde Gadsden II",
+          "position": "TE",
+          "team": "LAC",
+          "salary": 6400,
+          "fppg": 10.833333333333334
+        }
+      ]
+    },
+    {
+      "id": "lineup_4_20251031_174550",
+      "score": 125.6,
+      "projected_points": 125.6,
+      "total_salary": 59500,
+      "saved_date": "2025-10-31T17:45:50.152937",
+      "players": [
+        {
+          "nickname": "Drake Maye",
+          "position": "QB",
+          "team": "NE",
+          "salary": 7800,
+          "fppg": 21.967500686645508
+        },
+        {
+          "nickname": "Jahmyr Gibbs",
+          "position": "RB",
+          "team": "DET",
+          "salary": 8900,
+          "fppg": 18.571428571428573
+        },
+        {
+          "nickname": "Rico Dowdle",
+          "position": "RB",
+          "team": "CAR",
+          "salary": 6400,
+          "fppg": 12.887499809265137
+        },
+        {
+          "nickname": "Keenan Allen",
+          "position": "WR",
+          "team": "LAC",
+          "salary": 6600,
+          "fppg": 12.362500190734863
+        },
+        {
+          "nickname": "Puka Nacua",
+          "position": "WR",
+          "team": "LAR",
+          "salary": 9500,
+          "fppg": 20.13333384195964
+        },
+        {
+          "nickname": "Tyquan Thornton",
+          "position": "WR",
+          "team": "KC",
+          "salary": 4900,
+          "fppg": 9.34999974568685
+        },
+        {
+          "nickname": "Noah Fant",
+          "position": "TE",
+          "team": "CIN",
+          "salary": 5000,
+          "fppg": 6.783333460489909
+        },
+        {
+          "nickname": "Indianapolis Colts",
+          "position": "D",
+          "team": "IND",
+          "salary": 4200,
+          "fppg": 8.625
+        },
+        {
+          "nickname": "Tucker Kraft",
+          "position": "TE",
+          "team": "GB",
+          "salary": 6200,
+          "fppg": 14.885713849748884
+        }
+      ]
+    },
+    {
+      "id": "lineup_5_20251031_174553",
+      "score": 125.5,
+      "projected_points": 125.5,
+      "total_salary": 59000,
+      "saved_date": "2025-10-31T17:45:53.521911",
+      "players": [
+        {
+          "nickname": "Drake Maye",
+          "position": "QB",
+          "team": "NE",
+          "salary": 7800,
+          "fppg": 21.967500686645508
+        },
+        {
+          "nickname": "Jonathan Taylor",
+          "position": "RB",
+          "team": "IND",
+          "salary": 11000,
+          "fppg": 27.012500762939453
+        },
+        {
+          "nickname": "Jaylen Warren",
+          "position": "RB",
+          "team": "PIT",
+          "salary": 6500,
+          "fppg": 12.550000508626304
+        },
+        {
+          "nickname": "Tyquan Thornton",
+          "position": "WR",
+          "team": "KC",
+          "salary": 4900,
+          "fppg": 9.34999974568685
+        },
+        {
+          "nickname": "Rashee Rice",
+          "position": "WR",
+          "team": "KC",
+          "salary": 8200,
+          "fppg": 20.350000381469727
+        },
+        {
+          "nickname": "Keenan Allen",
+          "position": "WR",
+          "team": "LAC",
+          "salary": 6600,
+          "fppg": 12.362500190734863
+        },
+        {
+          "nickname": "Chig Okonkwo",
+          "position": "TE",
+          "team": "TEN",
+          "salary": 4700,
+          "fppg": 5.074999809265137
+        },
+        {
+          "nickname": "Houston Texans",
+          "position": "D",
+          "team": "HOU",
+          "salary": 3900,
+          "fppg": 9.428571428571429
+        },
+        {
+          "nickname": "Tyjae Spears",
+          "position": "RB",
+          "team": "TEN",
+          "salary": 5400,
+          "fppg": 7.400000095367432
+        }
+      ]
+    },
+    {
+      "id": "lineup_6_20251031_174614",
+      "score": 123.2,
+      "projected_points": 123.2,
+      "total_salary": 59800,
+      "saved_date": "2025-10-31T17:46:14.847021",
+      "players": [
+        {
+          "nickname": "Drake Maye",
+          "position": "QB",
+          "team": "NE",
+          "salary": 7800,
+          "fppg": 21.967500686645508
+        },
+        {
+          "nickname": "Ashton Jeanty",
+          "position": "RB",
+          "team": "LV",
+          "salary": 7000,
+          "fppg": 13.085714067731583
+        },
+        {
+          "nickname": "Bijan Robinson",
+          "position": "RB",
+          "team": "ATL",
+          "salary": 9000,
+          "fppg": 20.95714242117745
+        },
+        {
+          "nickname": "Kayshon Boutte",
+          "position": "WR",
+          "team": "NE",
+          "salary": 5900,
+          "fppg": 10.949999809265137
+        },
+        {
+          "nickname": "Stefon Diggs",
+          "position": "WR",
+          "team": "NE",
+          "salary": 6200,
+          "fppg": 10.0
+        },
+        {
+          "nickname": "Keenan Allen",
+          "position": "WR",
+          "team": "LAC",
+          "salary": 6600,
+          "fppg": 12.362500190734863
+        },
+        {
+          "nickname": "Jake Tonges",
+          "position": "TE",
+          "team": "SF",
+          "salary": 4700,
+          "fppg": 8.514285496303014
+        },
+        {
+          "nickname": "Carolina Panthers",
+          "position": "D",
+          "team": "CAR",
+          "salary": 3100,
+          "fppg": 5.25
+        },
+        {
+          "nickname": "Puka Nacua",
+          "position": "WR",
+          "team": "LAR",
+          "salary": 9500,
+          "fppg": 20.13333384195964
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "created": "2025-10-30T15:06:47.788050",
+    "user": "sofakinggoo",
+    "last_updated": "2025-10-31T17:46:14.849253"
+  }
+}

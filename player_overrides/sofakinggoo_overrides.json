@@ -1,0 +1,15 @@
+{
+  "overrides": {
+    "Kimani Vidal": {
+      "original": 10.88000030517578,
+      "new": 15.88,
+      "position": "RB",
+      "adjustment_factor": 1.4595587825898906
+    }
+  },
+  "metadata": {
+    "last_updated": "2025-10-31T17:35:40.211190",
+    "user": "sofakinggoo",
+    "count": 1
+  }
+}
