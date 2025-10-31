@@ -1,0 +1,81 @@
+{
+  "lineups": [
+    {
+      "id": "lineup_1_20251029_130523",
+      "score": 127.80571447099958,
+      "projected_points": 60000.0,
+      "total_salary": 60000,
+      "saved_date": "2025-10-29T13:05:23.094338",
+      "players": [
+        {
+          "nickname": "Patrick Mahomes",
+          "position": "QB",
+          "team": "KC",
+          "salary": 8500,
+          "fppg": 25.3700008392334
+        },
+        {
+          "nickname": "D'Andre Swift",
+          "position": "RB",
+          "team": "CHI",
+          "salary": 6900,
+          "fppg": 15.514285496303014
+        },
+        {
+          "nickname": "Bijan Robinson",
+          "position": "RB",
+          "team": "ATL",
+          "salary": 9000,
+          "fppg": 20.95714242117745
+        },
+        {
+          "nickname": "Rashee Rice",
+          "position": "WR",
+          "team": "KC",
+          "salary": 8200,
+          "fppg": 20.350000381469727
+        },
+        {
+          "nickname": "Hollywood Brown",
+          "position": "WR",
+          "team": "KC",
+          "salary": 5400,
+          "fppg": 8.949999809265137
+        },
+        {
+          "nickname": "Kayshon Boutte",
+          "position": "WR",
+          "team": "NE",
+          "salary": 5900,
+          "fppg": 10.949999809265137
+        },
+        {
+          "nickname": "Jonnu Smith",
+          "position": "TE",
+          "team": "PIT",
+          "salary": 5100,
+          "fppg": 5.342857360839844
+        },
+        {
+          "nickname": "Chicago Bears",
+          "position": "D",
+          "team": "CHI",
+          "salary": 4000,
+          "fppg": 7.285714285714286
+        },
+        {
+          "nickname": "Ashton Jeanty",
+          "position": "RB",
+          "team": "LV",
+          "salary": 7000,
+          "fppg": 13.085714067731583
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "created": "2025-10-29T13:05:23.093689",
+    "user": 3,
+    "last_updated": "2025-10-29T13:05:23.098924"
+  }
+}

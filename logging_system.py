@@ -37,83 +37,120 @@ class DFSLogger:
         self.last_errors = []
         
     def _setup_main_logger(self) -> logging.Logger:
-        """Setup main application logger"""
+        """Setup main application logger with error handling"""
         logger = logging.getLogger(f"{self.app_name}_main")
         logger.setLevel(logging.INFO)
         
         # Remove existing handlers
         logger.handlers.clear()
         
-        # File handler
-        file_handler = logging.FileHandler(
-            self.log_dir / f"{self.app_name}_{datetime.now().strftime('%Y%m%d')}.log"
-        )
-        file_handler.setLevel(logging.INFO)
+        # Try to set up file handler
+        try:
+            file_handler = logging.FileHandler(
+                self.log_dir / f"{self.app_name}_{datetime.now().strftime('%Y%m%d')}.log"
+            )
+            file_handler.setLevel(logging.INFO)
+            
+            # Formatter
+            formatter = logging.Formatter(
+                '%(asctime)s | %(levelname)s | %(funcName)s:%(lineno)d | %(message)s'
+            )
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
+        except (PermissionError, OSError) as e:
+            print(f"Warning: Could not create main log file. Error: {e}")
         
-        # Console handler
+        # Console handler (always add this as fallback)
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(logging.WARNING)
-        
-        # Formatter
         formatter = logging.Formatter(
             '%(asctime)s | %(levelname)s | %(funcName)s:%(lineno)d | %(message)s'
         )
-        file_handler.setFormatter(formatter)
         console_handler.setFormatter(formatter)
-        
-        logger.addHandler(file_handler)
         logger.addHandler(console_handler)
         
         return logger
-    
+
     def _setup_performance_logger(self) -> logging.Logger:
-        """Setup performance monitoring logger"""
+        """Setup performance monitoring logger with error handling"""
         logger = logging.getLogger(f"{self.app_name}_performance")
         logger.setLevel(logging.INFO)
         logger.handlers.clear()
         
-        handler = logging.FileHandler(
-            self.log_dir / f"performance_{datetime.now().strftime('%Y%m%d')}.log"
-        )
-        formatter = logging.Formatter(
-            '%(asctime)s | PERF | %(message)s'
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+        try:
+            handler = logging.FileHandler(
+                self.log_dir / f"performance_{datetime.now().strftime('%Y%m%d')}.log"
+            )
+            formatter = logging.Formatter(
+                '%(asctime)s | PERF | %(message)s'
+            )
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+        except (PermissionError, OSError) as e:
+            # Use console handler as fallback
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter(
+                '%(asctime)s | PERF | %(message)s'
+            )
+            console_handler.setFormatter(formatter)
+            logger.addHandler(console_handler)
+            print(f"Warning: Could not create performance log file. Error: {e}")
         
         return logger
-    
+
     def _setup_error_logger(self) -> logging.Logger:
-        """Setup error tracking logger"""
+        """Setup error tracking logger with error handling"""
         logger = logging.getLogger(f"{self.app_name}_errors")
         logger.setLevel(logging.ERROR)
         logger.handlers.clear()
         
-        handler = logging.FileHandler(
-            self.log_dir / f"errors_{datetime.now().strftime('%Y%m%d')}.log"
-        )
-        formatter = logging.Formatter(
-            '%(asctime)s | ERROR | %(funcName)s:%(lineno)d | %(message)s\n%(exc_info)s\n'
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+        try:
+            handler = logging.FileHandler(
+                self.log_dir / f"errors_{datetime.now().strftime('%Y%m%d')}.log"
+            )
+            formatter = logging.Formatter(
+                '%(asctime)s | ERROR | %(funcName)s:%(lineno)d | %(message)s\n%(exc_info)s\n'
+            )
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+        except (PermissionError, OSError) as e:
+            # Use console handler as fallback
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter(
+                '%(asctime)s | ERROR | %(funcName)s:%(lineno)d | %(message)s'
+            )
+            console_handler.setFormatter(formatter)
+            logger.addHandler(console_handler)
+            print(f"Warning: Could not create error log file. Error: {e}")
+        
+        return logger
         
         return logger
     
     def _setup_user_activity_logger(self) -> logging.Logger:
-        """Setup user activity tracking logger"""
+        """Setup user activity tracking logger with error handling"""
         logger = logging.getLogger(f"{self.app_name}_activity")
         logger.setLevel(logging.INFO)
         logger.handlers.clear()
         
-        handler = logging.FileHandler(
-            self.log_dir / f"user_activity_{datetime.now().strftime('%Y%m%d')}.log"
-        )
-        formatter = logging.Formatter(
-            '%(asctime)s | ACTIVITY | %(message)s'
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+        try:
+            handler = logging.FileHandler(
+                self.log_dir / f"user_activity_{datetime.now().strftime('%Y%m%d')}.log"
+            )
+            formatter = logging.Formatter(
+                '%(asctime)s | ACTIVITY | %(message)s'
+            )
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+        except (PermissionError, OSError) as e:
+            # If file logging fails, use console logging as fallback
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter(
+                '%(asctime)s | ACTIVITY | %(message)s'
+            )
+            console_handler.setFormatter(formatter)
+            logger.addHandler(console_handler)
+            print(f"Warning: Could not create log file, using console logging. Error: {e}")
         
         return logger
     
