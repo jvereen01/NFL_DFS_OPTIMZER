@@ -42,53 +42,103 @@ def get_user_portfolio_file(username):
         os.makedirs(PORTFOLIO_FOLDER)
     return os.path.join(PORTFOLIO_FOLDER, f"{username}_portfolio.json")
 
-def get_user_overrides_file(username):
-    """Get the overrides file path for a specific user"""
+def get_user_overrides_file(username=None):
+    """Get the global overrides file path (now shared across all users)"""
     if not os.path.exists(OVERRIDES_FOLDER):
         os.makedirs(OVERRIDES_FOLDER)
-    return os.path.join(OVERRIDES_FOLDER, f"{username}_overrides.json")
+    # Use a single global overrides file instead of user-specific ones
+    return os.path.join(OVERRIDES_FOLDER, "global_overrides.json")
 
 def load_player_overrides(username="default"):
-    """Load saved player projection overrides from JSON file for specific user"""
+    """Load saved player projection overrides from global JSON file (shared across all users)"""
     try:
-        overrides_file = get_user_overrides_file(username)
+        overrides_file = get_user_overrides_file()  # No longer user-specific
         if os.path.exists(overrides_file):
             with open(overrides_file, 'r') as f:
-                return json.load(f)
+                data = json.load(f)
+                # Handle both old format (direct dict) and new format (with metadata)
+                if "overrides" in data:
+                    return data["overrides"]
+                else:
+                    return data  # Legacy format
     except Exception as e:
-        st.error(f"Error loading overrides for {username}: {e}")
+        st.error(f"Error loading global overrides: {e}")
     return {}
 
 def save_player_overrides(overrides_data, username="default"):
-    """Save player projection overrides to JSON file for specific user"""
+    """Save player projection overrides to global JSON file (shared across all users)"""
     try:
-        overrides_file = get_user_overrides_file(username)
-        # Add metadata
+        overrides_file = get_user_overrides_file()  # No longer user-specific
+        # Add metadata showing who last updated
         save_data = {
             "overrides": overrides_data,
             "metadata": {
                 "last_updated": datetime.now().isoformat(),
-                "user": username,
-                "count": len(overrides_data)
+                "last_updated_by": username,
+                "count": len(overrides_data),
+                "note": "Global overrides shared across all users"
             }
         }
         with open(overrides_file, 'w') as f:
             json.dump(save_data, f, indent=2, default=str)
         return True
     except Exception as e:
-        st.error(f"Error saving overrides for {username}: {e}")
+        st.error(f"Error saving global overrides: {e}")
         return False
 
 def clear_player_overrides(username="default"):
-    """Clear all player projection overrides for specific user"""
+    """Clear all global player projection overrides (affects all users)"""
     try:
-        overrides_file = get_user_overrides_file(username)
+        overrides_file = get_user_overrides_file()  # No longer user-specific
         if os.path.exists(overrides_file):
             os.remove(overrides_file)
         return True
     except Exception as e:
-        st.error(f"Error clearing overrides for {username}: {e}")
+        st.error(f"Error clearing global overrides: {e}")
         return False
+
+def migrate_user_overrides_to_global():
+    """One-time migration function to convert user-specific overrides to global"""
+    try:
+        if not os.path.exists(OVERRIDES_FOLDER):
+            return
+        
+        global_overrides = {}
+        users_with_overrides = []
+        
+        # Check for existing user-specific override files
+        for filename in os.listdir(OVERRIDES_FOLDER):
+            if filename.endswith('_overrides.json') and filename != 'global_overrides.json':
+                user_file = os.path.join(OVERRIDES_FOLDER, filename)
+                username = filename.replace('_overrides.json', '')
+                
+                try:
+                    with open(user_file, 'r') as f:
+                        user_data = json.load(f)
+                        
+                    # Extract overrides from user file
+                    if 'overrides' in user_data:
+                        user_overrides = user_data['overrides']
+                    else:
+                        user_overrides = user_data
+                    
+                    # Merge into global overrides (latest values win)
+                    global_overrides.update(user_overrides)
+                    users_with_overrides.append(username)
+                    
+                except Exception as e:
+                    continue
+        
+        # Save merged overrides globally if any were found
+        if global_overrides and users_with_overrides:
+            if save_player_overrides(global_overrides, "migration"):
+                # Show migration success message
+                st.info(f"🔄 Migrated overrides from {', '.join(users_with_overrides)} to global overrides file")
+                return True
+                
+    except Exception as e:
+        pass  # Silent fail for migration
+    return False
         os.makedirs(PORTFOLIO_FOLDER)
     return os.path.join(PORTFOLIO_FOLDER, f"{username}_portfolio.json")
 
@@ -2619,13 +2669,13 @@ def main():
             # Store selected user in session state for use in save operations
             st.session_state.selected_portfolio_user = selected_user
             
-            # Check if user changed and reload their overrides
+            # Check if user changed and reload global overrides
             if 'last_selected_user' not in st.session_state or st.session_state.last_selected_user != selected_user:
-                # User changed, reload their overrides
-                saved_overrides = load_player_overrides(selected_user)
-                if saved_overrides and 'overrides' in saved_overrides:
-                    st.session_state.projection_overrides = saved_overrides['overrides']
-                    st.info(f"🔄 Loaded {len(saved_overrides['overrides'])} saved overrides for {selected_user}")
+                # User changed, reload global overrides (shared across all users)
+                saved_overrides = load_player_overrides()  # No longer user-specific
+                if saved_overrides:
+                    st.session_state.projection_overrides = saved_overrides
+                    st.info(f"🔄 Loaded {len(saved_overrides)} global projection overrides (shared across all users)")
                 else:
                     st.session_state.projection_overrides = {}
                 st.session_state.last_selected_user = selected_user
@@ -2645,13 +2695,13 @@ def main():
             lineups_list = portfolio["lineups"]
             st.success(f"📊 {selected_user}'s portfolio contains {len(lineups_list)} saved lineups")
             
-            # Show overrides info
-            saved_overrides = load_player_overrides(selected_user)
-            if saved_overrides and 'overrides' in saved_overrides and saved_overrides['overrides']:
-                override_count = len(saved_overrides['overrides'])
-                st.info(f"📝 {selected_user} has {override_count} saved projection override(s)")
+            # Show global overrides info (shared across all users)
+            saved_overrides = load_player_overrides()  # No longer user-specific
+            if saved_overrides:
+                override_count = len(saved_overrides)
+                st.info(f"📝 {override_count} global projection override(s) active (shared by all users)")
             else:
-                st.info(f"📝 {selected_user} has no saved projection overrides")
+                st.info(f"📝 No global projection overrides currently active")
             
             # Portfolio display options
             col1, col2, col3 = st.columns(3)
@@ -3069,10 +3119,10 @@ def main():
                 st.success(f"✅ **Fantasy Adjustments Applied:** {', '.join(adjustments)}")
         
         # Manual Projection Overrides Section
-        st.subheader("📝 Manual Projection Overrides")
-        st.caption("Adjust individual player projections for injuries, weather, or personal insights")
+        st.subheader("📝 Global Projection Overrides")
+        st.caption("🌍 Adjust individual player projections globally - changes apply to all users")
         
-        with st.expander("🎯 Override Player Projections", expanded=False):
+        with st.expander("🎯 Override Player Projections (Global)", expanded=False):
             col1, col2 = st.columns(2)
             
             with col1:
@@ -3177,13 +3227,13 @@ def main():
                             'adjustment_factor': adjustment_factor
                         }
                         
-                        # Save overrides to file
+                        # Save global overrides to file
                         current_user = st.session_state.get('selected_portfolio_user', 'sofakinggoo')
                         if save_player_overrides(st.session_state.projection_overrides, current_user):
-                            st.success(f"✅ **{selected_player}** projection updated to {new_projection:.1f} FPPG and saved!")
+                            st.success(f"✅ **{selected_player}** projection updated to {new_projection:.1f} FPPG and saved globally!")
                         else:
                             st.success(f"✅ **{selected_player}** projection updated to {new_projection:.1f} FPPG!")
-                            st.warning("⚠️ Override applied but could not save to file")
+                            st.warning("⚠️ Override applied but could not save to global file")
                         st.rerun()
             
             # Show current overrides
@@ -3240,13 +3290,13 @@ def main():
                             df.loc[player_mask, 'FPPG'] = new_fppg
                             df.loc[player_mask, 'Adjusted_FPPG'] = new_fppg * global_fppg_adjustment
                         
-                        # Save overrides to file
+                        # Save global overrides to file
                         current_user = st.session_state.get('selected_portfolio_user', 'sofakinggoo')
                         if save_player_overrides(st.session_state.projection_overrides, current_user):
-                            st.success(f"✅ Applied {team_adjustment:.0%} adjustment to all {selected_team} players and saved!")
+                            st.success(f"✅ Applied {team_adjustment:.0%} adjustment to all {selected_team} players and saved globally!")
                         else:
                             st.success(f"✅ Applied {team_adjustment:.0%} adjustment to all {selected_team} players!")
-                            st.warning("⚠️ Overrides applied but could not save to file")
+                            st.warning("⚠️ Overrides applied but could not save to global file")
                         st.rerun()
             
             with bulk_col2:
@@ -3287,23 +3337,25 @@ def main():
                             df.loc[player_mask, 'FPPG'] = new_fppg
                             df.loc[player_mask, 'Adjusted_FPPG'] = new_fppg * global_fppg_adjustment
                         
-                        # Save overrides to file
+                        # Save global overrides to file
                         current_user = st.session_state.get('selected_portfolio_user', 'sofakinggoo')
                         if save_player_overrides(st.session_state.projection_overrides, current_user):
-                            st.success(f"✅ Applied {pos_adjustment:.0%} adjustment to all {selected_pos}s and saved!")
+                            st.success(f"✅ Applied {pos_adjustment:.0%} adjustment to all {selected_pos}s and saved globally!")
                         else:
                             st.success(f"✅ Applied {pos_adjustment:.0%} adjustment to all {selected_pos}s!")
-                            st.warning("⚠️ Overrides applied but could not save to file")
+                            st.warning("⚠️ Overrides applied but could not save to global file")
                         st.rerun()
         
-        # Initialize session state for overrides tracking and load saved overrides
+        # Initialize session state for overrides tracking and load global saved overrides
         if 'projection_overrides' not in st.session_state:
-            # Load saved overrides for current user
-            current_user = st.session_state.get('selected_portfolio_user', 'sofakinggoo')
-            saved_overrides = load_player_overrides(current_user)
-            if saved_overrides and 'overrides' in saved_overrides:
-                st.session_state.projection_overrides = saved_overrides['overrides']
-                st.success(f"✅ Loaded {len(saved_overrides['overrides'])} saved projection overrides for {current_user}")
+            # One-time migration of user-specific overrides to global (if needed)
+            migrate_user_overrides_to_global()
+            
+            # Load global saved overrides (shared across all users)
+            saved_overrides = load_player_overrides()  # No longer user-specific
+            if saved_overrides:
+                st.session_state.projection_overrides = saved_overrides
+                st.success(f"✅ Loaded {len(saved_overrides)} global projection overrides (shared across all users)")
             else:
                 st.session_state.projection_overrides = {}
         
@@ -3340,25 +3392,25 @@ def main():
                     
                     col1, col2 = st.columns(2)
                     with col1:
-                        if st.button("🔄 Reset All Overrides", help="Remove all manual projection overrides"):
+                        if st.button("🔄 Reset All Global Overrides", help="Remove all global projection overrides (affects all users)"):
                             # Clear session state
                             st.session_state.projection_overrides = {}
                             # Clear saved file
                             current_user = st.session_state.get('selected_portfolio_user', 'sofakinggoo')
                             if clear_player_overrides(current_user):
-                                st.success("✅ All projection overrides cleared and saved!")
+                                st.success("✅ All global projection overrides cleared and saved!")
                             else:
                                 st.success("✅ All projection overrides cleared!")
-                                st.warning("⚠️ Session cleared but could not update saved file")
+                                st.warning("⚠️ Session cleared but could not update global file")
                             st.rerun()
                     
                     with col2:
-                        if st.button("💾 Manual Save", help="Manually save current overrides"):
+                        if st.button("💾 Manual Save", help="Manually save current overrides globally"):
                             current_user = st.session_state.get('selected_portfolio_user', 'sofakinggoo')
                             if save_player_overrides(st.session_state.projection_overrides, current_user):
-                                st.success(f"✅ {len(st.session_state.projection_overrides)} overrides saved for {current_user}!")
+                                st.success(f"✅ {len(st.session_state.projection_overrides)} overrides saved globally!")
                             else:
-                                st.error("❌ Failed to save overrides")
+                                st.error("❌ Failed to save global overrides")
         
         # Apply minimum projection filter AFTER manual overrides
         if 'FPPG' in df.columns:
