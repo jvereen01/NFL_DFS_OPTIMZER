@@ -139,8 +139,6 @@ def migrate_user_overrides_to_global():
     except Exception as e:
         pass  # Silent fail for migration
     return False
-        os.makedirs(PORTFOLIO_FOLDER)
-    return os.path.join(PORTFOLIO_FOLDER, f"{username}_portfolio.json")
 
 def load_portfolio(username="default"):
     """Load saved lineups from JSON file for specific user"""
@@ -3825,120 +3823,6 @@ def main():
                     st.write("- Try reducing forced players or using the 'Clear' button")
                 else:
                     st.success(f"✅ Successfully generated {len(stacked_lineups):,} lineups!")
-                    
-                    # Show simple usage analysis for top 150 lineups
-                    if len(stacked_lineups) >= 150:
-                        # Initialize target percentages in session state if not exists
-                        if 'target_percentages' not in st.session_state:
-                            st.session_state.target_percentages = {}
-                        
-                        st.subheader("📊 Usage Analysis & Target Adjustment")
-                        
-                        top_150 = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:150]
-                        usage_counts = {}
-                        
-                        # Count usage for each player
-                        for _, lineup_df, _, _, _, _ in top_150:
-                            for _, player in lineup_df.iterrows():
-                                player_name = player['Nickname']
-                                usage_counts[player_name] = usage_counts.get(player_name, 0) + 1
-                        
-                        # Convert to percentages and sort
-                        usage_analysis = []
-                        for player_name, count in usage_counts.items():
-                            percentage = (count / 150) * 100
-                            if percentage >= 1:  # Show all players with 1%+ usage (more inclusive)
-                                # Get existing target or use current usage as default
-                                current_target = st.session_state.target_percentages.get(player_name, percentage)
-                                
-                                usage_analysis.append({
-                                    'Player': player_name,
-                                    'Current Usage': f"{percentage:.1f}%",
-                                    'Usage Count': f"{count}/150",
-                                    'Target %': current_target
-                                })
-                        
-                        # Sort by current usage percentage
-                        usage_analysis.sort(key=lambda x: float(x['Current Usage'].rstrip('%')), reverse=True)
-                        
-                        if usage_analysis:
-                            st.info("💡 **Edit the 'Target %' column to set desired usage, then regenerate lineups**")
-                            
-                            # Create editable dataframe
-                            usage_df = pd.DataFrame(usage_analysis)
-                            
-                            # Use st.data_editor for editable table
-                            edited_df = st.data_editor(
-                                usage_df,
-                                column_config={
-                                    "Player": st.column_config.TextColumn("Player", disabled=True),
-                                    "Current Usage": st.column_config.TextColumn("Current Usage", disabled=True),
-                                    "Usage Count": st.column_config.TextColumn("Usage Count", disabled=True),
-                                    "Target %": st.column_config.NumberColumn(
-                                        "Target %",
-                                        help="Set target usage percentage (0-50%)",
-                                        min_value=0.0,
-                                        max_value=50.0,
-                                        step=0.5,
-                                        format="%.1f"
-                                    ),
-                                },
-                                disabled=["Player", "Current Usage", "Usage Count"],
-                                use_container_width=True,
-                                key="usage_editor"
-                            )
-                            
-                            # Update target percentages from edited dataframe
-                            new_targets = {}
-                            targets_changed = False
-                            
-                            for _, row in edited_df.iterrows():
-                                player_name = row['Player']
-                                new_target = row['Target %']
-                                current_usage = float(row['Current Usage'].rstrip('%'))
-                                
-                                new_targets[player_name] = new_target
-                                
-                                # Check if target has changed significantly
-                                if abs(new_target - current_usage) > 2:
-                                    targets_changed = True
-                            
-                            # Update session state
-                            st.session_state.target_percentages = new_targets
-                            
-                            # Show regenerate button if targets have been adjusted
-                            if targets_changed:
-                                st.warning("🔄 **Target percentages have been adjusted!**")
-                                col1, col2 = st.columns([1, 2])
-                                with col1:
-                                    if st.button("🚀 Regenerate with New Targets", type="primary"):
-                                        # Create tournament params with target percentages
-                                        new_target_assignments = {name: pct for name, pct in new_targets.items() if pct > 0}
-                                        
-                                        # Regenerate lineups with new targets
-                                        with st.spinner("🔄 Regenerating lineups with your target percentages..."):
-                                            new_tournament_params = {'tier_assignments': new_target_assignments}
-                                            
-                                            new_lineups = generate_lineups(
-                                                df, weighted_pools, num_simulations, stack_probability, 
-                                                elite_target_boost, great_target_boost, fantasy_data, 
-                                                player_selections, force_mode, forced_player_boost, 
-                                                strategy_type, new_tournament_params
-                                            )
-                                            
-                                            if new_lineups:
-                                                st.session_state.stacked_lineups = new_lineups
-                                                st.success(f"✅ Regenerated {len(new_lineups):,} lineups with your target percentages!")
-                                                st.rerun()
-                                            else:
-                                                st.error("❌ Failed to generate lineups with these targets. Try adjusting percentages.")
-                                
-                                with col2:
-                                    if st.button("↶ Reset to Current Usage"):
-                                        st.session_state.target_percentages = {}
-                                        st.rerun()
-                        else:
-                            st.info("📊 No players with significant usage (1%+) found")
         
         # Display results
         if st.session_state.lineups_generated and st.session_state.stacked_lineups:
