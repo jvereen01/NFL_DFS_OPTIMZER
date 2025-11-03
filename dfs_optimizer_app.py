@@ -212,29 +212,6 @@ def remove_lineup_simple(username, lineup_index):
         st.error(f"Error removing lineup: {e}")
         return False
 
-def lineup_already_exists(portfolio, new_lineup_data):
-    """Check if a lineup with the same players already exists in portfolio"""
-    if not portfolio.get("lineups"):
-        return False
-    
-    # Create set of player names from new lineup
-    new_players = set()
-    for _, player in new_lineup_data.iterrows():
-        new_players.add(str(player['Nickname']))
-    
-    # Check against existing lineups
-    for idx, existing_lineup in enumerate(portfolio["lineups"]):
-        existing_players = set()
-        for player in existing_lineup["players"]:
-            existing_players.add(player["nickname"])
-        
-        # If all players match, it's a duplicate
-        if new_players == existing_players:
-            return True
-    
-    return False
-    return False
-
 def is_lineup_in_portfolio(lineup_data, username="default"):
     """Check if a lineup is already saved in the user's portfolio"""
     try:
@@ -266,8 +243,8 @@ def add_lineup_to_portfolio(lineup_data, lineup_score, projected_points, usernam
     # Always load fresh portfolio data to avoid stale cache issues
     portfolio = load_portfolio(username)
     
-    # Check if lineup already exists
-    if lineup_already_exists(portfolio, lineup_data):
+    # Check if lineup already exists using consolidated function
+    if is_lineup_in_portfolio(lineup_data, username):
         return "duplicate"  # Return special status for duplicate
     
     # Convert lineup dataframe to serializable format
@@ -4122,15 +4099,19 @@ def main():
                         # Handle saving (checkbox checked, but wasn't originally saved)
                         if is_now_checked and not was_originally_saved:
                             try:
-                                result = add_lineup_to_portfolio(lineup_data, points_val, points_val, current_user)
-                                
-                                if result == "duplicate":
+                                # Double-check for duplicates before attempting save
+                                if is_lineup_in_portfolio(lineup_data, current_user):
                                     duplicate_count += 1
-                                elif result == True:
-                                    save_count += 1
                                 else:
-                                    error_count += 1
+                                    result = add_lineup_to_portfolio(lineup_data, points_val, points_val, current_user)
                                     
+                                    if result == "duplicate":
+                                        duplicate_count += 1
+                                    elif result == True:
+                                        save_count += 1
+                                    else:
+                                        error_count += 1
+                                        
                                 processed_indices.append(idx)
                             except Exception as e:
                                 error_count += 1
@@ -4155,7 +4136,7 @@ def main():
                         if unsave_count > 0:
                             st.success(f"✅ Successfully removed {unsave_count} lineup(s) from {current_user}'s portfolio!")
                         if duplicate_count > 0:
-                            st.warning(f"⚠️ {duplicate_count} lineup(s) already existed in {current_user}'s portfolio")
+                            st.warning(f"⚠️ {duplicate_count} lineup(s) already exist in {current_user}'s portfolio - no duplicates added")
                         if error_count > 0:
                             st.error(f"❌ {error_count} operation(s) failed")
                         
@@ -4199,19 +4180,25 @@ def main():
                             
                             # Handle save/unsave operations
                             if save_to_portfolio != is_already_saved:  # State changed
-                                if save_to_portfolio and not is_already_saved:  # Saving
-                                    result = add_lineup_to_portfolio(lineup, points, points, current_user)
-                                    if result == "duplicate":
-                                        st.warning(f"⚠️ Lineup already saved for {current_user}!")
-                                    elif result:
-                                        st.success(f"✅ Saved to {current_user}'s portfolio!")
-                                        st.rerun()  # Refresh to update state
+                                if save_to_portfolio and not is_already_saved:  # Attempting to save
+                                    # Double-check for duplicates before attempting save
+                                    if is_lineup_in_portfolio(lineup, current_user):
+                                        st.warning(f"⚠️ This exact lineup is already in {current_user}'s portfolio! No duplicate saved.")
+                                        st.rerun()  # Refresh to correct checkbox state
                                     else:
-                                        st.error("❌ Failed to save")
-                                elif not save_to_portfolio and is_already_saved:  # Unsaving
+                                        result = add_lineup_to_portfolio(lineup, points, points, current_user)
+                                        if result == "duplicate":
+                                            st.warning(f"⚠️ Lineup was just saved by another process! Already in {current_user}'s portfolio.")
+                                            st.rerun()  # Refresh to correct checkbox state
+                                        elif result:
+                                            st.success(f"✅ Successfully saved to {current_user}'s portfolio!")
+                                            st.rerun()  # Refresh to update state
+                                        else:
+                                            st.error("❌ Failed to save lineup")
+                                elif not save_to_portfolio and is_already_saved:  # Attempting to unsave
                                     result = remove_lineup_by_players(lineup, current_user)
                                     if result:
-                                        st.success(f"✅ Removed from {current_user}'s portfolio!")
+                                        st.success(f"✅ Successfully removed from {current_user}'s portfolio!")
                                         st.rerun()  # Refresh to update state
                                     else:
                                         st.error("❌ Failed to remove from portfolio")
