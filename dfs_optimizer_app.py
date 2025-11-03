@@ -4738,7 +4738,11 @@ def main():
                             top150_for_apply = sorted(stacked_lineups, key=lambda x: x[0], reverse=True)[:150]
                             modified_lineups = apply_usage_adjustments(top150_for_apply, display_usage_data, "All Positions", preserve_stacks=True)
                             if modified_lineups:
-                                st.success("✅ Lineups successfully modified while preserving stacks and optimization logic!")
+                                # Update session state with the new lineups for export
+                                st.session_state['stacked_lineups'] = modified_lineups
+                                # Also update the local variable for immediate use
+                                stacked_lineups = modified_lineups
+                                st.success(f"✅ Updated {len(modified_lineups)} lineups with new exposure targets! Export will now use adjusted lineups.")
                                 st.rerun()
                             else:
                                 st.error("❌ Unable to modify lineups. Try smaller changes.")
