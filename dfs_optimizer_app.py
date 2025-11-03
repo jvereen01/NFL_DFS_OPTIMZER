@@ -235,6 +235,32 @@ def lineup_already_exists(portfolio, new_lineup_data):
     return False
     return False
 
+def is_lineup_in_portfolio(lineup_data, username="default"):
+    """Check if a lineup is already saved in the user's portfolio"""
+    try:
+        portfolio = load_portfolio(username)
+        if not portfolio or not portfolio.get("lineups"):
+            return False
+        
+        # Create set of player names from the lineup to check
+        lineup_players = set()
+        for _, player in lineup_data.iterrows():
+            lineup_players.add(str(player['Nickname']))
+        
+        # Check against existing lineups in portfolio
+        for existing_lineup in portfolio["lineups"]:
+            existing_players = set()
+            for player in existing_lineup["players"]:
+                existing_players.add(player["nickname"])
+            
+            # If all players match, lineup is already saved
+            if lineup_players == existing_players:
+                return True
+        
+        return False
+    except Exception:
+        return False
+
 def add_lineup_to_portfolio(lineup_data, lineup_score, projected_points, username="default"):
     """Add a lineup to the saved portfolio for specific user"""
     # Always load fresh portfolio data to avoid stale cache issues
@@ -299,6 +325,33 @@ def get_portfolio_lineups(username="default"):
     """Get all saved lineups from portfolio for specific user"""
     portfolio = load_portfolio(username)
     return portfolio.get("lineups", [])
+
+def remove_lineup_by_players(lineup_data, username="default"):
+    """Remove a lineup from portfolio by matching the exact players"""
+    try:
+        portfolio = load_portfolio(username)
+        if not portfolio or not portfolio.get("lineups"):
+            return False
+        
+        # Create set of player names from the lineup to remove
+        lineup_players = set()
+        for _, player in lineup_data.iterrows():
+            lineup_players.add(str(player['Nickname']))
+        
+        # Find and remove matching lineup
+        for idx, existing_lineup in enumerate(portfolio["lineups"]):
+            existing_players = set()
+            for player in existing_lineup["players"]:
+                existing_players.add(player["nickname"])
+            
+            # If all players match, remove this lineup
+            if lineup_players == existing_players:
+                portfolio["lineups"].pop(idx)
+                return save_portfolio(portfolio, username)
+        
+        return False  # No matching lineup found
+    except Exception:
+        return False
 
 # Create minimal dummy functions to prevent crashes if enhanced features aren't available
 if not ENHANCED_FEATURES_AVAILABLE:
@@ -3941,6 +3994,8 @@ def main():
                     st.write(f"**Showing {selected_count_label} ({len(display_lineups)} lineups)**")
                 
                 table_data = []
+                current_user = st.session_state.get('selected_portfolio_user', 'sofakinggoo')
+                
                 for i, (points, lineup, salary, stacked_wrs_count, stacked_tes_count, qb_wr_te_count) in enumerate(display_lineups, 1):
                     # RECALCULATE STACKING FOR DISPLAY
                     actual_stacked_wrs, actual_stacked_tes, actual_qb_wr_te = recalculate_lineup_stacking(lineup)
@@ -3984,6 +4039,9 @@ def main():
                     ceiling = lineup['Ceiling'].sum() if 'Ceiling' in lineup.columns else 0
                     stack_label = f"QB+{actual_qb_wr_te}" if actual_qb_wr_te > 0 else "No Stack"
                     
+                    # Check if this lineup is already saved in portfolio
+                    is_already_saved = is_lineup_in_portfolio(lineup, current_user)
+                    
                     table_data.append({
                         'Rank': i,
                         'Points': round(points, 1),
@@ -3999,7 +4057,7 @@ def main():
                         'TE': te,
                         'FLEX': f"{flex_player} ({flex_pos})" if flex_player != 'N/A' else 'N/A',
                         'DST': dst,
-                        'Save': False,  # Default save checkbox value
+                        'Save': is_already_saved,  # Pre-check if lineup is already saved
                         'Lineup_Index': i-1  # Store index for portfolio saving
                     })
                 
@@ -4022,10 +4080,11 @@ def main():
                     'TE': st.column_config.TextColumn('TE', width='medium'),
                     'FLEX': st.column_config.TextColumn('FLEX', width='medium'),
                     'DST': st.column_config.TextColumn('DST', width='medium'),
-                    'Save': st.column_config.CheckboxColumn('💾 Save', help='Check to save lineup to portfolio'),
+                    'Save': st.column_config.CheckboxColumn('💾 Save', help='Check to save/unsave lineup - checkboxes show current save status'),
                 }
                 
                 st.write("**💾 Use checkboxes in the 'Save' column to add lineups to your portfolio:**")
+                st.caption("✅ Pre-checked boxes = already saved | ⬜ Unchecked boxes = not saved")
                 
                 # Create a unique key for this data_editor based on lineup count and user
                 current_user = st.session_state.get('selected_portfolio_user', 'sofakinggoo')
@@ -4042,48 +4101,66 @@ def main():
                     key=editor_key  # Unique key for state management
                 )
                 
-                # Process save requests
+                # Process save/unsave requests
                 if 'Save' in edited_df.columns:
                     current_user = st.session_state.get('selected_portfolio_user', 'sofakinggoo')
                     save_count = 0
+                    unsave_count = 0
                     duplicate_count = 0
                     error_count = 0
                     
-                    # Track which lineups were successfully saved to reset their checkboxes
-                    saved_indices = []
+                    # Track which lineups were successfully processed
+                    processed_indices = []
                     
                     for idx, row in edited_df.iterrows():
-                        if row['Save']:  # If checkbox is checked
-                            lineup_idx = table_data[idx]['Lineup_Index']
-                            lineup_data = display_lineups[lineup_idx][1]  # Get the actual lineup DataFrame
-                            points_val = row['Points']
-                            
+                        lineup_idx = table_data[idx]['Lineup_Index']
+                        lineup_data = display_lineups[lineup_idx][1]  # Get the actual lineup DataFrame
+                        points_val = row['Points']
+                        was_originally_saved = table_data[idx]['Save']  # Original save state
+                        is_now_checked = row['Save']  # Current checkbox state
+                        
+                        # Handle saving (checkbox checked, but wasn't originally saved)
+                        if is_now_checked and not was_originally_saved:
                             try:
                                 result = add_lineup_to_portfolio(lineup_data, points_val, points_val, current_user)
                                 
                                 if result == "duplicate":
                                     duplicate_count += 1
-                                    saved_indices.append(idx)  # Mark as processed
-                                elif result == True:  # Function returns True for success
+                                elif result == True:
                                     save_count += 1
-                                    saved_indices.append(idx)  # Mark as successfully saved
                                 else:
                                     error_count += 1
                                     
+                                processed_indices.append(idx)
+                            except Exception as e:
+                                error_count += 1
+                        
+                        # Handle unsaving (checkbox unchecked, but was originally saved)
+                        elif not is_now_checked and was_originally_saved:
+                            try:
+                                result = remove_lineup_by_players(lineup_data, current_user)
+                                if result:
+                                    unsave_count += 1
+                                else:
+                                    error_count += 1
+                                    
+                                processed_indices.append(idx)
                             except Exception as e:
                                 error_count += 1
                     
-                    # Show summary if any saves were attempted
-                    if save_count > 0 or duplicate_count > 0 or error_count > 0:
+                    # Show summary if any operations were performed
+                    if save_count > 0 or unsave_count > 0 or duplicate_count > 0 or error_count > 0:
                         if save_count > 0:
                             st.success(f"✅ Successfully saved {save_count} lineup(s) to {current_user}'s portfolio!")
+                        if unsave_count > 0:
+                            st.success(f"✅ Successfully removed {unsave_count} lineup(s) from {current_user}'s portfolio!")
                         if duplicate_count > 0:
                             st.warning(f"⚠️ {duplicate_count} lineup(s) already existed in {current_user}'s portfolio")
                         if error_count > 0:
-                            st.error(f"❌ {error_count} lineup(s) failed to save")
+                            st.error(f"❌ {error_count} operation(s) failed")
                         
-                        # Auto-rerun to clear checkboxes for saved lineups (improves UX)
-                        if saved_indices:
+                        # Auto-rerun to refresh checkbox states (improves UX)
+                        if processed_indices:
                             st.rerun()
                 
             else:
