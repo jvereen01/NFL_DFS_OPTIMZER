@@ -4185,23 +4185,36 @@ def main():
                         # Portfolio save checkbox
                         col1, col2 = st.columns([3, 1])
                         with col2:
+                            # Check if this lineup is already saved
+                            current_user = st.session_state.get('selected_portfolio_user', 'sofakinggoo')
+                            is_already_saved = is_lineup_in_portfolio(lineup, current_user)
+                            
                             lineup_id = f"temp_lineup_{i}_{points:.1f}"
                             save_to_portfolio = st.checkbox(
                                 "💾 Save to Portfolio", 
+                                value=is_already_saved,  # Pre-check if already saved
                                 key=f"save_lineup_{i}_{points:.1f}",
-                                help="Save this lineup to your persistent portfolio"
+                                help="Save/unsave this lineup - checkbox shows current save status"
                             )
                             
-                            if save_to_portfolio:
-                                # Get selected user from session state
-                                current_user = st.session_state.get('selected_portfolio_user', 'sofakinggoo')
-                                result = add_lineup_to_portfolio(lineup, points, points, current_user)
-                                if result == "duplicate":
-                                    st.warning(f"⚠️ Lineup already saved for {current_user}!")
-                                elif result:
-                                    st.success(f"✅ Saved to {current_user}'s portfolio!")
-                                else:
-                                    st.error("❌ Failed to save")
+                            # Handle save/unsave operations
+                            if save_to_portfolio != is_already_saved:  # State changed
+                                if save_to_portfolio and not is_already_saved:  # Saving
+                                    result = add_lineup_to_portfolio(lineup, points, points, current_user)
+                                    if result == "duplicate":
+                                        st.warning(f"⚠️ Lineup already saved for {current_user}!")
+                                    elif result:
+                                        st.success(f"✅ Saved to {current_user}'s portfolio!")
+                                        st.rerun()  # Refresh to update state
+                                    else:
+                                        st.error("❌ Failed to save")
+                                elif not save_to_portfolio and is_already_saved:  # Unsaving
+                                    result = remove_lineup_by_players(lineup, current_user)
+                                    if result:
+                                        st.success(f"✅ Removed from {current_user}'s portfolio!")
+                                        st.rerun()  # Refresh to update state
+                                    else:
+                                        st.error("❌ Failed to remove from portfolio")
                         
                         with col1:
                             # Create lineup display with ceiling and floor
