@@ -124,10 +124,11 @@ def clear_portfolio_simple(username):
         with open(portfolio_file, 'w') as f:
             json.dump(empty_portfolio, f, indent=2)
         
-        # Clear all save checkbox states
+        # Clear portfolio-specific save checkbox states only
         keys_to_clear = []
         for key in list(st.session_state.keys()):
-            if ("save_" in str(key)) or ("save_compact_" in str(key)) or ("save_lineup_" in str(key)):
+            # Only clear portfolio-specific save states, not lineup generation saves
+            if ("save_portfolio_" in str(key)) or ("save_lineup_portfolio_" in str(key)):
                 keys_to_clear.append(key)
         
         for key in keys_to_clear:
@@ -147,10 +148,11 @@ def remove_lineup_simple(username, lineup_index):
             result = save_portfolio(portfolio, username)
             
             if result:
-                # Clear all save checkbox states
+                # Clear portfolio-specific save checkbox states only
                 keys_to_clear = []
                 for key in list(st.session_state.keys()):
-                    if ("save_" in str(key)) or ("save_compact_" in str(key)) or ("save_lineup_" in str(key)):
+                    # Only clear portfolio-specific save states, not lineup generation saves
+                    if ("save_portfolio_" in str(key)) or ("save_lineup_portfolio_" in str(key)):
                         keys_to_clear.append(key)
                 
                 for key in keys_to_clear:
@@ -2655,10 +2657,11 @@ def main():
             col1, col2, col3 = st.columns(3)
             with col1:
                 if st.button("🗑️ Clear Portfolio", key=f"clear_{selected_user}"):
-                    # CLEAR ALL SAVE CHECKBOX STATES FIRST
+                    # CLEAR SAVE CHECKBOX STATES FOR PORTFOLIO MANAGEMENT ONLY
                     keys_to_clear = []
                     for key in list(st.session_state.keys()):
-                        if ("save_compact_" in str(key)) or ("save_lineup_" in str(key)) or ("save_" in str(key)):
+                        # Only clear portfolio-specific save states, not lineup generation saves
+                        if ("save_portfolio_" in str(key)) or ("save_lineup_portfolio_" in str(key)):
                             keys_to_clear.append(key)
                     
                     for key in keys_to_clear:
@@ -2817,10 +2820,11 @@ def main():
                                 help=f"Remove Lineup #{original_idx+1} ({saved_lineup['projected_points']:.1f} pts)",
                                 use_container_width=True
                             ):
-                                # CLEAR ALL SAVE CHECKBOX STATES FIRST
+                                # CLEAR PORTFOLIO-SPECIFIC SAVE CHECKBOX STATES
                                 keys_to_clear = []
                                 for key in list(st.session_state.keys()):
-                                    if ("save_compact_" in str(key)) or ("save_lineup_" in str(key)) or ("save_" in str(key)):
+                                    # Only clear portfolio-specific save states, not lineup generation saves
+                                    if ("save_portfolio_" in str(key)) or ("save_lineup_portfolio_" in str(key)):
                                         keys_to_clear.append(key)
                                 
                                 for key in keys_to_clear:
@@ -4087,6 +4091,10 @@ def main():
                 
                 st.write("**💾 Use checkboxes in the 'Save' column to add lineups to your portfolio:**")
                 
+                # Create a unique key for this data_editor based on lineup count and user
+                current_user = st.session_state.get('selected_portfolio_user', 'sofakinggoo')
+                editor_key = f"lineup_save_editor_{current_user}_{len(display_lineups)}"
+                
                 # Display efficient data_editor table with save checkboxes
                 edited_df = st.data_editor(
                     table_df.drop('Lineup_Index', axis=1),  # Hide index column from display
@@ -4094,7 +4102,8 @@ def main():
                     hide_index=True,
                     height=600,
                     column_config=column_config,
-                    disabled=[col for col in table_df.columns if col not in ['Save']]  # Only Save column is editable
+                    disabled=[col for col in table_df.columns if col not in ['Save']],  # Only Save column is editable
+                    key=editor_key  # Unique key for state management
                 )
                 
                 # Process save requests
@@ -4103,6 +4112,9 @@ def main():
                     save_count = 0
                     duplicate_count = 0
                     error_count = 0
+                    
+                    # Track which lineups were successfully saved to reset their checkboxes
+                    saved_indices = []
                     
                     for idx, row in edited_df.iterrows():
                         if row['Save']:  # If checkbox is checked
@@ -4115,8 +4127,10 @@ def main():
                                 
                                 if result == "duplicate":
                                     duplicate_count += 1
+                                    saved_indices.append(idx)  # Mark as processed
                                 elif result == True:  # Function returns True for success
                                     save_count += 1
+                                    saved_indices.append(idx)  # Mark as successfully saved
                                 else:
                                     error_count += 1
                                     
@@ -4131,6 +4145,10 @@ def main():
                             st.warning(f"⚠️ {duplicate_count} lineup(s) already existed in {current_user}'s portfolio")
                         if error_count > 0:
                             st.error(f"❌ {error_count} lineup(s) failed to save")
+                        
+                        # Auto-rerun to clear checkboxes for saved lineups (improves UX)
+                        if saved_indices:
+                            st.rerun()
                 
             else:
                 # EXPANDABLE CARDS VIEW (Original format)
