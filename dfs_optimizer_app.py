@@ -140,6 +140,58 @@ def migrate_user_overrides_to_global():
         pass  # Silent fail for migration
     return False
 
+def get_player_selections_file(username="default"):
+    """Get the file path for saved player selections (exclude/force)"""
+    if not os.path.exists(OVERRIDES_FOLDER):
+        os.makedirs(OVERRIDES_FOLDER)
+    return os.path.join(OVERRIDES_FOLDER, f"{username}_player_selections.json")
+
+def save_player_selections(selections_data, username="default"):
+    """Save player selections (force/exclude) to JSON file for specific user"""
+    try:
+        selections_file = get_player_selections_file(username)
+        save_data = {
+            "selections": selections_data,
+            "metadata": {
+                "last_updated": datetime.now().isoformat(),
+                "user": username,
+                "positions_saved": list(selections_data.keys()) if selections_data else []
+            }
+        }
+        with open(selections_file, 'w') as f:
+            json.dump(save_data, f, indent=2, default=str)
+        return True
+    except Exception as e:
+        st.error(f"Error saving player selections for {username}: {e}")
+        return False
+
+def load_player_selections(username="default"):
+    """Load saved player selections (force/exclude) from JSON file for specific user"""
+    try:
+        selections_file = get_player_selections_file(username)
+        if os.path.exists(selections_file):
+            with open(selections_file, 'r') as f:
+                data = json.load(f)
+                # Handle both old format (direct dict) and new format (with metadata)
+                if "selections" in data:
+                    return data["selections"]
+                else:
+                    return data  # Legacy format
+    except Exception as e:
+        st.error(f"Error loading player selections for {username}: {e}")
+    return {}
+
+def clear_player_selections(username="default"):
+    """Clear all saved player selections for specific user"""
+    try:
+        selections_file = get_player_selections_file(username)
+        if os.path.exists(selections_file):
+            os.remove(selections_file)
+        return True
+    except Exception as e:
+        st.error(f"Error clearing player selections for {username}: {e}")
+        return False
+
 def load_portfolio(username="default"):
     """Load saved lineups from JSON file for specific user"""
     try:
@@ -3558,7 +3610,12 @@ def main():
                 """Extract just the player name from 'Name ($salary)' format"""
                 return [name.split(' ($')[0] for name in selection_list]
             
-            player_selections = {}
+            # Load saved player selections for the current user
+            current_user = st.session_state.get('selected_portfolio_user', 'sofakinggoo')
+            saved_selections = load_player_selections(current_user)
+            
+            # Initialize player_selections with saved data or empty defaults
+            player_selections = saved_selections if saved_selections else {}
             
             with tab1:
                 st.subheader("Quarterbacks")
@@ -3568,8 +3625,13 @@ def main():
                 col1, col2 = st.columns(2)
                 with col1:
                     st.write("**Must Include:**")
-                    # Check for auto-selected values
-                    default_qb = st.session_state.get('auto_qb', [])
+                    # Load saved selections or use auto-selected values as fallback
+                    saved_qb_include = []
+                    if 'QB' in saved_selections and 'must_include' in saved_selections['QB']:
+                        # Convert saved player names back to the "Name ($salary)" format
+                        saved_qb_include = [opt for opt in qb_options if any(name in opt for name in saved_selections['QB']['must_include'])]
+                    
+                    default_qb = saved_qb_include if saved_qb_include else st.session_state.get('auto_qb', [])
                     must_include_qb = st.multiselect(
                         "Force these QBs in lineups",
                         options=qb_options,
@@ -3580,9 +3642,16 @@ def main():
                 
                 with col2:
                     st.write("**Exclude:**")
+                    # Load saved exclude selections
+                    saved_qb_exclude = []
+                    if 'QB' in saved_selections and 'exclude' in saved_selections['QB']:
+                        # Convert saved player names back to the "Name ($salary)" format
+                        saved_qb_exclude = [opt for opt in qb_options if any(name in opt for name in saved_selections['QB']['exclude'])]
+                    
                     exclude_qb = st.multiselect(
                         "Remove these QBs from consideration",
                         options=qb_options,
+                        default=saved_qb_exclude,
                         key="exclude_qb",
                         help="Players sorted by salary (highest to lowest)"
                     )
@@ -3606,8 +3675,12 @@ def main():
                 col1, col2 = st.columns(2)
                 with col1:
                     st.write("**Must Include:**")
-                    # Check for auto-selected values
-                    default_rb = st.session_state.get('auto_rb', [])
+                    # Load saved selections or use auto-selected values as fallback
+                    saved_rb_include = []
+                    if 'RB' in saved_selections and 'must_include' in saved_selections['RB']:
+                        saved_rb_include = [opt for opt in rb_options if any(name in opt for name in saved_selections['RB']['must_include'])]
+                    
+                    default_rb = saved_rb_include if saved_rb_include else st.session_state.get('auto_rb', [])
                     must_include_rb = st.multiselect(
                         "Force these RBs in lineups",
                         options=rb_options,
@@ -3618,9 +3691,15 @@ def main():
                 
                 with col2:
                     st.write("**Exclude:**")
+                    # Load saved exclude selections
+                    saved_rb_exclude = []
+                    if 'RB' in saved_selections and 'exclude' in saved_selections['RB']:
+                        saved_rb_exclude = [opt for opt in rb_options if any(name in opt for name in saved_selections['RB']['exclude'])]
+                    
                     exclude_rb = st.multiselect(
                         "Remove these RBs from consideration",
                         options=rb_options,
+                        default=saved_rb_exclude,
                         key="exclude_rb",
                         help="Players sorted by salary (highest to lowest)"
                     )
@@ -3643,8 +3722,12 @@ def main():
                 col1, col2 = st.columns(2)
                 with col1:
                     st.write("**Must Include:**")
-                    # Check for auto-selected values
-                    default_wr = st.session_state.get('auto_wr', [])
+                    # Load saved selections or use auto-selected values as fallback
+                    saved_wr_include = []
+                    if 'WR' in saved_selections and 'must_include' in saved_selections['WR']:
+                        saved_wr_include = [opt for opt in wr_options if any(name in opt for name in saved_selections['WR']['must_include'])]
+                    
+                    default_wr = saved_wr_include if saved_wr_include else st.session_state.get('auto_wr', [])
                     must_include_wr = st.multiselect(
                         "Force these WRs in lineups",
                         options=wr_options,
@@ -3655,9 +3738,15 @@ def main():
                 
                 with col2:
                     st.write("**Exclude:**")
+                    # Load saved exclude selections
+                    saved_wr_exclude = []
+                    if 'WR' in saved_selections and 'exclude' in saved_selections['WR']:
+                        saved_wr_exclude = [opt for opt in wr_options if any(name in opt for name in saved_selections['WR']['exclude'])]
+                    
                     exclude_wr = st.multiselect(
                         "Remove these WRs from consideration",
                         options=wr_options,
+                        default=saved_wr_exclude,
                         key="exclude_wr",
                         help="Players sorted by salary (highest to lowest)"
                     )
@@ -3680,8 +3769,12 @@ def main():
                 col1, col2 = st.columns(2)
                 with col1:
                     st.write("**Must Include:**")
-                    # Check for auto-selected values
-                    default_te = st.session_state.get('auto_te', [])
+                    # Load saved selections or use auto-selected values as fallback
+                    saved_te_include = []
+                    if 'TE' in saved_selections and 'must_include' in saved_selections['TE']:
+                        saved_te_include = [opt for opt in te_options if any(name in opt for name in saved_selections['TE']['must_include'])]
+                    
+                    default_te = saved_te_include if saved_te_include else st.session_state.get('auto_te', [])
                     must_include_te = st.multiselect(
                         "Force these TEs in lineups",
                         options=te_options,
@@ -3692,9 +3785,15 @@ def main():
                 
                 with col2:
                     st.write("**Exclude:**")
+                    # Load saved exclude selections
+                    saved_te_exclude = []
+                    if 'TE' in saved_selections and 'exclude' in saved_selections['TE']:
+                        saved_te_exclude = [opt for opt in te_options if any(name in opt for name in saved_selections['TE']['exclude'])]
+                    
                     exclude_te = st.multiselect(
                         "Remove these TEs from consideration",
                         options=te_options,
+                        default=saved_te_exclude,
                         key="exclude_te",
                         help="Players sorted by salary (highest to lowest)"
                     )
@@ -3717,18 +3816,33 @@ def main():
                 col1, col2 = st.columns(2)
                 with col1:
                     st.write("**Must Include:**")
+                    # Load saved include selections
+                    saved_def_include = []
+                    if 'D' in saved_selections and 'must_include' in saved_selections['D']:
+                        saved_def_include = [opt for opt in def_options if any(name in opt for name in saved_selections['D']['must_include'])]
+                    
                     must_include_def = st.multiselect(
                         "Force these DEF in lineups",
                         options=def_options,
+                        default=saved_def_include,
                         key="must_def",
                         help="Players sorted by salary (highest to lowest)"
                     )
                 
                 with col2:
                     st.write("**Exclude:**")
+                    # Load saved exclude selections
+                    saved_def_exclude = []
+                    if 'D' in saved_selections and 'exclude' in saved_selections['D']:
+                        saved_def_exclude = [opt for opt in def_options if any(name in opt for name in saved_selections['D']['exclude'])]
+                    
                     exclude_def = st.multiselect(
                         "Remove these DEF from consideration",
                         options=def_options,
+                        default=saved_def_exclude,
+                        key="exclude_def",
+                        help="Players sorted by salary (highest to lowest)"
+                    )
                         key="exclude_def",
                         help="Players sorted by salary (highest to lowest)"
                     )
@@ -3742,6 +3856,36 @@ def main():
                     def_display = def_players_tab[['Nickname', 'Team', 'Salary', 'FPPG', 'Matchup_Quality']].copy()
                     def_display['Salary'] = def_display['Salary'].apply(lambda x: f"${x:,}")
                     st.dataframe(def_display, use_container_width=True)
+            
+            # Add save/clear buttons for player selections
+            st.markdown("---")
+            col1, col2, col3 = st.columns([1, 1, 2])
+            
+            with col1:
+                if st.button("💾 Save Selections", help="Save current force/exclude selections for this user"):
+                    if save_player_selections(player_selections, current_user):
+                        # Count total selections
+                        total_forced = sum(len(pos_data.get('must_include', [])) for pos_data in player_selections.values())
+                        total_excluded = sum(len(pos_data.get('exclude', [])) for pos_data in player_selections.values())
+                        st.success(f"✅ Saved {total_forced} forced and {total_excluded} excluded players for {current_user}!")
+                    else:
+                        st.error("❌ Failed to save player selections")
+            
+            with col2:
+                if st.button("🗑️ Clear Saved", help="Clear all saved force/exclude selections for this user"):
+                    if clear_player_selections(current_user):
+                        st.success(f"✅ Cleared all saved player selections for {current_user}!")
+                        st.rerun()  # Refresh to show cleared selections
+                    else:
+                        st.error("❌ Failed to clear player selections")
+            
+            with col3:
+                # Show current saved selections summary
+                if saved_selections:
+                    total_forced = sum(len(pos_data.get('must_include', [])) for pos_data in saved_selections.values())
+                    total_excluded = sum(len(pos_data.get('exclude', [])) for pos_data in saved_selections.values())
+                    if total_forced > 0 or total_excluded > 0:
+                        st.info(f"📋 {current_user} has {total_forced} forced and {total_excluded} excluded players saved")
         
         else:
             player_selections = None
