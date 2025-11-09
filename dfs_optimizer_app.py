@@ -292,6 +292,8 @@ def is_lineup_in_portfolio(lineup_data, username="default"):
 
 def add_lineup_to_portfolio(lineup_data, lineup_score, projected_points, username="default"):
     """Add a lineup to the saved portfolio for specific user"""
+    from datetime import datetime
+    
     # Always load fresh portfolio data to avoid stale cache issues
     portfolio = load_portfolio(username)
     
@@ -2825,6 +2827,7 @@ def main():
                                 })
                         
                         if export_data:
+                            from datetime import datetime
                             export_df = pd.DataFrame(export_data)
                             csv = export_df.to_csv(index=False)
                             st.download_button(
