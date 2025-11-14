@@ -1543,44 +1543,95 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                     if len(must_te) > 0:
                         selected_te = must_te
                 
-                # Enhanced tournament stacking logic
+                # Enhanced diverse stacking logic with multiple stack types
                 remaining_wr_spots = 3 - len(selected_wrs)
                 need_te = len(selected_te) == 0
                 
                 if remaining_wr_spots > 0 or need_te:
-                    # Enhanced stacking decision for tournaments
-                    attempt_stack = will_attempt_stack and remaining_wr_spots > 0
+                    # Diverse stacking decision - multiple stack types for variance
+                    attempt_stack = will_attempt_stack
                     
-                    # Smart stacking with randomness - prefer high projections but keep variety
                     if attempt_stack:
+                        # Define different stack types with probabilities
+                        stack_types = {
+                            'QB+1WR': 0.35,      # QB + 1 WR (35%)
+                            'QB+1TE': 0.20,      # QB + 1 TE (20%)
+                            'QB+2WR': 0.25,      # QB + 2 WR (25%)
+                            'QB+1WR+1TE': 0.20   # QB + 1 WR + 1 TE (20%)
+                        }
+                        
+                        # Randomly select stack type based on probabilities
+                        stack_rand = random.random()
+                        cumulative_prob = 0
+                        selected_stack_type = 'QB+1WR'  # Default
+                        
+                        for stack_type, prob in stack_types.items():
+                            cumulative_prob += prob
+                            if stack_rand <= cumulative_prob:
+                                selected_stack_type = stack_type
+                                break
+                        
+                        # Get same team players
                         same_team_wrs = wr_pool[wr_pool['Team'] == qb_team]
-                        # Remove already selected WRs
+                        same_team_tes = te_pool[te_pool['Team'] == qb_team]
+                        
+                        # Remove already selected players
                         if len(selected_wrs) > 0:
                             used_wr_names = set(selected_wrs['Nickname'])
                             same_team_wrs = same_team_wrs[~same_team_wrs['Nickname'].isin(used_wr_names)]
                         
-                        if len(same_team_wrs) >= 1:
-                            # Moderate stacking boost: Prefer high projections but maintain randomness
-                            qb_fppg = qb['FPPG'].iloc[0]
+                        # Execute different stack types
+                        stacked_successfully = False
+                        
+                        if selected_stack_type == 'QB+1WR' and len(same_team_wrs) >= 1 and remaining_wr_spots >= 1:
+                            # Stack QB + 1 WR
+                            stacked_wr = same_team_wrs.sample(1, weights=same_team_wrs['Selection_Weight'])
+                            selected_wrs = pd.concat([selected_wrs, stacked_wr])
+                            remaining_wr_spots -= 1
+                            stacked_successfully = True
                             
-                            # Calculate stack value and apply moderate boost (less aggressive than before)
-                            for idx, wr_row in same_team_wrs.iterrows():
-                                stack_value = qb_fppg + wr_row['FPPG']
-                                # Smaller boost for randomness: 1.1x to 1.6x instead of much higher
-                                stack_multiplier = 1 + min(0.5, (stack_value - 20) / 40.0)  # More moderate boost
-                                same_team_wrs.at[idx, 'Selection_Weight'] *= stack_multiplier
+                        elif selected_stack_type == 'QB+1TE' and len(same_team_tes) >= 1 and need_te:
+                            # Stack QB + 1 TE
+                            stacked_te = same_team_tes.sample(1, weights=same_team_tes['Selection_Weight'])
+                            selected_te = stacked_te
+                            need_te = False
+                            stacked_successfully = True
                             
-                            stack_count = min(remaining_wr_spots, len(same_team_wrs), 2)
-                            stacked_wrs = same_team_wrs.sample(stack_count, weights=same_team_wrs['Selection_Weight'])
+                        elif selected_stack_type == 'QB+2WR' and len(same_team_wrs) >= 2 and remaining_wr_spots >= 2:
+                            # Stack QB + 2 WRs
+                            stacked_wrs = same_team_wrs.sample(2, weights=same_team_wrs['Selection_Weight'])
                             selected_wrs = pd.concat([selected_wrs, stacked_wrs])
-                            remaining_wr_spots -= stack_count
+                            remaining_wr_spots -= 2
+                            stacked_successfully = True
+                            
+                        elif selected_stack_type == 'QB+1WR+1TE' and len(same_team_wrs) >= 1 and len(same_team_tes) >= 1 and remaining_wr_spots >= 1 and need_te:
+                            # Stack QB + 1 WR + 1 TE
+                            stacked_wr = same_team_wrs.sample(1, weights=same_team_wrs['Selection_Weight'])
+                            stacked_te = same_team_tes.sample(1, weights=same_team_tes['Selection_Weight'])
+                            selected_wrs = pd.concat([selected_wrs, stacked_wr])
+                            selected_te = stacked_te
+                            remaining_wr_spots -= 1
+                            need_te = False
+                            stacked_successfully = True
+                        
+                        # If selected stack type failed, try fallback to QB+1WR
+                        if not stacked_successfully and len(same_team_wrs) >= 1 and remaining_wr_spots >= 1:
+                            stacked_wr = same_team_wrs.sample(1, weights=same_team_wrs['Selection_Weight'])
+                            selected_wrs = pd.concat([selected_wrs, stacked_wr])
+                            remaining_wr_spots -= 1
                     
-                    # Fill remaining WR spots
+                    # Fill remaining WR spots with non-stacked players
                     if remaining_wr_spots > 0:
                         available_wrs = wr_pool
                         if len(selected_wrs) > 0:
                             used_wr_names = set(selected_wrs['Nickname'])
                             available_wrs = available_wrs[~available_wrs['Nickname'].isin(used_wr_names)]
+                        
+                        # Prefer different teams for diversity
+                        if attempt_stack:
+                            different_team_wrs = available_wrs[available_wrs['Team'] != qb_team]
+                            if len(different_team_wrs) >= remaining_wr_spots:
+                                available_wrs = different_team_wrs
                         
                         if len(available_wrs) >= remaining_wr_spots:
                             additional_wrs = available_wrs.sample(remaining_wr_spots, weights=available_wrs['Selection_Weight'])
@@ -1590,9 +1641,14 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                     else:
                         wr = selected_wrs
                     
-                    # Handle TE
+                    # Handle TE if still needed
                     if need_te:
                         available_tes = te_pool
+                        # If we attempted stacking, prefer different team TEs for diversity
+                        if attempt_stack:
+                            different_team_tes = available_tes[available_tes['Team'] != qb_team]
+                            if len(different_team_tes) > 0:
+                                available_tes = different_team_tes
                         te = available_tes.sample(1, weights=available_tes['Selection_Weight'])
                     else:
                         te = selected_te
