@@ -1,0 +1,152 @@
+{
+  "lineups": [
+    {
+      "id": "lineup_1_20251029_122201",
+      "score": 128.9,
+      "projected_points": 128.9,
+      "total_salary": 58400,
+      "saved_date": "2025-10-29T12:22:01.755299",
+      "players": [
+        {
+          "nickname": "Patrick Mahomes",
+          "position": "QB",
+          "team": "KC",
+          "salary": 8500,
+          "fppg": 25.3700008392334
+        },
+        {
+          "nickname": "Jahmyr Gibbs",
+          "position": "RB",
+          "team": "DET",
+          "salary": 8900,
+          "fppg": 18.571428571428573
+        },
+        {
+          "nickname": "D'Andre Swift",
+          "position": "RB",
+          "team": "CHI",
+          "salary": 6900,
+          "fppg": 15.514285496303014
+        },
+        {
+          "nickname": "Tyquan Thornton",
+          "position": "WR",
+          "team": "KC",
+          "salary": 4900,
+          "fppg": 9.34999974568685
+        },
+        {
+          "nickname": "Rashee Rice",
+          "position": "WR",
+          "team": "KC",
+          "salary": 8200,
+          "fppg": 20.350000381469727
+        },
+        {
+          "nickname": "Quentin Johnston",
+          "position": "WR",
+          "team": "LAC",
+          "salary": 7000,
+          "fppg": 13.90000025431315
+        },
+        {
+          "nickname": "Jake Tonges",
+          "position": "TE",
+          "team": "SF",
+          "salary": 4700,
+          "fppg": 8.514285496303014
+        },
+        {
+          "nickname": "Houston Texans",
+          "position": "D",
+          "team": "HOU",
+          "salary": 3900,
+          "fppg": 9.428571428571429
+        },
+        {
+          "nickname": "Jakobi Meyers",
+          "position": "WR",
+          "team": "LV",
+          "salary": 5400,
+          "fppg": 7.900000254313151
+        }
+      ]
+    },
+    {
+      "id": "lineup_2_20251029_122213",
+      "score": 128.8,
+      "projected_points": 128.8,
+      "total_salary": 59900,
+      "saved_date": "2025-10-29T12:22:13.874959",
+      "players": [
+        {
+          "nickname": "Patrick Mahomes",
+          "position": "QB",
+          "team": "KC",
+          "salary": 8500,
+          "fppg": 25.3700008392334
+        },
+        {
+          "nickname": "Josh Jacobs",
+          "position": "RB",
+          "team": "GB",
+          "salary": 9400,
+          "fppg": 18.185714721679688
+        },
+        {
+          "nickname": "James Cook III",
+          "position": "RB",
+          "team": "BUF",
+          "salary": 8400,
+          "fppg": 20.5999995640346
+        },
+        {
+          "nickname": "Rashee Rice",
+          "position": "WR",
+          "team": "KC",
+          "salary": 8200,
+          "fppg": 20.350000381469727
+        },
+        {
+          "nickname": "Hollywood Brown",
+          "position": "WR",
+          "team": "KC",
+          "salary": 5400,
+          "fppg": 8.949999809265137
+        },
+        {
+          "nickname": "Tre Tucker",
+          "position": "WR",
+          "team": "LV",
+          "salary": 5500,
+          "fppg": 11.9000004359654
+        },
+        {
+          "nickname": "Hunter Henry",
+          "position": "TE",
+          "team": "NE",
+          "salary": 5300,
+          "fppg": 8.524999618530273
+        },
+        {
+          "nickname": "Chicago Bears",
+          "position": "D",
+          "team": "CHI",
+          "salary": 4000,
+          "fppg": 7.285714285714286
+        },
+        {
+          "nickname": "Keon Coleman",
+          "position": "WR",
+          "team": "BUF",
+          "salary": 5200,
+          "fppg": 7.600000108991351
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "created": "2025-10-29T12:22:01.755066",
+    "last_updated": "2025-10-29T12:22:13.877998"
+  }
+}

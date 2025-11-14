@@ -466,7 +466,7 @@ def load_player_data():
     import os
     
     # Direct path to the exact file we want
-    csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EST-11 EST-09 EST-122492-players-list.csv"
+    csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EST-11 EST-16 EST-122849-players-list.csv"
     
     if not os.path.exists(csv_file):
         st.error(f"CSV file not found: {csv_file}")
@@ -583,7 +583,7 @@ def calculate_ceiling_floor_projections(df):
     import os
     
     # ONLY use the October 26th CSV file (version 2)
-    target_file = 'FanDuel-NFL-2025 EST-11 EST-09 EST-122492-players-list.csv'
+    target_file = 'FanDuel-NFL-2025 EST-11 EST-16 EST-122849-players-list.csv'
     
     # Debug: Show what we're looking for
     st.info(f"🔍 **Looking for CSV file:** {target_file}")
@@ -2698,7 +2698,7 @@ def main():
     
     with col2:
         # Show file info
-        csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EST-11 EST-09 EST-122492-players-list.csv"
+        csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EST-11 EST-16 EST-122849-players-list.csv"
         if os.path.exists(csv_file):
             file_time = os.path.getmtime(csv_file)
             import datetime
