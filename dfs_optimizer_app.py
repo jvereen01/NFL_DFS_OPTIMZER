@@ -461,15 +461,53 @@ if 'stacked_lineups' not in st.session_state:
 def load_player_data():
     """Load and process player data with enhanced validation and optimization"""
     
-    # DIRECT CSV LOADING - NO CACHING, NO FALLBACKS
+    # ROBUST CSV LOADING - Multiple fallback strategies
     import pandas as pd
     import os
+    import glob
     
-    # Direct path to the exact file we want
-    csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EST-11 EST-16 EST-122849-players-list.csv"
+    # Primary CSV filename
+    target_csv = "FanDuel-NFL-2025 EST-11 EST-16 EST-122849-players-list.csv"
+    csv_file = None
     
-    if not os.path.exists(csv_file):
-        st.error(f"CSV file not found: {csv_file}")
+    # Strategy 1: Try current working directory
+    if os.path.exists(target_csv):
+        csv_file = target_csv
+    
+    # Strategy 2: Try script directory
+    if not csv_file:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        script_csv = os.path.join(script_dir, target_csv)
+        if os.path.exists(script_csv):
+            csv_file = script_csv
+    
+    # Strategy 3: Find any FanDuel CSV file with similar pattern
+    if not csv_file:
+        patterns = [
+            "FanDuel-NFL-2025*EST-11*EST-16*.csv",
+            "FanDuel-NFL-2025*.csv",
+            "*FanDuel*.csv"
+        ]
+        
+        for pattern in patterns:
+            matching_files = glob.glob(pattern)
+            if matching_files:
+                # Use the most recent file
+                csv_file = max(matching_files, key=os.path.getmtime)
+                st.info(f"📁 Using CSV file: {os.path.basename(csv_file)}")
+                break
+    
+    if not csv_file:
+        st.error(f"❌ No suitable CSV file found!")
+        # Show available CSV files for debugging
+        try:
+            available_csvs = [f for f in os.listdir('.') if f.endswith('.csv')]
+            if available_csvs:
+                st.error(f"Available CSV files: {available_csvs}")
+            else:
+                st.error("No CSV files found in directory")
+        except:
+            st.error("Could not list directory contents")
         return pd.DataFrame()
     
     try:
@@ -888,9 +926,29 @@ def create_performance_boosts(fantasy_data, wr_boost_multiplier=1.0, rb_boost_mu
         # WR boosts
         wr_fantasy = fantasy_data[fantasy_data['FantPos'] == 'WR'].copy()
         if len(wr_fantasy) > 0:
-            wr_fantasy['Tgt_Percentile'] = wr_fantasy['Tgt'].rank(pct=True, na_option='bottom')
-            wr_fantasy['Rec_Percentile'] = wr_fantasy['Rec'].rank(pct=True, na_option='bottom')
-            wr_fantasy['FDPt_Percentile'] = wr_fantasy['FDPt'].rank(pct=True, na_option='bottom')
+            # Check for required columns and use fallbacks
+            has_tgt = 'Tgt' in wr_fantasy.columns
+            has_rec = 'Rec' in wr_fantasy.columns
+            has_fdpt = 'FDPt' in wr_fantasy.columns
+            has_fantpt = 'FantPt' in wr_fantasy.columns
+            
+            if has_tgt:
+                wr_fantasy['Tgt_Percentile'] = wr_fantasy['Tgt'].rank(pct=True, na_option='bottom')
+            else:
+                wr_fantasy['Tgt_Percentile'] = 0.5
+                
+            if has_rec:
+                wr_fantasy['Rec_Percentile'] = wr_fantasy['Rec'].rank(pct=True, na_option='bottom')
+            else:
+                wr_fantasy['Rec_Percentile'] = 0.5
+                
+            # Use FDPt if available, otherwise use FantPt as fallback
+            if has_fdpt:
+                wr_fantasy['FDPt_Percentile'] = wr_fantasy['FDPt'].rank(pct=True, na_option='bottom')
+            elif has_fantpt:
+                wr_fantasy['FDPt_Percentile'] = wr_fantasy['FantPt'].rank(pct=True, na_option='bottom')
+            else:
+                wr_fantasy['FDPt_Percentile'] = 0.5
             
             wr_fantasy['WR_Performance_Score'] = (
                 wr_fantasy['Tgt_Percentile'] * 0.25 +
@@ -905,9 +963,29 @@ def create_performance_boosts(fantasy_data, wr_boost_multiplier=1.0, rb_boost_mu
         # RB boosts
         rb_fantasy = fantasy_data[fantasy_data['FantPos'] == 'RB'].copy()
         if len(rb_fantasy) > 0:
-            rb_fantasy['FDPt_Percentile'] = rb_fantasy['FDPt'].rank(pct=True, na_option='bottom')
-            rb_fantasy['Att_Percentile'] = rb_fantasy['Att_1'].rank(pct=True, na_option='bottom')
-            rb_fantasy['Rec_Percentile'] = rb_fantasy['Rec'].rank(pct=True, na_option='bottom')
+            # Check for required columns
+            has_fdpt = 'FDPt' in rb_fantasy.columns
+            has_fantpt = 'FantPt' in rb_fantasy.columns
+            has_att = 'Att_1' in rb_fantasy.columns
+            has_rec = 'Rec' in rb_fantasy.columns
+            
+            # Use FDPt or FantPt fallback
+            if has_fdpt:
+                rb_fantasy['FDPt_Percentile'] = rb_fantasy['FDPt'].rank(pct=True, na_option='bottom')
+            elif has_fantpt:
+                rb_fantasy['FDPt_Percentile'] = rb_fantasy['FantPt'].rank(pct=True, na_option='bottom')
+            else:
+                rb_fantasy['FDPt_Percentile'] = 0.5
+                
+            if has_att:
+                rb_fantasy['Att_Percentile'] = rb_fantasy['Att_1'].rank(pct=True, na_option='bottom')
+            else:
+                rb_fantasy['Att_Percentile'] = 0.5
+                
+            if has_rec:
+                rb_fantasy['Rec_Percentile'] = rb_fantasy['Rec'].rank(pct=True, na_option='bottom')
+            else:
+                rb_fantasy['Rec_Percentile'] = 0.5
             
             rb_fantasy['RB_Performance_Score'] = (
                 rb_fantasy['FDPt_Percentile'] * 0.5 +
@@ -922,8 +1000,23 @@ def create_performance_boosts(fantasy_data, wr_boost_multiplier=1.0, rb_boost_mu
         # TE boosts - prioritize receptions and FDPts
         te_fantasy = fantasy_data[fantasy_data['FantPos'] == 'TE'].copy()
         if len(te_fantasy) > 0:
-            te_fantasy['Rec_Percentile'] = te_fantasy['Rec'].rank(pct=True, na_option='bottom')
-            te_fantasy['FDPt_Percentile'] = te_fantasy['FDPt'].rank(pct=True, na_option='bottom')
+            # Check for required columns
+            has_rec = 'Rec' in te_fantasy.columns
+            has_fdpt = 'FDPt' in te_fantasy.columns
+            has_fantpt = 'FantPt' in te_fantasy.columns
+            
+            if has_rec:
+                te_fantasy['Rec_Percentile'] = te_fantasy['Rec'].rank(pct=True, na_option='bottom')
+            else:
+                te_fantasy['Rec_Percentile'] = 0.5
+                
+            # Use FDPt or FantPt fallback
+            if has_fdpt:
+                te_fantasy['FDPt_Percentile'] = te_fantasy['FDPt'].rank(pct=True, na_option='bottom')
+            elif has_fantpt:
+                te_fantasy['FDPt_Percentile'] = te_fantasy['FantPt'].rank(pct=True, na_option='bottom')
+            else:
+                te_fantasy['FDPt_Percentile'] = 0.5
             
             # TE Performance Score: 50% Receptions + 50% FDPts
             te_fantasy['TE_Performance_Score'] = (
@@ -938,7 +1031,17 @@ def create_performance_boosts(fantasy_data, wr_boost_multiplier=1.0, rb_boost_mu
         # QB boosts - based purely on FDPts performance
         qb_fantasy = fantasy_data[fantasy_data['FantPos'] == 'QB'].copy()
         if len(qb_fantasy) > 0:
-            qb_fantasy['FDPt_Percentile'] = qb_fantasy['FDPt'].rank(pct=True, na_option='bottom')
+            # Check for required columns
+            has_fdpt = 'FDPt' in qb_fantasy.columns
+            has_fantpt = 'FantPt' in qb_fantasy.columns
+            
+            # Use FDPt or FantPt fallback
+            if has_fdpt:
+                qb_fantasy['FDPt_Percentile'] = qb_fantasy['FDPt'].rank(pct=True, na_option='bottom')
+            elif has_fantpt:
+                qb_fantasy['FDPt_Percentile'] = qb_fantasy['FantPt'].rank(pct=True, na_option='bottom')
+            else:
+                qb_fantasy['FDPt_Percentile'] = 0.5
             
             # QB Performance Score: 100% FDPts (simple but effective)
             qb_fantasy['QB_Performance_Score'] = qb_fantasy['FDPt_Percentile']
