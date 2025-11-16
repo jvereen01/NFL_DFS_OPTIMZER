@@ -3638,8 +3638,8 @@ def main():
                     selected_player = ""
                 
                 if selected_player:
-                    # Get current player stats
-                    player_row = df[df['Nickname'] == selected_player].iloc[0]
+                    # Get current player stats from unfiltered data (includes sub-5 FPPG players)
+                    player_row = unfiltered_df[unfiltered_df['Nickname'] == selected_player].iloc[0]
                     current_fppg = player_row['FPPG']
                     current_salary = player_row['Salary']
                     current_pos = player_row['Position']
@@ -3681,15 +3681,30 @@ def main():
                         else:
                             original_fppg = st.session_state.projection_overrides[selected_player]['original']
                         
-                        # Apply the override
+                        # Apply the override - check if player exists in filtered df
                         mask = df['Nickname'] == selected_player
-                        df.loc[mask, 'FPPG'] = new_projection
-                        df.loc[mask, 'Adjusted_FPPG'] = new_projection * global_fppg_adjustment
-                        
-                        # Adjust ceiling/floor proportionally if they exist
-                        if 'Ceiling' in df.columns and 'Floor' in df.columns:
-                            df.loc[mask, 'Ceiling'] = df.loc[mask, 'Ceiling'] * adjustment_factor
-                            df.loc[mask, 'Floor'] = df.loc[mask, 'Floor'] * adjustment_factor
+                        if mask.any():
+                            # Player exists in filtered df - update them
+                            df.loc[mask, 'FPPG'] = new_projection
+                            df.loc[mask, 'Adjusted_FPPG'] = new_projection * global_fppg_adjustment
+                            
+                            # Adjust ceiling/floor proportionally if they exist
+                            if 'Ceiling' in df.columns and 'Floor' in df.columns:
+                                df.loc[mask, 'Ceiling'] = df.loc[mask, 'Ceiling'] * adjustment_factor
+                                df.loc[mask, 'Floor'] = df.loc[mask, 'Floor'] * adjustment_factor
+                        else:
+                            # Player was filtered out - add them back to df with new projection
+                            player_data = unfiltered_df[unfiltered_df['Nickname'] == selected_player].copy()
+                            player_data.loc[:, 'FPPG'] = new_projection
+                            player_data.loc[:, 'Adjusted_FPPG'] = new_projection * global_fppg_adjustment
+                            
+                            # Adjust ceiling/floor proportionally if they exist
+                            if 'Ceiling' in player_data.columns and 'Floor' in player_data.columns:
+                                player_data.loc[:, 'Ceiling'] = player_data['Ceiling'] * adjustment_factor
+                                player_data.loc[:, 'Floor'] = player_data['Floor'] * adjustment_factor
+                            
+                            # Add player back to main dataframe
+                            df = pd.concat([df, player_data], ignore_index=True)
                         
                         # Track the override in session state
                         st.session_state.projection_overrides[selected_player] = {
