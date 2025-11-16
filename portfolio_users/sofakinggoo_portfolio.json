@@ -1,7 +1,90 @@
 {
-  "lineups": [],
+  "lineups": [
+    {
+      "id": "lineup_1_20251115_192819",
+      "score": 117.00789640820214,
+      "projected_points": 117.00789640820214,
+      "total_salary": 59900,
+      "saved_date": "2025-11-15T19:28:19.317277",
+      "players": [
+        {
+          "id": "122849-152575",
+          "nickname": "J.J. McCarthy",
+          "position": "QB",
+          "team": "MIN",
+          "salary": 6800,
+          "fppg": 16.170000076293945
+        },
+        {
+          "id": "122849-85671",
+          "nickname": "Justin Jefferson",
+          "position": "WR",
+          "team": "MIN",
+          "salary": 8600,
+          "fppg": 12.5
+        },
+        {
+          "id": "122849-91626",
+          "nickname": "James Cook III",
+          "position": "RB",
+          "team": "BUF",
+          "salary": 8900,
+          "fppg": 18.711110432942707
+        },
+        {
+          "id": "122849-91598",
+          "nickname": "D'Andre Swift",
+          "position": "RB",
+          "team": "CHI",
+          "salary": 6900,
+          "fppg": 15.112500190734863
+        },
+        {
+          "id": "122849-45889",
+          "nickname": "Davante Adams",
+          "position": "WR",
+          "team": "LAR",
+          "salary": 8000,
+          "fppg": 14.97777811686198
+        },
+        {
+          "id": "122849-89220",
+          "nickname": "Tyquan Thornton",
+          "position": "WR",
+          "team": "KC",
+          "salary": 4600,
+          "fppg": 8.014285496303014
+        },
+        {
+          "id": "122849-83117",
+          "nickname": "Tanner Hudson",
+          "position": "TE",
+          "team": "CIN",
+          "salary": 4200,
+          "fppg": 5.200000127156575
+        },
+        {
+          "id": "122849-12554",
+          "nickname": "Jacksonville Jaguars",
+          "position": "D",
+          "team": "JAC",
+          "salary": 3700,
+          "fppg": 7.222222222222222
+        },
+        {
+          "id": "122849-111311",
+          "nickname": "Rashee Rice",
+          "position": "WR",
+          "team": "KC",
+          "salary": 8200,
+          "fppg": 19.099999745686848
+        }
+      ]
+    }
+  ],
   "metadata": {
-    "created": "2025-11-03T20:51:31.081738",
-    "user": "sofakinggoo"
+    "created": "2025-11-15T18:46:22.326728",
+    "user": "sofakinggoo",
+    "last_updated": "2025-11-15T19:28:19.319400"
   }
 }
