@@ -3573,13 +3573,35 @@ def main():
             st.caption("🌍 Adjust individual player projections globally - changes apply to all users")
             
             with st.expander("🎯 Override Player Projections (Global)", expanded=False):
+                # Load unfiltered data for override selection (includes players under 5 points)
+                try:
+                    import pandas as pd
+                    target_csv = "FanDuel-NFL-2025 EST-11 EST-16 EST-122849-players-list.csv"
+                    unfiltered_df = pd.read_csv(target_csv)
+                    unfiltered_df.columns = [col.strip() for col in unfiltered_df.columns]
+                    
+                    # Apply only essential filters (injury/salary) but NOT the 5-point filter
+                    if 'Injury Indicator' in unfiltered_df.columns:
+                        unfiltered_df = unfiltered_df[~unfiltered_df['Injury Indicator'].isin(['IR', 'O', 'D'])]
+                    
+                    if 'Salary' in unfiltered_df.columns and 'Position' in unfiltered_df.columns:
+                        defense_mask = (unfiltered_df['Position'] == 'D') & (unfiltered_df['Salary'] >= 3000) & (unfiltered_df['Salary'] <= 5000)
+                        other_positions_mask = (unfiltered_df['Position'] != 'D') & (unfiltered_df['Salary'] >= 5000)
+                        unfiltered_df = unfiltered_df[defense_mask | other_positions_mask]
+                    
+                    st.caption(f"📊 Showing {len(unfiltered_df)} total players (including those under 5 FPPG for manual adjustment)")
+                except:
+                    # Fallback to filtered df if unfiltered loading fails
+                    unfiltered_df = df
+                    st.caption("⚠️ Using filtered data - some low-projection players may not be available")
+                
                 col1, col2 = st.columns(2)
                 
                 with col1:
                     st.markdown("**Select Player to Override:**")
                     
                     # Position filter
-                    positions = ["All Positions"] + sorted(df['Position'].unique().tolist())
+                    positions = ["All Positions"] + sorted(unfiltered_df['Position'].unique().tolist())
                     selected_position = st.selectbox(
                         "Filter by Position:",
                         positions,
@@ -3588,10 +3610,10 @@ def main():
                     
                     # Filter players by position if selected
                     if selected_position == "All Positions":
-                        filtered_df = df
+                        filtered_df = unfiltered_df
                         position_label = ""
                     else:
-                        filtered_df = df[df['Position'] == selected_position]
+                        filtered_df = unfiltered_df[unfiltered_df['Position'] == selected_position]
                         position_label = f" ({selected_position}s)"
                 
                 # Sort players by salary (descending) for easier navigation
@@ -3703,8 +3725,8 @@ def main():
             bulk_col1, bulk_col2 = st.columns(2)
             
             with bulk_col1:
-                # Team-based adjustments
-                teams = sorted(df['Team'].unique())
+                # Team-based adjustments (use unfiltered data to include all players)
+                teams = sorted(unfiltered_df['Team'].unique())
                 selected_team = st.selectbox("Adjust Entire Team:", [""] + teams)
                 
                 if selected_team:
@@ -3715,11 +3737,11 @@ def main():
                     )
                     
                     if st.button(f"Apply to All {selected_team} Players", key=f"apply_team_{selected_team}"):
-                        team_mask = df['Team'] == selected_team
-                        team_players = df[team_mask]['Nickname'].tolist()
+                        team_mask = unfiltered_df['Team'] == selected_team
+                        team_players = unfiltered_df[team_mask]['Nickname'].tolist()
                         
                         for player in team_players:
-                            current_fppg = df[df['Nickname'] == player]['FPPG'].iloc[0]
+                            current_fppg = unfiltered_df[unfiltered_df['Nickname'] == player]['FPPG'].iloc[0]
                             new_fppg = current_fppg * team_adjustment
                             
                             # Store override
@@ -3731,7 +3753,7 @@ def main():
                             st.session_state.projection_overrides[player] = {
                                 'original': original_fppg,
                                 'new': new_fppg,
-                                'position': df[df['Nickname'] == player]['Position'].iloc[0],
+                                'position': unfiltered_df[unfiltered_df['Nickname'] == player]['Position'].iloc[0],
                                 'adjustment_factor': team_adjustment
                             }
                             
@@ -3750,7 +3772,7 @@ def main():
                         st.rerun()
             
             with bulk_col2:
-                # Position-based adjustments
+                # Position-based adjustments (use unfiltered data to include all players)
                 positions = ['QB', 'RB', 'WR', 'TE']
                 selected_pos = st.selectbox("Adjust by Position:", [""] + positions)
                 
@@ -3762,11 +3784,11 @@ def main():
                     )
                     
                     if st.button(f"Apply to All {selected_pos}s", key=f"apply_pos_{selected_pos}"):
-                        pos_mask = df['Position'] == selected_pos
-                        pos_players = df[pos_mask]['Nickname'].tolist()
+                        pos_mask = unfiltered_df['Position'] == selected_pos
+                        pos_players = unfiltered_df[pos_mask]['Nickname'].tolist()
                         
                         for player in pos_players:
-                            current_fppg = df[df['Nickname'] == player]['FPPG'].iloc[0]
+                            current_fppg = unfiltered_df[unfiltered_df['Nickname'] == player]['FPPG'].iloc[0]
                             new_fppg = current_fppg * pos_adjustment
                             
                             # Store override
