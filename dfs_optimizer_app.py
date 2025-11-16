@@ -541,6 +541,14 @@ def load_player_data():
         if 'Injury Indicator' in df.columns:
             df = df[~df['Injury Indicator'].isin(['IR', 'O', 'D'])]  # Removed 'Q' from exclusions
         
+        # Apply minimum 5-point fantasy projection filter
+        if 'FPPG' in df.columns:
+            pre_filter_count = len(df)
+            df = df[df['FPPG'] > 5.0]
+            filtered_count = pre_filter_count - len(df)
+            if filtered_count > 0:
+                print(f"Filtered out {filtered_count} players with projections ≤ 5.0 points during data loading")
+        
         # Add ceiling and floor projections
         df = calculate_ceiling_floor_projections(df)
         
@@ -649,6 +657,8 @@ def calculate_ceiling_floor_projections(df):
         # Use enhanced loading with validation and optimization
         try:
             with log_operation("load_player_data"):
+                # Clear cache to ensure latest filter logic is applied
+                cached_load_player_data.clear()
                 df = cached_load_player_data()
                 
                 # Add validation
@@ -763,6 +773,14 @@ def calculate_ceiling_floor_projections(df):
         defense_mask = (df['Position'] == 'D') & (df['Salary'] >= 3000) & (df['Salary'] <= 5000)
         other_positions_mask = (df['Position'] != 'D') & (df['Salary'] >= 5000)
         df = df[defense_mask | other_positions_mask]
+        
+        # Apply minimum 5-point fantasy projection filter
+        if 'FPPG' in df.columns:
+            pre_fppg_count = len(df)
+            df = df[df['FPPG'] > 5.0]
+            fppg_filtered = pre_fppg_count - len(df)
+            if fppg_filtered > 0:
+                st.write(f"🔽 **Minimum FPPG filter:** Removed {fppg_filtered} players with ≤ 5.0 fantasy points")
         
         # Debug: Check CeeDee Lamb AFTER salary filtering
         lamb_after_salary = df[df['Nickname'].str.contains('Lamb', case=False, na=False)]
@@ -2966,9 +2984,18 @@ def main():
     
     # Load data
     with st.spinner("Loading player data..."):
+        # Clear cache to ensure 5-point filter takes effect
+        load_player_data.clear()
         df = load_player_data()
         
     if df is not None:
+        # Show filter results
+        if 'FPPG' in df.columns:
+            low_proj_count = len(df[df['FPPG'] <= 5.0])
+            if low_proj_count == 0:
+                st.success(f"✅ **5-point minimum filter active:** All {len(df)} players have >5.0 FPPG")
+            else:
+                st.warning(f"⚠️ **Filter not working:** {low_proj_count} players still have ≤5.0 FPPG")
         with st.spinner("Loading defensive matchup data..."):
             pass_defense, rush_defense = load_defensive_data()
             
@@ -3835,19 +3862,21 @@ def main():
                             else:
                                 st.error("❌ Failed to save global overrides")
         
-            # Apply minimum projection filter AFTER manual overrides (but skip manually overridden players)
+            # Re-apply minimum projection filter AFTER manual overrides (preserve manually overridden players)
             pre_filter_count = len(df)
             if hasattr(st.session_state, 'projection_overrides') and st.session_state.projection_overrides:
                 # Keep all players with manual overrides, regardless of their projection
                 manually_overridden = df['Nickname'].isin(st.session_state.projection_overrides.keys())
                 df = df[(df['FPPG'] > 5.0) | manually_overridden]
+                
+                filtered_count = pre_filter_count - len(df)
+                if filtered_count > 0:
+                    st.info(f"🔽 Filtered out {filtered_count} additional players with projections ≤ 5.0 points (manual overrides preserved)")
             else:
-                # No overrides, apply standard filter
-                df = df[df['FPPG'] > 5.0]
-            
-            filtered_count = pre_filter_count - len(df)
-            if filtered_count > 0:
-                st.info(f"🔽 Filtered out {filtered_count} players with projections ≤ 5.0 points (manual overrides preserved)")
+                # Check if any low-projection players need filtering (shouldn't be any from main load, but just in case)
+                low_proj_players = df[df['FPPG'] <= 5.0]
+                if len(low_proj_players) > 0:
+                    st.info(f"ℹ️ Found {len(low_proj_players)} players with projections ≤ 5.0 points (already filtered in main data load)")
         
         # Display top matchups (only if we have proper player data)
         if 'FPPG' in df.columns and 'Position' in df.columns and 'Nickname' in df.columns:

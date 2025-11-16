@@ -166,6 +166,16 @@ def cached_load_player_data():
             else:
                 st.write(f"✅ **CeeDee Lamb in final dataset:** ${cedee_final.iloc[0]['Salary']:,}")
         
+        # Apply minimum 5-point fantasy projection filter
+        if 'FPPG' in df.columns:
+            st.write(f"🎯 **Before FPPG filter:** {len(df)} players")
+            pre_fppg_count = len(df)
+            df = df[df['FPPG'] > 5.0]
+            fppg_filtered = pre_fppg_count - len(df)
+            if fppg_filtered > 0:
+                st.write(f"🔽 **Minimum FPPG filter:** Removed {fppg_filtered} players with ≤ 5.0 fantasy points")
+            st.write(f"🎯 **After FPPG filter:** {len(df)} players")
+        
         return df
         
     except Exception as e:
