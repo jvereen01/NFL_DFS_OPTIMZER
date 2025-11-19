@@ -3576,24 +3576,52 @@ def main():
                 # Load unfiltered data for override selection (includes players under 5 points)
                 try:
                     import pandas as pd
+                    import os
+                    
+                    # Try multiple strategies to find the CSV file
                     target_csv = "FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-list.csv"
-                    unfiltered_df = pd.read_csv(target_csv)
-                    unfiltered_df.columns = [col.strip() for col in unfiltered_df.columns]
+                    csv_file = None
                     
-                    # Apply only essential filters (injury/salary) but NOT the 5-point filter
-                    if 'Injury Indicator' in unfiltered_df.columns:
-                        unfiltered_df = unfiltered_df[~unfiltered_df['Injury Indicator'].isin(['IR', 'O', 'D'])]
+                    # Strategy 1: Current directory
+                    if os.path.exists(target_csv):
+                        csv_file = target_csv
+                    # Strategy 2: Script directory
+                    if not csv_file:
+                        script_dir = os.path.dirname(os.path.abspath(__file__))
+                        script_csv = os.path.join(script_dir, target_csv)
+                        if os.path.exists(script_csv):
+                            csv_file = script_csv
+                    # Strategy 3: Find any matching CSV
+                    if not csv_file:
+                        import glob
+                        matching_files = glob.glob("*EST-11*EST-23*.csv")
+                        if matching_files:
+                            csv_file = matching_files[0]
                     
-                    if 'Salary' in unfiltered_df.columns and 'Position' in unfiltered_df.columns:
-                        defense_mask = (unfiltered_df['Position'] == 'D') & (unfiltered_df['Salary'] >= 3000) & (unfiltered_df['Salary'] <= 5000)
-                        other_positions_mask = (unfiltered_df['Position'] != 'D') & (unfiltered_df['Salary'] >= 5000)
-                        unfiltered_df = unfiltered_df[defense_mask | other_positions_mask]
-                    
-                    st.caption(f"📊 Showing {len(unfiltered_df)} total players (including those under 5 FPPG for manual adjustment)")
-                except:
+                    if csv_file:
+                        unfiltered_df = pd.read_csv(csv_file)
+                        unfiltered_df.columns = [col.strip() for col in unfiltered_df.columns]
+                        
+                        # Apply only essential filters but NOT salary or projection filters
+                        original_count = len(unfiltered_df)
+                        
+                        # Remove players with severe injury designations that prevent play
+                        if 'Injury Indicator' in unfiltered_df.columns:
+                            unfiltered_df = unfiltered_df[~unfiltered_df['Injury Indicator'].isin(['IR', 'O', 'D'])]
+                        
+                        # No salary filtering - include all players regardless of salary for manual overrides
+                        filtered_count = len(unfiltered_df)
+                        
+                        st.caption(f"📊 Loaded {filtered_count} players from {original_count} total (removed {original_count - filtered_count} with IR/O/D status)")
+                        success = True
+                    else:
+                        raise FileNotFoundError("CSV file not found")
+                        
+                except Exception as e:
                     # Fallback to filtered df if unfiltered loading fails
                     unfiltered_df = df
-                    st.caption("⚠️ Using filtered data - some low-projection players may not be available")
+                    st.caption(f"⚠️ Could not load unfiltered data ({str(e)[:50]}...) - using filtered data. Some low-projection players may not be available")
+                    success = False
                 
                 col1, col2 = st.columns(2)
                 
