@@ -473,8 +473,9 @@ def load_player_data():
     import os
     import glob
     
-    # Direct path to the exact file we want
-    csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-list.csv"
+    # Target CSV filename
+    target_csv = "FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-list.csv"
+    csv_file = None
     
     # Strategy 1: Try current working directory
     if os.path.exists(target_csv):
@@ -490,7 +491,7 @@ def load_player_data():
     # Strategy 3: Find any FanDuel CSV file with similar pattern
     if not csv_file:
         patterns = [
-            "FanDuel-NFL-2025*EST-11*EST-16*.csv",
+            "FanDuel-NFL-2025*EST-11*EST-23*.csv",
             "FanDuel-NFL-2025*.csv",
             "*FanDuel*.csv"
         ]
@@ -3575,7 +3576,7 @@ def main():
                 # Load unfiltered data for override selection (includes players under 5 points)
                 try:
                     import pandas as pd
-                    target_csv = "FanDuel-NFL-2025 EST-11 EST-16 EST-122849-players-list.csv"
+                    target_csv = "FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-list.csv"
                     unfiltered_df = pd.read_csv(target_csv)
                     unfiltered_df.columns = [col.strip() for col in unfiltered_df.columns]
                     
