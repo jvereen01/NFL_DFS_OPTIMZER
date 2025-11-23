@@ -1,0 +1,18 @@
+2025-11-14 08:19:15,040 | PERF | load_player_data_failed | Duration: 0.018s | Details: {"error": "Required CSV file not found: FanDuel-NFL-2025 EST-11 EST-02 EST-122147-players-list.csv"}
+2025-11-14 08:21:09,256 | PERF | load_player_data | Duration: 0.156s
+2025-11-14 09:36:30,428 | PERF | load_player_data | Duration: 0.118s
+2025-11-14 10:06:57,962 | PERF | load_player_data | Duration: 0.091s
+2025-11-14 10:18:53,595 | PERF | load_player_data | Duration: 0.053s
+2025-11-14 11:02:21,852 | PERF | load_player_data | Duration: 0.069s
+2025-11-14 11:10:24,211 | PERF | load_player_data | Duration: 0.075s
+2025-11-14 11:11:03,054 | PERF | load_player_data | Duration: 0.054s
+2025-11-14 11:13:33,701 | PERF | load_player_data | Duration: 0.038s
+2025-11-14 11:15:10,500 | PERF | load_player_data | Duration: 0.046s
+2025-11-14 11:15:14,500 | PERF | load_player_data | Duration: 0.045s
+2025-11-14 11:15:31,362 | PERF | load_player_data | Duration: 0.054s
+2025-11-14 11:17:35,942 | PERF | load_player_data | Duration: 0.042s
+2025-11-14 11:18:33,022 | PERF | load_player_data | Duration: 0.041s
+2025-11-14 11:18:35,178 | PERF | load_player_data | Duration: 0.040s
+2025-11-14 11:18:39,674 | PERF | load_player_data | Duration: 0.038s
+2025-11-14 11:22:19,804 | PERF | load_player_data | Duration: 0.035s
+2025-11-14 11:22:44,756 | PERF | load_player_data | Duration: 0.039s

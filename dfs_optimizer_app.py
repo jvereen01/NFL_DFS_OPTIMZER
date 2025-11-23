@@ -391,6 +391,55 @@ def remove_lineup_by_players(lineup_data, username="default"):
     except Exception:
         return False
 
+def generate_single_lineup_usage_breakdown(lineup_data):
+    """Generate a usage breakdown for a single lineup similar to the full analysis"""
+    try:
+        # Create usage summary for the single lineup
+        breakdown_data = []
+        
+        for _, player in lineup_data.iterrows():
+            position = player['Position']
+            if position == 'D':
+                position = 'DEF'
+            
+            # Calculate metrics for this player
+            points_per_dollar = (player.get('FPPG', 0) / player['Salary']) * 1000 if player['Salary'] > 0 else 0
+            
+            # Determine value tier
+            if player['Salary'] >= 8000:
+                value_tier = "Premium"
+            elif player['Salary'] >= 6000:
+                value_tier = "Mid-Tier"
+            else:
+                value_tier = "Value"
+            
+            # Calculate ceiling/floor estimates
+            ceiling_multiplier = 1.4 if player.get('Matchup_Quality') in ['ELITE TARGET', 'Great Target'] else 1.2
+            floor_multiplier = 0.6 if position in ['WR', 'TE'] else 0.7
+            
+            ceiling = player.get('FPPG', 0) * ceiling_multiplier
+            floor = player.get('FPPG', 0) * floor_multiplier
+            variance = ceiling - floor
+            upside_rating = "High" if variance >= 8 else "Medium" if variance >= 5 else "Low"
+            
+            breakdown_data.append({
+                'Player': player['Nickname'],
+                'Position': position,
+                'Team': player.get('Team', ''),
+                'Salary': f"${player['Salary']:,}",
+                'FPPG': f"{player.get('FPPG', 0):.1f}",
+                'Ceiling': f"{ceiling:.1f}",
+                'Floor': f"{floor:.1f}",
+                'Upside': upside_rating,
+                'Pts/$': f"{points_per_dollar:.2f}",
+                'Value Tier': value_tier,
+                'Matchup': player.get('Matchup_Quality', 'N/A')
+            })
+        
+        return breakdown_data
+    except Exception as e:
+        return []
+
 # Create minimal dummy functions to prevent crashes if enhanced features aren't available
 if not ENHANCED_FEATURES_AVAILABLE:
     def log_info(*args): pass
@@ -474,7 +523,7 @@ def load_player_data():
     import glob
     
     # Target CSV filename
-    target_csv = "FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-list.csv"
+    target_csv = "FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-listtoday.csv"
     csv_file = None
     
     # Strategy 1: Try current working directory
@@ -683,7 +732,7 @@ def calculate_ceiling_floor_projections(df):
     import os
     
     # ONLY use the November 23rd CSV file (version 3)
-    target_file = 'FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-list.csv'
+    target_file = 'FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-listtoday.csv'
     
     # Debug: Show what we're looking for
     st.info(f"🔍 **Looking for CSV file:** {target_file}")
@@ -2975,7 +3024,7 @@ def main():
     with col2:
         # Show file info
         import os
-        csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-list.csv"
+        csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-listtoday.csv"
         if os.path.exists(csv_file):
             file_time = os.path.getmtime(csv_file)
             import datetime
@@ -3257,7 +3306,7 @@ def main():
                     # Try to load the current CSV to get player IDs
                     player_id_lookup = {}
                     try:
-                        target_file = 'FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-list.csv'
+                        target_file = 'FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-listtoday.csv'
                         current_dir = os.getcwd()
                         csv_path = os.path.join(current_dir, target_file)
                         
@@ -3579,7 +3628,7 @@ def main():
                     import os
                     
                     # Try multiple strategies to find the CSV file
-                    target_csv = "FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-list.csv"
+                    target_csv = "FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-listtoday.csv"
                     csv_file = None
                     
                     # Strategy 1: Current directory
@@ -4590,6 +4639,22 @@ def main():
                             save_portfolio(existing_portfolio, current_user)
                             
                             st.success(f"✅ Saved to {current_user}'s portfolio! Session total: {len(st.session_state.stacked_lineups)} lineups")
+                            
+                            # Show usage breakdown for the saved lineup
+                            st.markdown("---")
+                            st.markdown("**📊 Saved Lineup Breakdown:**")
+                            breakdown_data = generate_single_lineup_usage_breakdown(builder_df)
+                            if breakdown_data:
+                                breakdown_df = pd.DataFrame(breakdown_data)
+                                st.dataframe(
+                                    breakdown_df, 
+                                    use_container_width=True, 
+                                    hide_index=True,
+                                    height=320
+                                )
+                                
+                                # Show lineup totals
+                                st.info(f"💰 **Total Salary:** ${total_salary:,} | 📈 **Total FPPG:** {total_fppg:.1f}")
                         except Exception as e:
                             st.warning(f"⚠️ Added to session but couldn't save to portfolio file: {e}")
                             st.success(f"✅ Added to session! Total: {len(st.session_state.stacked_lineups)} lineups")
@@ -4683,6 +4748,24 @@ def main():
                                 elif result == True:
                                     # SUCCESS: Saved to portfolio file
                                     st.success(f"✅ **PORTFOLIO SAVED!** Lineup added to {current_user}'s portfolio file (`portfolio_users/{current_user}_portfolio.json`)")
+                                    
+                                    # Show usage breakdown for the saved lineup
+                                    st.markdown("---")
+                                    st.markdown("**📊 Saved Lineup Breakdown:**")
+                                    breakdown_data = generate_single_lineup_usage_breakdown(saved_lineup)
+                                    if breakdown_data:
+                                        breakdown_df = pd.DataFrame(breakdown_data)
+                                        st.dataframe(
+                                            breakdown_df, 
+                                            use_container_width=True, 
+                                            hide_index=True,
+                                            height=320
+                                        )
+                                        
+                                        # Show lineup totals
+                                        total_salary = saved_lineup['Salary'].sum()
+                                        total_fppg = saved_lineup['FPPG'].sum()
+                                        st.info(f"💰 **Total Salary:** ${total_salary:,} | 📈 **Total FPPG:** {total_fppg:.1f}")
                                     
                                     # DEBUG: Verify file was actually written
                                     import os
@@ -5546,6 +5629,72 @@ def main():
                     if save_count > 0 or unsave_count > 0 or duplicate_count > 0 or error_count > 0:
                         if save_count > 0:
                             st.success(f"✅ Successfully saved {save_count} lineup(s) to {current_user}'s portfolio!")
+                            
+                            # Show usage breakdown for saved lineups
+                            if save_count > 0:
+                                st.markdown("---")
+                                st.markdown(f"**📊 Saved Lineups Breakdown ({save_count} lineup{'s' if save_count > 1 else ''}):**")
+                                
+                                # Collect data from all saved lineups
+                                all_saved_players = {}
+                                saved_lineup_count = 0
+                                
+                                for idx in processed_indices[:save_count]:  # Only process successfully saved lineups
+                                    if idx < len(display_lineups):
+                                        _, lineup_data, _, _, _, _ = display_lineups[idx]
+                                        saved_lineup_count += 1
+                                        
+                                        for _, player in lineup_data.iterrows():
+                                            player_name = player['Nickname']
+                                            position = player['Position']
+                                            if position == 'D':
+                                                position = 'DEF'
+                                            
+                                            key = f"{player_name} ({position})"
+                                            if key not in all_saved_players:
+                                                all_saved_players[key] = {
+                                                    'count': 0,
+                                                    'player_data': player
+                                                }
+                                            all_saved_players[key]['count'] += 1
+                                
+                                # Create usage breakdown
+                                saved_breakdown = []
+                                for player_key, data in all_saved_players.items():
+                                    player = data['player_data']
+                                    count = data['count']
+                                    usage_pct = (count / saved_lineup_count) * 100
+                                    
+                                    position = player['Position']
+                                    if position == 'D':
+                                        position = 'DEF'
+                                    
+                                    points_per_dollar = (player.get('FPPG', 0) / player['Salary']) * 1000 if player['Salary'] > 0 else 0
+                                    
+                                    saved_breakdown.append({
+                                        'Player': player['Nickname'],
+                                        'Position': position,
+                                        'Team': player.get('Team', ''),
+                                        'Salary': f"${player['Salary']:,}",
+                                        'FPPG': f"{player.get('FPPG', 0):.1f}",
+                                        'Count': f"{count}/{saved_lineup_count}",
+                                        'Usage %': f"{usage_pct:.1f}%",
+                                        'Pts/$': f"{points_per_dollar:.2f}",
+                                        'Matchup': player.get('Matchup_Quality', 'N/A')
+                                    })
+                                
+                                # Sort by usage percentage
+                                saved_breakdown.sort(key=lambda x: float(x['Usage %'].replace('%', '')), reverse=True)
+                                
+                                if saved_breakdown:
+                                    breakdown_df = pd.DataFrame(saved_breakdown)
+                                    st.dataframe(
+                                        breakdown_df, 
+                                        use_container_width=True, 
+                                        hide_index=True,
+                                        height=400
+                                    )
+                        
                         if unsave_count > 0:
                             st.success(f"✅ Successfully removed {unsave_count} lineup(s) from {current_user}'s portfolio!")
                         if duplicate_count > 0:
@@ -5628,6 +5777,25 @@ def main():
                                             st.rerun()  # Refresh to correct checkbox state
                                         elif result:
                                             st.success(f"✅ Successfully saved to {current_user}'s portfolio!")
+                                            
+                                            # Show usage breakdown for the saved lineup
+                                            st.markdown("---")
+                                            st.markdown("**📊 Saved Lineup Breakdown:**")
+                                            breakdown_data = generate_single_lineup_usage_breakdown(lineup)
+                                            if breakdown_data:
+                                                breakdown_df = pd.DataFrame(breakdown_data)
+                                                st.dataframe(
+                                                    breakdown_df, 
+                                                    use_container_width=True, 
+                                                    hide_index=True,
+                                                    height=320
+                                                )
+                                                
+                                                # Show lineup totals
+                                                total_salary = lineup['Salary'].sum()
+                                                total_fppg = lineup['FPPG'].sum()
+                                                st.info(f"💰 **Total Salary:** ${total_salary:,} | 📈 **Total FPPG:** {total_fppg:.1f}")
+                                            
                                             st.rerun()  # Refresh to update state
                                         else:
                                             st.error("❌ Failed to save lineup")
