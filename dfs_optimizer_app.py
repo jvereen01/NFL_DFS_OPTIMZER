@@ -3250,6 +3250,71 @@ def main():
                 lineup_df = pd.DataFrame(lineup_table_data)
                 st.dataframe(lineup_df, use_container_width=True, height=min(400, len(lineup_table_data) * 35 + 50))
                 
+                # Portfolio Usage Breakdown
+                st.markdown("---")
+                st.subheader("📊 Portfolio Usage Breakdown")
+                
+                # Collect data from all filtered lineups for usage analysis
+                all_portfolio_players = {}
+                total_lineups = len(filtered_lineups)
+                
+                for _, (_, saved_lineup) in enumerate(filtered_lineups):
+                    for player in saved_lineup['players']:
+                        player_name = player['nickname']
+                        position = player['position']
+                        if position == 'D':
+                            position = 'DEF'
+                        
+                        key = f"{player_name} ({position})"
+                        if key not in all_portfolio_players:
+                            all_portfolio_players[key] = {
+                                'count': 0,
+                                'player_data': player
+                            }
+                        all_portfolio_players[key]['count'] += 1
+                
+                # Create usage breakdown
+                portfolio_breakdown = []
+                for player_key, data in all_portfolio_players.items():
+                    player = data['player_data']
+                    count = data['count']
+                    usage_pct = (count / total_lineups) * 100 if total_lineups > 0 else 0
+                    
+                    position = player['position']
+                    if position == 'D':
+                        position = 'DEF'
+                    
+                    points_per_dollar = (player.get('fppg', 0) / player['salary']) * 1000 if player['salary'] > 0 else 0
+                    
+                    portfolio_breakdown.append({
+                        'Player': player['nickname'],
+                        'Position': position,
+                        'Team': player.get('team', ''),
+                        'Salary': f"${player['salary']:,}",
+                        'FPPG': f"{player.get('fppg', 0):.1f}",
+                        'Count': f"{count}/{total_lineups}",
+                        'Usage %': f"{usage_pct:.1f}%",
+                        'Pts/$': f"{points_per_dollar:.2f}"
+                    })
+                
+                # Sort by usage percentage
+                portfolio_breakdown.sort(key=lambda x: float(x['Usage %'].replace('%', '')), reverse=True)
+                
+                if portfolio_breakdown:
+                    portfolio_breakdown_df = pd.DataFrame(portfolio_breakdown)
+                    st.dataframe(
+                        portfolio_breakdown_df, 
+                        use_container_width=True, 
+                        hide_index=True,
+                        height=min(400, len(portfolio_breakdown) * 35 + 50)
+                    )
+                    
+                    # Show summary stats
+                    high_usage_players = len([p for p in portfolio_breakdown if float(p['Usage %'].replace('%', '')) >= 50])
+                    st.info(f"📈 **Portfolio Summary:** {len(portfolio_breakdown)} unique players | {high_usage_players} with 50%+ usage | {total_lineups} total lineups")
+                else:
+                    st.info("No player data available for usage breakdown.")
+                
                 # Individual remove buttons in a clean row layout
                 st.write("**Remove Filtered Lineups:**")
                 
@@ -5474,7 +5539,7 @@ def main():
                     # RECALCULATE STACKING FOR DISPLAY
                     actual_stacked_wrs, actual_stacked_tes, actual_qb_wr_te = recalculate_lineup_stacking(lineup)
                     
-                    # Get player names by position
+                    # Get player names by position (using full names for readability)
                     qb = lineup[lineup['Position'] == 'QB']['Nickname'].iloc[0] if len(lineup[lineup['Position'] == 'QB']) > 0 else 'N/A'
                     
                     # Get RBs
@@ -5492,7 +5557,7 @@ def main():
                     te_list = lineup[lineup['Position'] == 'TE']['Nickname'].tolist()
                     te = te_list[0] if len(te_list) > 0 else 'N/A'
                     
-                    # Get DST
+                    # Get DST (use full defense names)
                     dst = lineup[lineup['Position'] == 'D']['Nickname'].iloc[0] if len(lineup[lineup['Position'] == 'D']) > 0 else 'N/A'
                     
                     # Determine FLEX position (the 9th player - could be additional RB, WR, or TE)
@@ -5506,7 +5571,7 @@ def main():
                     for _, player_row in lineup.iterrows():
                         player_name = player_row['Nickname']
                         if player_name not in used_core_positions:
-                            flex_player = player_name
+                            flex_player = player_name  # Use full name
                             flex_pos = player_row['Position']
                             break
                     
@@ -5529,7 +5594,7 @@ def main():
                         'WR2': wr2,
                         'WR3': wr3,
                         'TE': te,
-                        'FLEX': f"{flex_player} ({flex_pos})" if flex_player != 'N/A' else 'N/A',
+                        'FLEX': f"{flex_player}" if flex_player != 'N/A' else 'N/A',
                         'DST': dst,
                         'Save': is_already_saved,  # Pre-check if lineup is already saved
                         'Lineup_Index': i-1  # Store index for portfolio saving
@@ -5539,23 +5604,23 @@ def main():
                 import pandas as pd
                 table_df = pd.DataFrame(table_data)
                 
-                # Configure column display and editing
+                # Configure column display and editing - BALANCED FOR FULL NAMES
                 column_config = {
-                    'Rank': st.column_config.NumberColumn('Rank', width='small'),
-                    'Points': st.column_config.NumberColumn('Points', format="%.1f", width='small'),
-                    'Salary': st.column_config.NumberColumn('Salary', format="$%d", width='small'),
-                    'Ceiling': st.column_config.NumberColumn('Ceiling', format="%.1f", width='small'),
-                    'Stack': st.column_config.TextColumn('Stack', width='small'),
-                    'QB': st.column_config.TextColumn('QB', width='medium'),
-                    'RB1': st.column_config.TextColumn('RB1', width='medium'),
-                    'RB2': st.column_config.TextColumn('RB2', width='medium'), 
-                    'WR1': st.column_config.TextColumn('WR1', width='medium'),
-                    'WR2': st.column_config.TextColumn('WR2', width='medium'),
-                    'WR3': st.column_config.TextColumn('WR3', width='medium'),
-                    'TE': st.column_config.TextColumn('TE', width='medium'),
-                    'FLEX': st.column_config.TextColumn('FLEX', width='medium'),
-                    'DST': st.column_config.TextColumn('DST', width='medium'),
-                    'Save': st.column_config.CheckboxColumn('💾 Save', help='Check to save/unsave lineup - checkboxes show current save status'),
+                    'Rank': st.column_config.NumberColumn('#', width=35),
+                    'Points': st.column_config.NumberColumn('Pts', format="%.1f", width=45),
+                    'Salary': st.column_config.NumberColumn('Sal', format="$%d", width=50),
+                    'Ceiling': st.column_config.NumberColumn('Ceil', format="%.1f", width=45),
+                    'Stack': st.column_config.TextColumn('Stack', width=65),
+                    'QB': st.column_config.TextColumn('QB', width=120),
+                    'RB1': st.column_config.TextColumn('RB1', width=120),
+                    'RB2': st.column_config.TextColumn('RB2', width=120), 
+                    'WR1': st.column_config.TextColumn('WR1', width=120),
+                    'WR2': st.column_config.TextColumn('WR2', width=120),
+                    'WR3': st.column_config.TextColumn('WR3', width=120),
+                    'TE': st.column_config.TextColumn('TE', width=120),
+                    'FLEX': st.column_config.TextColumn('FLEX', width=120),
+                    'DST': st.column_config.TextColumn('DST', width=110),
+                    'Save': st.column_config.CheckboxColumn('💾', help='Check to save/unsave lineup', width=30),
                 }
                 
                 st.write("**💾 Use checkboxes in the 'Save' column to add lineups to your portfolio:**")
@@ -5565,12 +5630,12 @@ def main():
                 current_user = st.session_state.get('selected_portfolio_user', 'sofakinggoo')
                 editor_key = f"lineup_save_editor_{current_user}_{len(display_lineups)}"
                 
-                # Display efficient data_editor table with save checkboxes
+                # Display efficient data_editor table with save checkboxes - COMPACT VERSION
                 edited_df = st.data_editor(
                     table_df.drop('Lineup_Index', axis=1),  # Hide index column from display
                     use_container_width=True,
                     hide_index=True,
-                    height=600,
+                    height=400,  # Reduced height for compactness
                     column_config=column_config,
                     disabled=[col for col in table_df.columns if col not in ['Save']],  # Only Save column is editable
                     key=editor_key  # Unique key for state management
