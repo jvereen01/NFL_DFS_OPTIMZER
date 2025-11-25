@@ -523,7 +523,7 @@ def load_player_data():
     import glob
     
     # Target CSV filename
-    target_csv = "FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-listtoday.csv"
+    target_csv = "FanDuel-NFL-2025 EST-11 EST-30 EST-123506-players-list.csv"
     csv_file = None
     
     # Strategy 1: Try current working directory
@@ -731,8 +731,8 @@ def calculate_ceiling_floor_projections(df):
     # Standard loading (original code)
     import os
     
-    # ONLY use the November 23rd CSV file (version 3)
-    target_file = 'FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-listtoday.csv'
+    # ONLY use the November 30th CSV file (latest version)
+    target_file = 'FanDuel-NFL-2025 EST-11 EST-30 EST-123506-players-list.csv'
     
     # Debug: Show what we're looking for
     st.info(f"🔍 **Looking for CSV file:** {target_file}")
@@ -3024,7 +3024,7 @@ def main():
     with col2:
         # Show file info
         import os
-        csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-listtoday.csv"
+        csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EST-11 EST-30 EST-123506-players-list.csv"
         if os.path.exists(csv_file):
             file_time = os.path.getmtime(csv_file)
             import datetime
@@ -3306,7 +3306,7 @@ def main():
                     # Try to load the current CSV to get player IDs
                     player_id_lookup = {}
                     try:
-                        target_file = 'FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-listtoday.csv'
+                        target_file = 'FanDuel-NFL-2025 EST-11 EST-30 EST-123506-players-list.csv'
                         current_dir = os.getcwd()
                         csv_path = os.path.join(current_dir, target_file)
                         
@@ -3331,15 +3331,17 @@ def main():
                         qb = next((p for p in players if p['position'] == 'QB'), None)
                         rbs = [p for p in players if p['position'] == 'RB']
                         wrs = [p for p in players if p['position'] == 'WR'] 
-                        te = next((p for p in players if p['position'] == 'TE'), None)
+                        tes = [p for p in players if p['position'] == 'TE']
                         dst = next((p for p in players if p['position'] == 'D'), None)
                         
-                        # Determine FLEX (3rd RB or 4th WR)
+                        # Determine FLEX (3rd RB, 4th WR, or 2nd TE)
                         flex_player = None
                         if len(rbs) >= 3:
                             flex_player = rbs[2]
                         elif len(wrs) >= 4:
                             flex_player = wrs[3]
+                        elif len(tes) >= 2:
+                            flex_player = tes[1]
                         
                         # Helper function to get player ID
                         def get_player_id(player):
@@ -3362,7 +3364,7 @@ def main():
                             'WR1': get_player_id(wrs[0]) if len(wrs) > 0 else '',
                             'WR2': get_player_id(wrs[1]) if len(wrs) > 1 else '',
                             'WR3': get_player_id(wrs[2]) if len(wrs) > 2 else '',
-                            'TE': get_player_id(te),
+                            'TE': get_player_id(tes[0]) if len(tes) > 0 else '',
                             'FLEX': get_player_id(flex_player),
                             'DEF': get_player_id(dst)
                         }
@@ -3628,7 +3630,7 @@ def main():
                     import os
                     
                     # Try multiple strategies to find the CSV file
-                    target_csv = "FanDuel-NFL-2025 EST-11 EST-23 EST-123168-players-listtoday.csv"
+                    target_csv = "FanDuel-NFL-2025 EST-11 EST-30 EST-123506-players-list.csv"
                     csv_file = None
                     
                     # Strategy 1: Current directory
