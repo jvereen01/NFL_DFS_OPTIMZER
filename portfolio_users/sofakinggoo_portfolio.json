@@ -1,8 +1,333 @@
 {
-  "lineups": [],
+  "lineups": [
+    {
+      "id": "lineup_1_20251124_203712",
+      "score": 125.0,
+      "projected_points": 125.0,
+      "total_salary": 59900,
+      "saved_date": "2025-11-24T20:37:12.142988",
+      "players": [
+        {
+          "id": "123506-62239",
+          "nickname": "Josh Allen",
+          "position": "QB",
+          "team": "BUF",
+          "salary": 9400,
+          "fppg": 24.85999922318892
+        },
+        {
+          "id": "123506-89675",
+          "nickname": "Jonathan Taylor",
+          "position": "RB",
+          "team": "IND",
+          "salary": 9900,
+          "fppg": 25.59090909090909
+        },
+        {
+          "id": "123506-55050",
+          "nickname": "Christian McCaffrey",
+          "position": "RB",
+          "team": "SF",
+          "salary": 8600,
+          "fppg": 22.990908536044035
+        },
+        {
+          "id": "123506-86518",
+          "nickname": "Khalil Shakir",
+          "position": "WR",
+          "team": "BUF",
+          "salary": 6300,
+          "fppg": 9.35454559326172
+        },
+        {
+          "id": "123506-157467",
+          "nickname": "Keon Coleman",
+          "position": "WR",
+          "team": "BUF",
+          "salary": 5000,
+          "fppg": 7.555555555555555
+        },
+        {
+          "id": "123506-63634",
+          "nickname": "Jakobi Meyers",
+          "position": "WR",
+          "team": "JAC",
+          "salary": 6100,
+          "fppg": 7.919999694824218
+        },
+        {
+          "id": "123506-86080",
+          "nickname": "Kyle Pitts Sr.",
+          "position": "TE",
+          "team": "ATL",
+          "salary": 5100,
+          "fppg": 6.94545468417081
+        },
+        {
+          "id": "123506-12547",
+          "nickname": "Pittsburgh Steelers",
+          "position": "D",
+          "team": "PIT",
+          "salary": 3800,
+          "fppg": 8.636363636363637
+        },
+        {
+          "id": "123506-145558",
+          "nickname": "Dalton Kincaid",
+          "position": "TE",
+          "team": "BUF",
+          "salary": 5700,
+          "fppg": 11.162500381469728
+        }
+      ]
+    },
+    {
+      "id": "lineup_2_20251124_203712",
+      "score": 120.8,
+      "projected_points": 120.8,
+      "total_salary": 58900,
+      "saved_date": "2025-11-24T20:37:12.248919",
+      "players": [
+        {
+          "id": "123506-63519",
+          "nickname": "Daniel Jones",
+          "position": "QB",
+          "team": "IND",
+          "salary": 7500,
+          "fppg": 20.227272727272727
+        },
+        {
+          "id": "123506-138820",
+          "nickname": "De'Von Achane",
+          "position": "RB",
+          "team": "MIA",
+          "salary": 8700,
+          "fppg": 19.727272727272727
+        },
+        {
+          "id": "123506-55050",
+          "nickname": "Christian McCaffrey",
+          "position": "RB",
+          "team": "SF",
+          "salary": 8600,
+          "fppg": 22.990908536044035
+        },
+        {
+          "id": "123506-129305",
+          "nickname": "Josh Downs",
+          "position": "WR",
+          "team": "IND",
+          "salary": 5500,
+          "fppg": 6.759999847412109
+        },
+        {
+          "id": "123506-129210",
+          "nickname": "Jordan Addison",
+          "position": "WR",
+          "team": "MIN",
+          "salary": 6100,
+          "fppg": 10.100000381469728
+        },
+        {
+          "id": "123506-112745",
+          "nickname": "Drake London",
+          "position": "WR",
+          "team": "ATL",
+          "salary": 8000,
+          "fppg": 18.0
+        },
+        {
+          "id": "123506-158438",
+          "nickname": "Oronde Gadsden II",
+          "position": "TE",
+          "team": "LAC",
+          "salary": 5900,
+          "fppg": 9.133332994249132
+        },
+        {
+          "id": "123506-12546",
+          "nickname": "Arizona Cardinals",
+          "position": "D",
+          "team": "ARI",
+          "salary": 3500,
+          "fppg": 6.909090909090909
+        },
+        {
+          "id": "123506-86080",
+          "nickname": "Kyle Pitts Sr.",
+          "position": "TE",
+          "team": "ATL",
+          "salary": 5100,
+          "fppg": 6.94545468417081
+        }
+      ]
+    },
+    {
+      "id": "lineup_3_20251124_203712",
+      "score": 118.5,
+      "projected_points": 118.5,
+      "total_salary": 59500,
+      "saved_date": "2025-11-24T20:37:12.285930",
+      "players": [
+        {
+          "id": "123506-69189",
+          "nickname": "Justin Herbert",
+          "position": "QB",
+          "team": "LAC",
+          "salary": 8300,
+          "fppg": 20.37636358087713
+        },
+        {
+          "id": "123506-167031",
+          "nickname": "Ashton Jeanty",
+          "position": "RB",
+          "team": "LV",
+          "salary": 7100,
+          "fppg": 13.636363636363637
+        },
+        {
+          "id": "123506-55050",
+          "nickname": "Christian McCaffrey",
+          "position": "RB",
+          "team": "SF",
+          "salary": 8600,
+          "fppg": 22.990908536044035
+        },
+        {
+          "id": "123506-120639",
+          "nickname": "Quentin Johnston",
+          "position": "WR",
+          "team": "LAC",
+          "salary": 6000,
+          "fppg": 11.48888905843099
+        },
+        {
+          "id": "123506-86518",
+          "nickname": "Khalil Shakir",
+          "position": "WR",
+          "team": "BUF",
+          "salary": 6300,
+          "fppg": 9.35454559326172
+        },
+        {
+          "id": "123506-112745",
+          "nickname": "Drake London",
+          "position": "WR",
+          "team": "ATL",
+          "salary": 8000,
+          "fppg": 18.0
+        },
+        {
+          "id": "123506-158438",
+          "nickname": "Oronde Gadsden II",
+          "position": "TE",
+          "team": "LAC",
+          "salary": 5900,
+          "fppg": 9.133332994249132
+        },
+        {
+          "id": "123506-12525",
+          "nickname": "Atlanta Falcons",
+          "position": "D",
+          "team": "ATL",
+          "salary": 4000,
+          "fppg": 7.454545454545454
+        },
+        {
+          "id": "123506-86811",
+          "nickname": "Cade Otton",
+          "position": "TE",
+          "team": "TB",
+          "salary": 5300,
+          "fppg": 6.070000076293946
+        }
+      ]
+    },
+    {
+      "id": "lineup_4_20251124_203712",
+      "score": 117.3,
+      "projected_points": 117.3,
+      "total_salary": 58200,
+      "saved_date": "2025-11-24T20:37:12.319525",
+      "players": [
+        {
+          "id": "123506-85607",
+          "nickname": "Brock Purdy",
+          "position": "QB",
+          "team": "SF",
+          "salary": 7300,
+          "fppg": 20.2466672261556
+        },
+        {
+          "id": "123506-91626",
+          "nickname": "James Cook III",
+          "position": "RB",
+          "team": "BUF",
+          "salary": 8800,
+          "fppg": 19.15454517711293
+        },
+        {
+          "id": "123506-55050",
+          "nickname": "Christian McCaffrey",
+          "position": "RB",
+          "team": "SF",
+          "salary": 8600,
+          "fppg": 22.990908536044035
+        },
+        {
+          "id": "123506-103619",
+          "nickname": "Tre Tucker",
+          "position": "WR",
+          "team": "LV",
+          "salary": 5600,
+          "fppg": 10.009090770374645
+        },
+        {
+          "id": "123506-110974",
+          "nickname": "Malik Washington",
+          "position": "WR",
+          "team": "MIA",
+          "salary": 5500,
+          "fppg": 5.790909160267223
+        },
+        {
+          "id": "123506-63634",
+          "nickname": "Jakobi Meyers",
+          "position": "WR",
+          "team": "JAC",
+          "salary": 6100,
+          "fppg": 7.919999694824218
+        },
+        {
+          "id": "123506-39793",
+          "nickname": "George Kittle",
+          "position": "TE",
+          "team": "SF",
+          "salary": 6800,
+          "fppg": 11.383333841959637
+        },
+        {
+          "id": "123506-12547",
+          "nickname": "Pittsburgh Steelers",
+          "position": "D",
+          "team": "PIT",
+          "salary": 3800,
+          "fppg": 8.636363636363637
+        },
+        {
+          "id": "123506-145558",
+          "nickname": "Dalton Kincaid",
+          "position": "TE",
+          "team": "BUF",
+          "salary": 5700,
+          "fppg": 11.162500381469728
+        }
+      ]
+    }
+  ],
   "metadata": {
     "created": "2025-11-15T18:46:22.326728",
     "user": "sofakinggoo",
-    "last_updated": "2025-11-18T20:54:50.037719"
+    "last_updated": "2025-11-24T20:37:12.321669"
   }
 }
