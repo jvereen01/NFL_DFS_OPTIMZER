@@ -3024,7 +3024,7 @@ def main():
     with col2:
         # Show file info
         import os
-        csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EST-12 EST-07 EST-123820-players-list.csv"
+        csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2025 EST-12 EST-14 EST-124136-players-list.csv"
         if os.path.exists(csv_file):
             file_time = os.path.getmtime(csv_file)
             import datetime
@@ -3371,7 +3371,7 @@ def main():
                     # Try to load the current CSV to get player IDs
                     player_id_lookup = {}
                     try:
-                        target_file = 'FanDuel-NFL-2025 EST-12 EST-07 EST-123820-players-list.csv'
+                        target_file = 'FanDuel-NFL-2025 EST-12 EST-14 EST-124136-players-list.csv'
                         current_dir = os.getcwd()
                         csv_path = os.path.join(current_dir, target_file)
                         
@@ -3695,7 +3695,7 @@ def main():
                     import os
                     
                     # Try multiple strategies to find the CSV file
-                    target_csv = "FanDuel-NFL-2025 EST-12 EST-07 EST-123820-players-list.csv"
+                    target_csv = "FanDuel-NFL-2025 EST-12 EST-14 EST-124136-players-list.csv"
                     csv_file = None
                     
                     # Strategy 1: Current directory
