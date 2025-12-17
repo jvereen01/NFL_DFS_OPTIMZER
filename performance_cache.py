@@ -54,7 +54,7 @@ def cached_load_player_data():
     """Cached version of load_player_data with enhanced error handling"""
     import os
     
-    target_file = 'FanDuel-NFL-2025 EST-12 EST-14 EST-124136-players-list.csv'
+    target_file = 'FanDuel-NFL-2025 EST-12 EST-21 EST-124417-players-list.csv'
     
     # Force specific directory path to avoid confusion
     base_dir = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER"
