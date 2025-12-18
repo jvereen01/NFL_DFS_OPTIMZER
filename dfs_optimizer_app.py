@@ -3218,14 +3218,21 @@ def main():
                 wrs = [p['nickname'] for p in saved_lineup['players'] if p['position'] == 'WR'] 
                 tes = [p['nickname'] for p in saved_lineup['players'] if p['position'] == 'TE']
                 
-                # FLEX is typically the 3rd RB, 4th WR, or 2nd TE
+                # Determine the main TE (first one)
+                main_te = tes[0] if tes else ''
+                
+                # FLEX is typically the 3rd RB, 4th WR, or 2nd TE (but not the same as main TE)
                 flex_player = ''
                 if len(rbs) >= 3:
                     flex_player = rbs[2]
                 elif len(wrs) >= 4:
                     flex_player = wrs[3]
                 elif len(tes) >= 2:
-                    flex_player = tes[1]
+                    # Find a TE that's different from the main TE
+                    for te in tes[1:]:
+                        if te != main_te:
+                            flex_player = te
+                            break
                 
                 lineup_table_data.append({
                     'ID': f"#{original_idx+1}",
@@ -3237,7 +3244,7 @@ def main():
                     'WR1': wrs[0] if len(wrs) > 0 else '',
                     'WR2': wrs[1] if len(wrs) > 1 else '',
                     'WR3': wrs[2] if len(wrs) > 2 else '',
-                    'TE': players_by_pos.get('TE', ''),
+                    'TE': main_te,
                     'FLEX': flex_player,
                     'DEF': players_by_pos.get('D', ''),
                     'Saved': saved_lineup['saved_date'][:10]
