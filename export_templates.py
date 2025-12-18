@@ -158,15 +158,28 @@ class LineupExporter:
                 positions['DEF'][0]     # DEF
             ]
             
-            # Determine FLEX player
+            # Determine FLEX player (avoid duplicating the same TE)
+            flex_filled = False
+            
+            # Try RB3 first
             if len(positions['RB']) > 2:
                 row[7] = positions['RB'][2]
+                flex_filled = True
+            # Try WR4 next
             elif len(positions['WR']) > 3:
                 row[7] = positions['WR'][3]
+                flex_filled = True
+            # Try TE2, but make sure it's different from TE1
             elif len(positions['TE']) > 1:
-                row[7] = positions['TE'][1]
-            else:
-                continue
+                # Find a TE that's not already in the TE slot
+                for te in positions['TE'][1:]:
+                    if te != row[6]:  # Don't duplicate the same TE
+                        row[7] = te
+                        flex_filled = True
+                        break
+            
+            if not flex_filled:
+                continue  # Skip incomplete lineups
             
             # Add lineup data with commas
             lineup_data_str = ','.join(map(str, row))
@@ -435,3 +448,89 @@ class ExportManager:
             'salary_range': np.max(salary_list) - np.min(salary_list),
             'top_10_avg_points': np.mean(sorted(points_list, reverse=True)[:10])
         }
+    
+    def export_to_csv(self, saved_lineups: List[Dict], platform: str = "fanduel") -> str:
+        """Export saved portfolio lineups to CSV format"""
+        if platform.lower() == 'fanduel':
+            return self._export_saved_fanduel(saved_lineups)
+        else:
+            return self._export_saved_generic(saved_lineups)
+    
+    def _export_saved_fanduel(self, saved_lineups: List[Dict]) -> str:
+        """Export saved lineups for FanDuel format"""
+        csv_lines = ['QB,RB,RB,WR,WR,WR,TE,FLEX,DEF']
+        
+        for saved_lineup in saved_lineups:
+            players = saved_lineup.get('players', [])
+            
+            # Build position groups
+            positions = {'QB': [], 'RB': [], 'WR': [], 'TE': [], 'DEF': []}
+            
+            for player in players:
+                pos = player.get('position', '')
+                nickname = player.get('nickname', '')
+                
+                if pos == 'D':
+                    positions['DEF'].append(nickname)
+                elif pos in positions:
+                    positions[pos].append(nickname)
+            
+            # Validate lineup completeness
+            if (len(positions['QB']) < 1 or len(positions['RB']) < 2 or 
+                len(positions['WR']) < 3 or len(positions['TE']) < 1 or 
+                len(positions['DEF']) < 1):
+                continue
+            
+            # Build FanDuel format: QB, RB, RB, WR, WR, WR, TE, FLEX, DEF
+            row = [
+                positions['QB'][0],     # QB
+                positions['RB'][0],     # RB1
+                positions['RB'][1],     # RB2
+                positions['WR'][0],     # WR1
+                positions['WR'][1],     # WR2
+                positions['WR'][2],     # WR3
+                positions['TE'][0],     # TE
+                '',                     # FLEX (will be filled below)
+                positions['DEF'][0]     # DEF
+            ]
+            
+            # Determine FLEX player (avoid duplicating the same TE)
+            flex_filled = False
+            
+            # Try RB3 first
+            if len(positions['RB']) > 2:
+                row[7] = positions['RB'][2]
+                flex_filled = True
+            # Try WR4 next
+            elif len(positions['WR']) > 3:
+                row[7] = positions['WR'][3]
+                flex_filled = True
+            # Try TE2, but make sure it's different from TE1
+            elif len(positions['TE']) > 1:
+                # Find a TE that's not already in the TE slot
+                for te in positions['TE'][1:]:
+                    if te != row[6]:  # Don't duplicate the same TE
+                        row[7] = te
+                        flex_filled = True
+                        break
+            
+            if not flex_filled:
+                continue  # Skip incomplete lineups
+            
+            # Add lineup to CSV
+            csv_lines.append(','.join(row))
+        
+        return '\n'.join(csv_lines)
+    
+    def _export_saved_generic(self, saved_lineups: List[Dict]) -> str:
+        """Generic export for saved lineups"""
+        csv_lines = ['QB,RB1,RB2,WR1,WR2,WR3,TE,FLEX,DEF']
+        
+        for saved_lineup in saved_lineups:
+            players = saved_lineup.get('players', [])
+            player_names = [p.get('nickname', '') for p in players]
+            
+            if len(player_names) >= 9:
+                csv_lines.append(','.join(player_names[:9]))
+        
+        return '\n'.join(csv_lines)
