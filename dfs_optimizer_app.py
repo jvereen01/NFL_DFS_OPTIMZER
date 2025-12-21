@@ -540,7 +540,7 @@ def load_player_data():
     # Strategy 3: Find any FanDuel CSV file with similar pattern
     if not csv_file:
         patterns = [
-            "FanDuel-NFL-2025*EST-11*EST-23*.csv",
+            "FanDuel-NFL-2025*EST-12*EST-21*.csv",
             "FanDuel-NFL-2025*.csv",
             "*FanDuel*.csv"
         ]
@@ -3817,10 +3817,13 @@ def main():
                         st.write(f"**New Projection:** {new_projection:.1f} FPPG ({adjustment_factor:.0%} of original)")
                     
                     else:  # Absolute Value
+                        # Handle negative FPPG values by setting appropriate min/max and default
+                        min_fppg = min(-10.0, float(current_fppg) - 5.0)  # Allow negative values
+                        default_fppg = max(0.0, float(current_fppg))  # Use 0 as default if current is negative
                         new_projection = st.number_input(
                             "New FPPG Projection",
-                            0.0, 50.0, float(current_fppg), 0.1,
-                            help="Set exact fantasy points projection"
+                            min_fppg, 50.0, default_fppg, 0.1,
+                            help="Set exact fantasy points projection (negative values allowed)"
                         )
                         adjustment_factor = new_projection / current_fppg if current_fppg > 0 else 1.0
                     
