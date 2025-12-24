@@ -523,7 +523,7 @@ def load_player_data():
     import glob
     
     # Target CSV filename
-    target_csv = "FanDuel-NFL-2025 EST-12 EST-21 EST-124417-players-list.csv"
+    target_csv = "FanDuel-NFL-2025 EST-12 EST-28 EST-124699-players-list.csv"
     csv_file = None
     
     # Strategy 1: Try current working directory
