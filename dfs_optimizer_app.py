@@ -523,7 +523,7 @@ def load_player_data():
     import glob
     
     # Target CSV filename
-    target_csv = "FanDuel-NFL-2025 EST-12 EST-28 EST-124699-players-list.csv"
+    target_csv = "FanDuel-NFL-2026 EST-01 EST-04 EST-124949-players-list.csv"
     csv_file = None
     
     # Strategy 1: Try current working directory
@@ -541,7 +541,7 @@ def load_player_data():
     if not csv_file:
         patterns = [
             "FanDuel-NFL-2026*EST-01*EST-04*.csv",
-            "FanDuel-NFL-2025*.csv",
+            "FanDuel-NFL-2026*.csv",
             "*FanDuel*.csv"
         ]
         
