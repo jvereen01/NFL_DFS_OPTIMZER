@@ -49,9 +49,9 @@ class PerformanceCache:
                     del st.session_state[dependent_key]
                 self.cache_keys[dependent_key] = None
 
-@st.cache_data(ttl=3600)  # Cache for 1 hour
+@st.cache_data(ttl=300)  # Cache for 5 minutes only to ensure fresh data
 def cached_load_player_data():
-    """Cached version of load_player_data with enhanced error handling"""
+    """Cached version of load_player_data with enhanced error handling and file modification tracking"""
     import os
     
     target_file = 'FanDuel-NFL-2026 EST-01 EST-04 EST-124949-players-list.csv'

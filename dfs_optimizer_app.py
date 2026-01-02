@@ -3015,9 +3015,10 @@ def main():
     # Data refresh controls
     col1, col2, col3 = st.columns([1, 1, 2])
     with col1:
-        if st.button("🔄 Refresh Data", help="Clear cache and reload latest player data from CSV"):
+        if st.button("🔄 Refresh Data", help="Clear cache and reload latest player data from CSV (Use after CSV updates!)"):
             # Clear Streamlit cache
             st.cache_data.clear()
+            st.success("✅ Cache cleared! Reloading fresh data...")
             # Force rerun to reload data
             st.rerun()
     
