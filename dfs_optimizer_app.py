@@ -3035,8 +3035,8 @@ def main():
     # Load data
     with st.spinner("Loading player data..."):
         # Clear cache to ensure 5-point filter takes effect
-        load_player_data.clear()
-        df = load_player_data()
+        cached_load_player_data.clear()  # Use same cache clearing as main app
+        df = cached_load_player_data()   # Use same cached function as main app
         
     if df is not None:
         # Show filter results
