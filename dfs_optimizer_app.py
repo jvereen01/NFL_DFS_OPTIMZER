@@ -523,7 +523,7 @@ def load_player_data():
     import glob
     
     # Target CSV filename
-    target_csv = "FanDuel-NFL-2026 EST-01 EST-04 EST-124949-players-list.csv"
+    target_csv = "FanDuel-NFL-2026 EDT-09 EDT-13 EDT-133104-players-list.csv"
     csv_file = None
     
     # Strategy 1: Try current working directory
@@ -540,7 +540,7 @@ def load_player_data():
     # Strategy 3: Find any FanDuel CSV file with similar pattern
     if not csv_file:
         patterns = [
-            "FanDuel-NFL-2026*EST-01*EST-04*.csv",
+            "FanDuel-NFL-2026*EDT-09*EDT-13*.csv",
             "FanDuel-NFL-2026*.csv",
             "*FanDuel*.csv"
         ]
@@ -732,7 +732,7 @@ def calculate_ceiling_floor_projections(df):
     import os
     
     # ONLY use the January 4th CSV file (latest version)
-    target_file = 'FanDuel-NFL-2026 EST-01 EST-04 EST-124949-players-list.csv'
+    target_file = 'FanDuel-NFL-2026 EDT-09 EDT-13 EDT-133104-players-list.csv'
     
     # Debug: Show what we're looking for
     st.info(f"🔍 **Looking for CSV file:** {target_file}")
@@ -2893,7 +2893,7 @@ def main():
         if usage_mode == "Tier Strategy" and num_simulations > 10000:
             st.warning("⚠️ **Performance Notice:** Tier Strategy with >10K simulations may be slow. Consider reducing simulations or enabling Performance Mode above.")
         
-        stack_probability = st.slider("Stacking Probability", 0.0, 1.0, default_stack_prob, step=0.05,
+        stack_probability = st.slider("Stacking Probability", 0.0, 1.0, 0.80, step=0.05,
                                      help=f"Current strategy optimized for {strategy_type.lower()} contests")
         elite_target_boost = st.slider("Elite Target Boost", 0.0, 1.0, default_elite_boost, step=0.05,
                                       help=f"{'Consistent elite performers' if strategy_type == 'Single Entry' else 'High ceiling elite players'}")
@@ -3022,16 +3022,6 @@ def main():
             # Force rerun to reload data
             st.rerun()
     
-    with col2:
-        # Show file info
-        import os
-        csv_file = r"c:\Users\jamin\OneDrive\NFL scrapping\NFL_DFS_OPTIMZER\FanDuel-NFL-2026 EST-01 EST-04 EST-124949-players-list.csv"
-        if os.path.exists(csv_file):
-            file_time = os.path.getmtime(csv_file)
-            import datetime
-            readable_time = datetime.datetime.fromtimestamp(file_time).strftime('%m/%d/%Y %H:%M')
-            st.caption(f"📄 Data file updated: {readable_time}")
-    
     # Load data
     with st.spinner("Loading player data..."):
         # Clear cache to ensure 5-point filter takes effect
@@ -3039,13 +3029,8 @@ def main():
         df = cached_load_player_data()   # Use same cached function as main app
         
     if df is not None:
-        # Show filter results
-        if 'FPPG' in df.columns:
-            low_proj_count = len(df[df['FPPG'] <= 5.0])
-            if low_proj_count == 0:
-                st.success(f"✅ **5-point minimum filter active:** All {len(df)} players have >5.0 FPPG")
-            else:
-                st.warning(f"⚠️ **Filter not working:** {low_proj_count} players still have ≤5.0 FPPG")
+        # Store for reuse elsewhere in the app (e.g. export player ID lookups) without re-reading disk
+        st.session_state['player_df'] = df
         with st.spinner("Loading defensive matchup data..."):
             pass_defense, rush_defense = load_defensive_data()
             
@@ -3379,18 +3364,12 @@ def main():
                     # Try to load the current CSV to get player IDs
                     player_id_lookup = {}
                     try:
-                        target_file = 'FanDuel-NFL-2026 EST-01 EST-04 EST-124949-players-list.csv'
-                        current_dir = os.getcwd()
-                        csv_path = os.path.join(current_dir, target_file)
-                        
-                        if os.path.exists(csv_path):
-                            import pandas as pd
-                            lookup_df = pd.read_csv(csv_path)
-                            # Create nickname to ID mapping
+                        lookup_df = st.session_state.get('player_df')
+                        if lookup_df is not None and 'Nickname' in lookup_df.columns and 'Id' in lookup_df.columns:
                             for _, row in lookup_df.iterrows():
                                 player_id_lookup[row['Nickname']] = row['Id']
                         else:
-                            st.warning("⚠️ Could not find player data file for ID lookup. Using player names instead.")
+                            st.warning("⚠️ Could not find player data for ID lookup. Using player names instead.")
                     except Exception as e:
                         st.warning(f"⚠️ Could not load player IDs: {e}. Using player names instead.")
                     
@@ -3701,29 +3680,21 @@ def main():
                 try:
                     import pandas as pd
                     import os
-                    
-                    # Try multiple strategies to find the CSV file
-                    target_csv = "FanDuel-NFL-2026 EST-01 EST-04 EST-124949-players-list.csv"
+                    import glob
+
+                    # Find any FanDuel players-list CSV next to the app (most recently modified)
                     csv_file = None
-                    
-                    # Strategy 1: Current directory
-                    if os.path.exists(target_csv):
-                        csv_file = target_csv
-                    # Strategy 2: Script directory
-                    if not csv_file:
-                        script_dir = os.path.dirname(os.path.abspath(__file__))
-                        script_csv = os.path.join(script_dir, target_csv)
-                        if os.path.exists(script_csv):
-                            csv_file = script_csv
-                    # Strategy 3: Find any matching CSV
-                    if not csv_file:
-                        import glob
-                        matching_files = glob.glob("*EST-11*EST-23*.csv")
-                        if matching_files:
-                            csv_file = matching_files[0]
-                    
-                    if csv_file:
+                    script_dir = os.path.dirname(os.path.abspath(__file__))
+                    candidates = []
+                    for search_dir in {os.getcwd(), script_dir}:
+                        candidates.extend(glob.glob(os.path.join(search_dir, "*players-list*.csv")))
+                        candidates.extend(glob.glob(os.path.join(search_dir, "*FanDuel*.csv")))
+                    candidates = sorted(set(candidates), key=os.path.getmtime, reverse=True)
+                    if candidates:
+                        csv_file = candidates[0]
                         unfiltered_df = pd.read_csv(csv_file)
+
+                    if csv_file:
                         unfiltered_df.columns = [col.strip() for col in unfiltered_df.columns]
                         
                         # Apply only essential filters but NOT salary or projection filters
@@ -4071,51 +4042,6 @@ def main():
                     st.info(f"ℹ️ Found {len(low_proj_players)} players with projections ≤ 5.0 points (already filtered in main data load)")
         
         # Display top matchups (only if we have proper player data)
-        if 'FPPG' in df.columns and 'Position' in df.columns and 'Nickname' in df.columns:
-            st.markdown("### 🎯 Top 6 Matchups by Position")
-        
-        # Get top matchups by position
-        position_matchups = get_top_matchups(df, pass_defense, rush_defense, num_per_position=6)
-        
-        if position_matchups:
-            # Create tabs for each position
-            pos_tabs = st.tabs(["QB", "RB", "WR", "TE"])
-            
-            positions = ['QB', 'RB', 'WR', 'TE']
-            emojis = ['🎯', '🏈', '⚡', '🎪']
-            
-            for i, (tab, pos, emoji) in enumerate(zip(pos_tabs, positions, emojis)):
-                with tab:
-                    if pos in position_matchups and len(position_matchups[pos]) > 0:
-                        for j, (_, matchup) in enumerate(position_matchups[pos].iterrows()):
-                            if j < 6:  # Show top 6 in each tab
-                                quality_icon = "🔥" if matchup['Matchup_Quality'] == 'ELITE TARGET' else ("⭐" if matchup['Matchup_Quality'] == 'Great Target' else "")
-                                
-                                # Add salary boost indicator for QBs
-                                salary_boost_icon = ""
-                                if pos == 'QB':
-                                    qb_data = df[df['Position'] == 'QB']
-                                    for team in qb_data['Team'].unique():
-                                        team_qbs = qb_data[qb_data['Team'] == team]
-                                        if len(team_qbs) > 0:
-                                            highest_qb = team_qbs.loc[team_qbs['Salary'].idxmax(), 'Nickname']
-                                            if matchup['Player'] == highest_qb:
-                                                salary_boost_icon = " 💰"
-                                
-                                # Format all fields safely
-                                ypg_display = f"{matchup['YPG_Allowed']:.1f} YPG allowed" if isinstance(matchup['YPG_Allowed'], (int, float)) else f"{matchup['YPG_Allowed']} YPG allowed"
-                                fppg_display = f"{matchup['FPPG']:.1f} pts" if isinstance(matchup['FPPG'], (int, float)) else f"{matchup['FPPG']} pts"
-                                salary_display = f"${matchup['Salary']:,}" if isinstance(matchup['Salary'], (int, float)) else f"${matchup['Salary']}"
-                                
-                                st.markdown(
-                                    f"**{emoji} {matchup['Player']}** vs {matchup['vs']} {quality_icon}{salary_boost_icon}  \n"
-                                    f"{salary_display} | {fppg_display}", 
-                                    help=f"Defense Rank: #{matchup['Defense_Rank']} ({ypg_display})"
-                                )
-                    else:
-                        st.info(f"No {pos} matchups found")
-        else:
-            st.info("Top matchups will appear here once data is loaded")
         
         # Lineup Builder Feature
         st.markdown('<h2 class="sub-header">🏗️ Lineup Builder</h2>', unsafe_allow_html=True)
@@ -4319,14 +4245,11 @@ def main():
             with builder_action_cols[0]:
                 if st.button("🔥 **Build Lineup**", type="primary", help="Generate a complete optimized lineup around your selected players"):
                     if any(st.session_state.lineup_builder.values()):
-                        # Generate a single optimized lineup immediately using direct approach
+                        # Generate a single optimized lineup using the SAME weighted-pool/simulation
+                        # engine as normal "Generate Lineups", so results stay consistent (boosts,
+                        # matchup analysis, stacking probability all apply the same way).
                         with st.spinner("🏗️ Building your custom lineup..."):
                             try:
-                                # Import needed modules for local scope
-                                import pandas as pd
-                                import random
-                                import time
-                                
                                 # Apply projection overrides if they exist (same as main generator)
                                 df_builder = df.copy()
                                 saved_overrides = load_player_overrides()
@@ -4337,334 +4260,50 @@ def main():
                                             if mask.any():
                                                 df_builder.loc[mask, 'FPPG'] = override_data['fppg']
                                 
-                                # Direct lineup building approach - bypass complex constraints  
-                                # Add randomization for variety in lineup building
-                                random.seed(int(time.time() * 1000) % 100000)  # Different seed each time
+                                forced_players_for_builder = [p for p in st.session_state.lineup_builder.values() if p]
+                                target_assignments = st.session_state.get('tier_assignments', {})
                                 
-                                selected_players = []
-                                used_salary = 0
-                                position_slots = {
-                                    'QB': 1, 'RB': 2, 'WR': 3, 'TE': 1, 'D': 1, 'FLEX': 1
-                                }
-                                filled_positions = {pos: 0 for pos in position_slots.keys()}
-                                
-                                # Track position assignments for proper export format
-                                rb_count = 0
-                                wr_count = 0
-                                
-                                # First, add all selected players (using override-adjusted data)
-                                for builder_pos, player_name in st.session_state.lineup_builder.items():
-                                    if player_name:
-                                        player_data = df_builder[df_builder['Nickname'] == player_name]
-                                        if len(player_data) > 0:
-                                            player = player_data.iloc[0].copy()
-                                            
-                                            # Count positions based on actual player position, not builder slot
-                                            actual_position = player['Position']
-                                            
-                                            # Convert builder positions to DFS export format
-                                            if builder_pos == 'QB':
-                                                player['LineupPosition'] = 'QB'
-                                                filled_positions['QB'] += 1
-                                            elif builder_pos in ['RB1', 'RB2']:
-                                                player['LineupPosition'] = 'RB'
-                                                filled_positions['RB'] += 1
-                                            elif builder_pos in ['WR1', 'WR2', 'WR3']:
-                                                player['LineupPosition'] = 'WR'
-                                                filled_positions['WR'] += 1
-                                            elif builder_pos == 'TE':
-                                                player['LineupPosition'] = 'TE'
-                                                filled_positions['TE'] += 1
-                                            elif builder_pos == 'DST':
-                                                player['LineupPosition'] = 'D'
-                                                filled_positions['D'] += 1
-                                            elif builder_pos == 'FLEX':
-                                                player['LineupPosition'] = 'FLEX'
-                                                filled_positions['FLEX'] += 1
-                                            
-                                            selected_players.append(player)
-                                            used_salary += player['Salary']
-                                
-                                # Calculate remaining positions needed (fix the counting logic)
-                                remaining_salary = 60000 - used_salary
-                                positions_needed = []
-                                
-                                # Calculate actual positions from selected players
-                                actual_positions = {'QB': 0, 'RB': 0, 'WR': 0, 'TE': 0, 'D': 0, 'FLEX': 0}
-                                for player in selected_players:
-                                    pos = player.get('LineupPosition', player.get('Position', 'Unknown'))
-                                    if pos in actual_positions:
-                                        actual_positions[pos] += 1
-                                    elif pos == 'D':
-                                        actual_positions['D'] += 1
-                                
-                                # Calculate what positions are still needed using actual_positions
-                                # Total lineup: 1 QB, 2 RB, 3 WR, 1 TE, 1 FLEX, 1 D/ST = 9 players
-                                current_count = len(selected_players)
-                                
-                                # Check if we have all required positions (may need FLEX or D/ST)
-                                core_positions_filled = (
-                                    actual_positions['QB'] >= 1 and 
-                                    actual_positions['RB'] >= 2 and 
-                                    actual_positions['WR'] >= 3 and 
-                                    actual_positions['TE'] >= 1
+                                weighted_pools = create_weighted_pools(
+                                    df_builder, wr_performance_boosts, rb_performance_boosts,
+                                    te_performance_boosts, qb_performance_boosts,
+                                    elite_target_boost, great_target_boost,
+                                    forced_players_for_builder, forced_player_boost,
+                                    prioritize_projections, target_assignments
                                 )
                                 
-                                # If we already have 9 players, we're done!
-                                if current_count >= 9 or (core_positions_filled and current_count >= 7):
-                                    pass  # Lineup is complete or close enough
-                                else:
-                                    # Add missing positions based on actual selected players
-                                    if actual_positions['QB'] < 1:
-                                        positions_needed.append('QB')
-                                    if actual_positions['RB'] < 2:
-                                        for i in range(2 - actual_positions['RB']):
-                                            positions_needed.append('RB')
-                                    if actual_positions['WR'] < 3:
-                                        for i in range(3 - actual_positions['WR']):
-                                            positions_needed.append('WR')
-                                    if actual_positions['TE'] < 1:
-                                        positions_needed.append('TE')
-                                    if actual_positions['D'] < 1:
-                                        positions_needed.append('D')
-                                    if actual_positions['FLEX'] < 1:
-                                        positions_needed.append('FLEX')
-                                    
-                                    # If we have too many positions needed, prioritize by removing excess
-                                    while len(positions_needed) > (9 - current_count):
-                                        # Remove FLEX first if we have other positions to fill
-                                        if 'FLEX' in positions_needed and len(positions_needed) > 1:
-                                            positions_needed.remove('FLEX')
-                                        else:
-                                            positions_needed = positions_needed[:9 - current_count]
+                                tournament_params = {
+                                    'contrarian_boost': contrarian_boost if strategy_type == "Tournament" else 0.05,
+                                    'correlation_preference': correlation_preference if strategy_type == "Tournament" else 0.3,
+                                    'salary_variance_target': salary_variance_target if strategy_type == "Tournament" else 0.2,
+                                    'leverage_focus': leverage_focus if strategy_type == "Tournament" else 0.1,
+                                    'global_fppg_adjustment': global_fppg_adjustment,
+                                    'ceiling_floor_variance': ceiling_floor_variance,
+                                    'tier_strategy_active': False,
+                                    'tier_assignments': {}
+                                }
                                 
-                                # Fill remaining positions using direct high-projection approach
-                                used_players = [p['Nickname'] for p in selected_players]
+                                builder_results = generate_lineups(
+                                    df_builder, weighted_pools, num_simulations, stack_probability,
+                                    elite_target_boost, great_target_boost, fantasy_data,
+                                    player_selections=None, force_mode=force_mode,
+                                    forced_player_boost=forced_player_boost, strategy_type=strategy_type,
+                                    tournament_params=tournament_params,
+                                    lineup_builder_selections=st.session_state.lineup_builder
+                                )
                                 
-                                # Smart salary-aware selection to ensure lineup completion
-                                positions_remaining = len(positions_needed)
-                                
-                                for i, pos_needed in enumerate(positions_needed):
-                                    if remaining_salary <= 0:
-                                        break
-                                        
-                                    # Calculate how many positions are left to fill
-                                    positions_left = positions_remaining - i
-                                    
-                                    # Estimate minimum salary needed for remaining positions (realistic minimums)
-                                    min_def_salary = 4000  # Minimum defense cost (some are cheaper)
-                                    min_flex_salary = 4000  # Minimum flex cost  
-                                    min_other_salary = 4000  # Minimum for other positions
-                                    
-                                    # Special case: if looking for WR and many WRs needed, use lower minimum
-                                    if pos_needed == 'WR':
-                                        wr_positions_left = positions_needed[i:].count('WR')
-                                        if wr_positions_left > 1:
-                                            min_other_salary = 4000  # Some cheap WRs available
-                                    
-                                    # Calculate salary buffer needed for remaining positions
-                                    if positions_left > 1:
-                                        if 'D' in positions_needed[i+1:] and 'FLEX' in positions_needed[i+1:]:
-                                            salary_buffer = min_def_salary + min_flex_salary + (positions_left - 2) * min_other_salary
-                                        elif 'D' in positions_needed[i+1:]:
-                                            salary_buffer = min_def_salary + (positions_left - 1) * min_other_salary
-                                        elif 'FLEX' in positions_needed[i+1:]:
-                                            salary_buffer = min_flex_salary + (positions_left - 1) * min_other_salary
-                                        else:
-                                            salary_buffer = positions_left * min_other_salary
-                                    else:
-                                        salary_buffer = 0
-                                    
-                                    # Max salary we can spend on this position
-                                    max_salary_for_position = remaining_salary - salary_buffer
-                                    
-                                    # Get available players for this position
-                                    if pos_needed == 'FLEX':
-                                        available = df_builder[
-                                            (df_builder['Position'].isin(['RB', 'WR', 'TE'])) & 
-                                            (~df_builder['Nickname'].isin(used_players)) &
-                                            (df_builder['Salary'] <= max_salary_for_position)
-                                        ].copy()
-                                    else:
-                                        pos_key = pos_needed if pos_needed != 'D' else 'D'
-                                        available = df_builder[
-                                            (df_builder['Position'] == pos_key) & 
-                                            (~df_builder['Nickname'].isin(used_players)) &
-                                            (df_builder['Salary'] <= max_salary_for_position)
-                                        ].copy()
-                                    
-                                    if len(available) > 0:
-                                        # Add variety to selections - choose from top players instead of always the best
-                                        import random
-                                        import math
-                                        
-                                        # Sort by FPPG and take top candidates (top 20% or at least top 3)
-                                        top_candidates = available.nlargest(max(3, len(available) // 5), 'FPPG')
-                                        
-                                        # Weight selection toward higher FPPG players but allow some variety
-                                        # Create weights: highest FPPG gets weight 5, second gets 4, etc.
-                                        weights = list(range(len(top_candidates), 0, -1))
-                                        
-                                        # Ensure weights are finite and valid - simple check
-                                        try:
-                                            # Test if weights work with random.choices
-                                            if sum(weights) <= 0 or any(w <= 0 for w in weights):
-                                                weights = [1] * len(top_candidates)
-                                        except:
-                                            # Fallback to equal weights if there are any issues
-                                            weights = [1] * len(top_candidates)
-                                        
-                                        # Randomly select from top candidates using weighted selection
-                                        selected_idx = random.choices(range(len(top_candidates)), weights=weights, k=1)[0]
-                                        best_player = top_candidates.iloc[selected_idx].copy()
-                                        
-                                        # Set proper DFS export format position
-                                        if pos_needed == 'D':
-                                            best_player['LineupPosition'] = 'D'
-                                        else:
-                                            best_player['LineupPosition'] = pos_needed
-                                        
-                                        selected_players.append(best_player)
-                                        used_players.append(best_player['Nickname'])
-                                        remaining_salary -= best_player['Salary']
-                                        used_salary += best_player['Salary']
-                                    else:
-                                        # If no players available with buffer, try without buffer (desperate mode)
-                                        if pos_needed == 'FLEX':
-                                            desperate_available = df_builder[
-                                                (df_builder['Position'].isin(['RB', 'WR', 'TE'])) & 
-                                                (~df_builder['Nickname'].isin(used_players)) &
-                                                (df_builder['Salary'] <= remaining_salary)
-                                            ].copy()
-                                        else:
-                                            pos_key = pos_needed if pos_needed != 'D' else 'D'
-                                            desperate_available = df_builder[
-                                                (df_builder['Position'] == pos_key) & 
-                                                (~df_builder['Nickname'].isin(used_players)) &
-                                                (df_builder['Salary'] <= remaining_salary)
-                                            ].copy()
-                                        
-                                        if len(desperate_available) > 0:
-                                            # In desperate mode, still add some variety among cheaper options
-                                            import random
-                                            
-                                            # Get cheapest 30% of available players (or at least cheapest 3)
-                                            cheap_candidates = desperate_available.nsmallest(max(3, len(desperate_available) // 3), 'Salary')
-                                            
-                                            # Among cheap options, prefer higher FPPG but allow variety
-                                            if len(cheap_candidates) > 1:
-                                                # Weight by FPPG among cheap options - handle NaN/inf values
-                                                fppg_values = cheap_candidates['FPPG'].fillna(1.0)  # Use 1.0 instead of 0
-                                                min_fppg = max(fppg_values.min(), 0.1)  # Avoid division by zero
-                                                
-                                                try:
-                                                    weights = (fppg_values / min_fppg).tolist()
-                                                    # Simple validation - check if weights are valid numbers
-                                                    if any(w <= 0 or str(w) in ['nan', 'inf', '-inf'] for w in weights):
-                                                        weights = [1] * len(cheap_candidates)
-                                                except:
-                                                    # Fallback to equal weights if there are any issues
-                                                    weights = [1] * len(cheap_candidates)
-                                                
-                                                selected_idx = random.choices(range(len(cheap_candidates)), weights=weights, k=1)[0]
-                                                best_player = cheap_candidates.iloc[selected_idx].copy()
-                                            else:
-                                                best_player = cheap_candidates.iloc[0].copy()
-                                            
-                                            # Set proper DFS export format position
-                                            if pos_needed == 'D':
-                                                best_player['LineupPosition'] = 'D'
-                                            else:
-                                                best_player['LineupPosition'] = pos_needed
-                                            
-                                            selected_players.append(best_player)
-                                            used_players.append(best_player['Nickname'])
-                                            remaining_salary -= best_player['Salary']
-                                            used_salary += best_player['Salary']
-                                
-                                # Recalculate positions after adding players
-                                final_positions = {'QB': 0, 'RB': 0, 'WR': 0, 'TE': 0, 'D': 0, 'FLEX': 0}
-                                for player in selected_players:
-                                    pos = player.get('LineupPosition', player.get('Position', 'Unknown'))
-                                    if pos in final_positions:
-                                        final_positions[pos] += 1
-                                    elif pos == 'D':
-                                        final_positions['D'] += 1
-                                
-                                # Convert to DataFrame and store - no immediate display
-                                if len(selected_players) == 9:
-                                    builder_lineup = pd.DataFrame(selected_players)
+                                if builder_results:
+                                    _, builder_lineup, _, _, _, _ = sorted(
+                                        builder_results, key=lambda x: x[0], reverse=True
+                                    )[0]
                                     
                                     # Store the lineup for the persistent display section
                                     st.session_state.builder_generated_lineup = [builder_lineup]
                                     st.session_state.current_built_lineup = builder_lineup.copy()
                                     
-                                    # Simple success message without cluttering display
                                     st.success("✅ **Lineup Built Successfully!** Check below for details and export options.")
                                     st.rerun()  # Refresh to show the persistent lineup section
-                                    
                                 else:
-                                    # Provide detailed debugging info with proper formatting
-                                    st.error("❌ **Could not complete lineup build**")
-                                    
-                                    # Debug: show what we actually have
-                                    st.markdown("### 🔍 Debug Information")
-                                    st.write(f"**Status**: Got {len(selected_players)}/9 players")
-                                    
-                                    if selected_players:
-                                        player_names = [p['Nickname'] for p in selected_players]
-                                        st.write(f"**Selected Players**: {', '.join(player_names)}")
-                                    
-                                    # Fix salary formatting
-                                    remaining_salary = 60000 - used_salary
-                                    st.write(f"**Salary Used**: ${used_salary:,} out of $60,000")
-                                    st.write(f"**Remaining Budget**: ${remaining_salary:,}")
-                                    
-                                    # Position breakdown already calculated above
-                                    
-                                    # Debug: show actual position counts
-                                    st.write("**Position Status:**")
-                                    st.write(f"- QB: {actual_positions['QB']}/1")
-                                    st.write(f"- RB: {actual_positions['RB']}/2") 
-                                    st.write(f"- WR: {actual_positions['WR']}/3")
-                                    st.write(f"- TE: {actual_positions['TE']}/1")
-                                    st.write(f"- D/ST: {actual_positions['D']}/1")
-                                    st.write(f"- FLEX: {actual_positions['FLEX']}/1")
-                                    
-                                    if positions_needed:
-                                        st.write(f"**Still Need**: {', '.join(positions_needed)}")
-                                        
-                                        # Show available players for next needed position
-                                        next_pos = positions_needed[0]
-                                        if next_pos == 'FLEX':
-                                            available_debug = df_builder[
-                                                (df_builder['Position'].isin(['RB', 'WR', 'TE'])) & 
-                                                (~df_builder['Nickname'].isin([p['Nickname'] for p in selected_players])) &
-                                                (df_builder['Salary'] <= remaining_salary)
-                                            ]
-                                        else:
-                                            pos_key = next_pos if next_pos != 'D' else 'D'
-                                            available_debug = df_builder[
-                                                (df_builder['Position'] == pos_key) & 
-                                                (~df_builder['Nickname'].isin([p['Nickname'] for p in selected_players])) &
-                                                (df_builder['Salary'] <= remaining_salary)
-                                            ]
-                                        
-                                        st.write(f"**Available {next_pos} players under ${remaining_salary:,}**: {len(available_debug)}")
-                                        
-                                        if len(available_debug) > 0:
-                                            cheapest = available_debug.nsmallest(3, 'Salary')[['Nickname', 'Salary']]
-                                            st.write("**Cheapest options:**")
-                                            for _, player in cheapest.iterrows():
-                                                st.write(f"- {player['Nickname']}: ${int(player['Salary']):,}")
-                                    
-                                    # Better tips based on salary situation
-                                    if remaining_salary < 4000:
-                                        st.warning("💡 **Tip**: Your selected players use too much salary. Try selecting cheaper players or fewer core players.")
-                                    else:
-                                        st.warning("💡 **Tip**: Try selecting fewer core players to give the optimizer more flexibility.")
-                                
-
+                                    st.error("❌ **Could not complete lineup build** - your selected players may leave too little salary/roster flexibility to fill the rest of the lineup. Try selecting fewer or cheaper core players.")
                                     
                             except Exception as e:
                                 st.error(f"❌ Error generating lineup: {str(e)}")
@@ -5808,21 +5447,9 @@ def main():
                     num_entries = st.session_state.get('roi_num_entries', 150)
                     expected_payout, expected_roi = calculate_roi_for_points(roi_points, entry_fee, num_entries)
                     
-                    # ROI display text with color coding - show percentage as main metric (plain text for consistent font)
-                    if expected_roi > 50:
-                        roi_text = f" | ROI: +{expected_roi:.0f}% (${expected_payout:.2f} exp.)"
-                    elif expected_roi > 10:
-                        roi_text = f" | ROI: +{expected_roi:.0f}% (${expected_payout:.2f} exp.)"
-                    elif expected_roi > 0:
-                        roi_text = f" | ROI: +{expected_roi:.1f}% (${expected_payout:.2f} exp.)"
-                    elif expected_roi > -50:
-                        roi_text = f" | ROI: {expected_roi:.1f}% (${expected_payout:.2f} exp.)"
-                    else:
-                        roi_text = f" | ROI: {expected_roi:.0f}% (${expected_payout:.2f} exp.)"
-                    
                     # Create consistent header text with uniform formatting (no emojis for consistent font)
                     stack_text = f"QB+{actual_qb_wr_te} receivers" if actual_qb_wr_te > 0 else "No stack"
-                    lineup_header = f"Lineup #{i}: {points:.1f} pts{ceiling_text} | ${salary:,} | {stack_text}{roi_text}"
+                    lineup_header = f"Lineup #{i}: {points:.1f} pts{ceiling_text} | ${salary:,} | {stack_text}"
                     
                     with st.expander(lineup_header):
                         
