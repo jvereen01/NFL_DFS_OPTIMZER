@@ -1807,10 +1807,11 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                     if attempt_stack:
                         # Define different stack types with probabilities
                         stack_types = {
-                            'QB+1WR': 0.35,      # QB + 1 WR (35%)
-                            'QB+1TE': 0.20,      # QB + 1 TE (20%)
-                            'QB+2WR': 0.25,      # QB + 2 WR (25%)
-                            'QB+1WR+1TE': 0.20   # QB + 1 WR + 1 TE (20%)
+                            'QB+1WR': 0.25,        # QB + 1 WR (25%)
+                            'QB+1TE': 0.15,        # QB + 1 TE (15%)
+                            'QB+2WR': 0.25,        # QB + 2 WR (25%)
+                            'QB+1WR+1TE': 0.20,    # QB + 1 WR + 1 TE (20%)
+                            'QB+2WR+1TE': 0.15     # QB + 2 WR + 1 TE - full 3-stack (15%)
                         }
                         
                         # Randomly select stack type based on probabilities
@@ -1864,6 +1865,16 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                             selected_wrs = pd.concat([selected_wrs, stacked_wr])
                             selected_te = stacked_te
                             remaining_wr_spots -= 1
+                            need_te = False
+                            stacked_successfully = True
+                            
+                        elif selected_stack_type == 'QB+2WR+1TE' and len(same_team_wrs) >= 2 and len(same_team_tes) >= 1 and remaining_wr_spots >= 2 and need_te:
+                            # Stack QB + 2 WR + 1 TE (full 3-stack)
+                            stacked_wrs = same_team_wrs.sample(2, weights=same_team_wrs['Selection_Weight'])
+                            stacked_te = same_team_tes.sample(1, weights=same_team_tes['Selection_Weight'])
+                            selected_wrs = pd.concat([selected_wrs, stacked_wrs])
+                            selected_te = stacked_te
+                            remaining_wr_spots -= 2
                             need_te = False
                             stacked_successfully = True
                         
@@ -2020,16 +2031,21 @@ def generate_lineups(df, weighted_pools, num_simulations, stack_probability, eli
                     
                     stacked_wrs_count = sum(1 for team in wr_teams if team == qb_team)
                     stacked_tes_count = sum(1 for team in te_teams if team == qb_team)
-                    qb_wr_te_count = stacked_wrs_count + stacked_tes_count
+                    stacked_rbs_count = sum(1 for team in rb_teams if team == qb_team)
+                    qb_wr_te_count = stacked_wrs_count + stacked_tes_count + stacked_rbs_count
+                    
+                    # Stacking correlation bonus - scales with the user's chosen Stacking
+                    # Probability so higher settings reliably surface stacked lineups in the
+                    # top-ranked results (not just in how many simulations attempt a stack).
+                    if qb_wr_te_count >= 3:
+                        total_points *= (1 + 0.05 * stack_probability)
+                    elif qb_wr_te_count == 2:
+                        total_points *= (1 + 0.035 * stack_probability)
+                    elif qb_wr_te_count == 1:
+                        total_points *= (1 + 0.015 * stack_probability)
                     
                     # Simplified tournament correlation scoring
                     if strategy_type == "Tournament":
-                        # QB stack bonus (correlated production)
-                        if qb_wr_te_count >= 2:
-                            total_points *= 1.03  # 3% bonus for strong stacks
-                        elif qb_wr_te_count == 1:
-                            total_points *= 1.01  # 1% bonus for mini stacks
-                        
                         # Tournament leverage scoring (now safe to use total_points)
                         if leverage_focus > 0.3:
                             high_salary_players = len(lineup[lineup['Salary'] >= 8000])
@@ -2367,10 +2383,11 @@ def recalculate_all_lineup_stacking():
 
 
 def recalculate_lineup_stacking(lineup):
-    """Recalculate stacking counts for a modified lineup"""
+    """Recalculate stacking counts for a modified lineup (RBs on the QB's team count too)"""
     qb_team = None
     wr_teams = []
     te_teams = []
+    rb_teams = []
     
     # Find QB team and all skill position teams
     for _, player in lineup.iterrows():
@@ -2381,11 +2398,14 @@ def recalculate_lineup_stacking(lineup):
             wr_teams.append(team)
         elif player['Position'] == 'TE':
             te_teams.append(team)
+        elif player['Position'] == 'RB':
+            rb_teams.append(team)
     
     if qb_team:
         stacked_wrs_count = sum(1 for team in wr_teams if team == qb_team)
         stacked_tes_count = sum(1 for team in te_teams if team == qb_team)
-        qb_wr_te_count = stacked_wrs_count + stacked_tes_count
+        stacked_rbs_count = sum(1 for team in rb_teams if team == qb_team)
+        qb_wr_te_count = stacked_wrs_count + stacked_tes_count + stacked_rbs_count
     else:
         stacked_wrs_count = 0
         stacked_tes_count = 0
