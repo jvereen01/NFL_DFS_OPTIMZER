@@ -11,6 +11,7 @@ import glob
 import json
 import time
 import stat
+import csv
 from datetime import datetime
 
 # New enhanced modules
@@ -3428,26 +3429,31 @@ def main():
                             # Fallback to nickname
                             return player['nickname']
                         
-                        # Create row with player IDs
-                        lineup_row = {
-                            'QB': get_player_id(qb),
-                            'RB1': get_player_id(rbs[0]) if len(rbs) > 0 else '',
-                            'RB2': get_player_id(rbs[1]) if len(rbs) > 1 else '', 
-                            'WR1': get_player_id(wrs[0]) if len(wrs) > 0 else '',
-                            'WR2': get_player_id(wrs[1]) if len(wrs) > 1 else '',
-                            'WR3': get_player_id(wrs[2]) if len(wrs) > 2 else '',
-                            'TE': get_player_id(tes[0]) if len(tes) > 0 else '',
-                            'FLEX': get_player_id(flex_player),
-                            'DEF': get_player_id(dst)
-                        }
+                        # FanDuel requires the exact header "QB,RB,RB,WR,WR,WR,TE,FLEX,DEF"
+                        # (duplicate position names, no numbering) - pandas can't hold duplicate
+                        # dict keys, so build the row as a plain list instead.
+                        lineup_row = [
+                            get_player_id(qb),
+                            get_player_id(rbs[0]) if len(rbs) > 0 else '',
+                            get_player_id(rbs[1]) if len(rbs) > 1 else '',
+                            get_player_id(wrs[0]) if len(wrs) > 0 else '',
+                            get_player_id(wrs[1]) if len(wrs) > 1 else '',
+                            get_player_id(wrs[2]) if len(wrs) > 2 else '',
+                            get_player_id(tes[0]) if len(tes) > 0 else '',
+                            get_player_id(flex_player),
+                            get_player_id(dst)
+                        ]
                         
                         csv_data.append(lineup_row)
                     
-                    # Create CSV using pandas DataFrame like main export
-                    import pandas as pd
+                    # Build CSV manually so the header can have duplicate FanDuel position names
+                    import io
                     from datetime import datetime
-                    df = pd.DataFrame(csv_data)
-                    csv_string = df.to_csv(index=False)
+                    csv_buffer = io.StringIO()
+                    csv_writer = csv.writer(csv_buffer)
+                    csv_writer.writerow(['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'FLEX', 'DEF'])
+                    csv_writer.writerows(csv_data)
+                    csv_string = csv_buffer.getvalue()
                     
                     # Download button
                     st.download_button(
