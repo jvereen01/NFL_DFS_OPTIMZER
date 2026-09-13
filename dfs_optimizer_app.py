@@ -43,6 +43,57 @@ if 'ExportManager' not in globals():
 PORTFOLIO_FOLDER = "portfolio_users"
 OVERRIDES_FOLDER = "player_overrides"
 
+# GitHub repo backing this deployment. Streamlit Community Cloud rebuilds the
+# container from this repo on every redeploy/wake-from-sleep, which wipes any
+# local-only file writes. Pushing saves back to GitHub keeps them from being lost.
+GITHUB_OWNER = "jvereen01"
+GITHUB_REPO = "NFL_DFS_OPTIMZER"
+GITHUB_BRANCH = "main"
+
+def sync_file_to_github(local_path, commit_message=None):
+    """Push a local file's current contents to GitHub so it survives redeploys.
+
+    No-ops silently if a GITHUB_TOKEN isn't configured in st.secrets (e.g. local dev),
+    and never raises - a sync failure shouldn't block the user's local save.
+    """
+    try:
+        token = st.secrets.get("GITHUB_TOKEN")
+    except Exception:
+        token = None
+    if not token or not os.path.exists(local_path):
+        return False
+
+    try:
+        import requests
+        import base64
+
+        repo_path = local_path.replace("\\", "/").lstrip("./")
+        api_url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/{repo_path}"
+        headers = {
+            "Authorization": f"token {token}",
+            "Accept": "application/vnd.github+json",
+        }
+
+        # Look up the existing file's sha (required by GitHub to update a file)
+        existing = requests.get(api_url, headers=headers, params={"ref": GITHUB_BRANCH}, timeout=10)
+        sha = existing.json().get("sha") if existing.status_code == 200 else None
+
+        with open(local_path, "rb") as f:
+            content_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+        payload = {
+            "message": commit_message or f"Auto-sync {repo_path}",
+            "content": content_b64,
+            "branch": GITHUB_BRANCH,
+        }
+        if sha:
+            payload["sha"] = sha
+
+        response = requests.put(api_url, headers=headers, json=payload, timeout=10)
+        return response.status_code in (200, 201)
+    except Exception:
+        return False
+
 def get_user_portfolio_file(username):
     """Get the portfolio file path for a specific user"""
     if not os.path.exists(PORTFOLIO_FOLDER):
@@ -88,6 +139,7 @@ def save_player_overrides(overrides_data, username="default"):
         }
         with open(overrides_file, 'w') as f:
             json.dump(save_data, f, indent=2, default=str)
+        sync_file_to_github(overrides_file, f"Update global overrides ({username})")
         return True
     except Exception as e:
         st.error(f"Error saving global overrides: {e}")
@@ -97,8 +149,10 @@ def clear_player_overrides(username="default"):
     """Clear all global player projection overrides (affects all users)"""
     try:
         overrides_file = get_user_overrides_file()  # No longer user-specific
-        if os.path.exists(overrides_file):
-            os.remove(overrides_file)
+        empty_data = {"overrides": {}, "metadata": {"last_updated": datetime.now().isoformat(), "last_updated_by": username, "count": 0}}
+        with open(overrides_file, 'w') as f:
+            json.dump(empty_data, f, indent=2, default=str)
+        sync_file_to_github(overrides_file, f"Clear global overrides ({username})")
         return True
     except Exception as e:
         st.error(f"Error clearing global overrides: {e}")
@@ -167,6 +221,7 @@ def save_player_selections(selections_data, username="default"):
         }
         with open(selections_file, 'w') as f:
             json.dump(save_data, f, indent=2, default=str)
+        sync_file_to_github(selections_file, f"Update player selections for {username}")
         return True
     except Exception as e:
         st.error(f"Error saving player selections for {username}: {e}")
@@ -192,8 +247,10 @@ def clear_player_selections(username="default"):
     """Clear all saved player selections for specific user"""
     try:
         selections_file = get_player_selections_file(username)
-        if os.path.exists(selections_file):
-            os.remove(selections_file)
+        empty_data = {"selections": {}, "metadata": {"last_updated": datetime.now().isoformat(), "user": username, "positions_saved": []}}
+        with open(selections_file, 'w') as f:
+            json.dump(empty_data, f, indent=2, default=str)
+        sync_file_to_github(selections_file, f"Clear player selections for {username}")
         return True
     except Exception as e:
         st.error(f"Error clearing player selections for {username}: {e}")
@@ -218,6 +275,7 @@ def save_portfolio(portfolio_data, username="default"):
         portfolio_data["metadata"]["user"] = username
         with open(portfolio_file, 'w') as f:
             json.dump(portfolio_data, f, indent=2, default=str)
+        sync_file_to_github(portfolio_file, f"Update {username}'s saved lineups")
         return True
     except Exception as e:
         st.error(f"Error saving portfolio for {username}: {e}")
@@ -230,6 +288,7 @@ def clear_portfolio_simple(username):
         empty_portfolio = {"lineups": [], "metadata": {"created": datetime.now().isoformat(), "user": username}}
         with open(portfolio_file, 'w') as f:
             json.dump(empty_portfolio, f, indent=2)
+        sync_file_to_github(portfolio_file, f"Clear {username}'s saved lineups")
         
         # Clear portfolio-specific save checkbox states only
         keys_to_clear = []

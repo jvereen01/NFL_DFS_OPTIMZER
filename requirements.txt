@@ -8,3 +8,4 @@ psutil
 scikit-learn
 seaborn
 scipy
+requests
