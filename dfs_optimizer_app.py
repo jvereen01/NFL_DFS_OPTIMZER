@@ -4077,12 +4077,16 @@ def main():
             with st.expander("📊 Current Projection Overrides", expanded=True):
                 override_df = []
                 for player, data in st.session_state.projection_overrides.items():
+                    if data['original']:
+                        adjustment_str = f"{((data['new']/data['original']-1)*100):+.1f}%"
+                    else:
+                        adjustment_str = "N/A"
                     override_df.append({
                         'Player': player,
                         'Position': data['position'],
                         'Original FPPG': f"{data['original']:.1f}",
                         'New FPPG': f"{data['new']:.1f}",
-                        'Adjustment': f"{((data['new']/data['original']-1)*100):+.1f}%"
+                        'Adjustment': adjustment_str
                     })
                 
                 if override_df:
