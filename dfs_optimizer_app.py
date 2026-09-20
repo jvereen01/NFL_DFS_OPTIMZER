@@ -3830,7 +3830,8 @@ def main():
                 # Create player display names with salary for easier identification
                 player_options = [""]
                 for _, player in filtered_df_sorted.iterrows():
-                    display_name = f"{player['Nickname']} - ${player['Salary']:,} ({player['FPPG']:.1f} FPPG)"
+                    injury_tag = " ⚠️Q" if player.get('Injury Indicator', '') == 'Q' else ""
+                    display_name = f"{player['Nickname']} - ${player['Salary']:,} ({player['FPPG']:.1f} FPPG){injury_tag}"
                     player_options.append(display_name)
                 
                 selected_player_display = st.selectbox(
@@ -3851,8 +3852,10 @@ def main():
                     current_fppg = player_row['FPPG']
                     current_salary = player_row['Salary']
                     current_pos = player_row['Position']
+                    current_injury = player_row.get('Injury Indicator', '')
                     
-                    st.info(f"**{selected_player}** ({current_pos}) - ${current_salary:,} - Current: {current_fppg:.1f} FPPG")
+                    injury_note = f" — ⚠️ **Questionable**" if current_injury == 'Q' else ""
+                    st.info(f"**{selected_player}** ({current_pos}) - ${current_salary:,} - Current: {current_fppg:.1f} FPPG{injury_note}")
             
             with col2:
                 if selected_player:
@@ -3922,7 +3925,8 @@ def main():
                             'original': original_fppg,
                             'new': new_projection,
                             'position': current_pos,
-                            'adjustment_factor': adjustment_factor
+                            'adjustment_factor': adjustment_factor,
+                            'injury_status': current_injury
                         }
                         
                         # Save global overrides to file
@@ -4081,9 +4085,11 @@ def main():
                         adjustment_str = f"{((data['new']/data['original']-1)*100):+.1f}%"
                     else:
                         adjustment_str = "N/A"
+                    status_str = "⚠️ Q" if data.get('injury_status') == 'Q' else ""
                     override_df.append({
                         'Player': player,
                         'Position': data['position'],
+                        'Status': status_str,
                         'Original FPPG': f"{data['original']:.1f}",
                         'New FPPG': f"{data['new']:.1f}",
                         'Adjustment': adjustment_str
