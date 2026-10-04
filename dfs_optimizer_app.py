@@ -583,7 +583,7 @@ def load_player_data():
     import glob
     
     # Target CSV filename
-    target_csv = "FanDuel-NFL-2026 EDT-09 EDT-13 EDT-133104-players-list.csv"
+    target_csv = "FanDuel-NFL-2026 EDT-10 EDT-04 EDT-134747-players-list.csv"
     csv_file = None
     
     # Strategy 1: Try current working directory
@@ -600,7 +600,7 @@ def load_player_data():
     # Strategy 3: Find any FanDuel CSV file with similar pattern
     if not csv_file:
         patterns = [
-            "FanDuel-NFL-2026*EDT-09*EDT-13*.csv",
+            "FanDuel-NFL-2026*EDT-10*EDT-04*.csv",
             "FanDuel-NFL-2026*.csv",
             "*FanDuel*.csv"
         ]
@@ -791,8 +791,8 @@ def calculate_ceiling_floor_projections(df):
     # Standard loading (original code)
     import os
     
-    # ONLY use the January 4th CSV file (latest version)
-    target_file = 'FanDuel-NFL-2026 EDT-09 EDT-13 EDT-133104-players-list.csv'
+    # ONLY use the latest players-list CSV file
+    target_file = 'FanDuel-NFL-2026 EDT-10 EDT-04 EDT-134747-players-list.csv'
     
     # Debug: Show what we're looking for
     st.info(f"🔍 **Looking for CSV file:** {target_file}")
@@ -820,7 +820,7 @@ def calculate_ceiling_floor_projections(df):
     
     if csv_path is None:
         st.error(f"❌ Required CSV file not found: {target_file}")
-        st.warning("This app requires the October 12th FanDuel player list file.")
+        st.warning("This app requires the latest FanDuel player list file.")
         st.info("Please upload the correct CSV file to continue.")
         return None
     
