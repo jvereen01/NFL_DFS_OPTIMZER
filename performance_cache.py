@@ -84,8 +84,8 @@ def cached_load_player_data():
         if missing_columns:
             st.warning(f"Missing columns in CSV: {missing_columns}")
         
-        # Apply injury filters
-        injury_exclusions = ['Q', 'IR', 'O', 'D']
+        # Apply injury filters (Questionable 'Q' players remain eligible)
+        injury_exclusions = ['IR', 'O', 'D']
         if 'Injury Indicator' in df.columns:
             df = df[~df['Injury Indicator'].isin(injury_exclusions)]
         
