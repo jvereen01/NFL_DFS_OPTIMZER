@@ -583,7 +583,7 @@ def load_player_data():
     import glob
     
     # Target CSV filename
-    target_csv = "FanDuel-NFL-2026 EDT-10 EDT-18 EDT-135326-players-list.csv"
+    target_csv = "FanDuel-NFL-2026 EDT-10 EDT-25 EDT-135562-players-list.csv"
     csv_file = None
     
     # Strategy 1: Try current working directory
@@ -792,7 +792,7 @@ def calculate_ceiling_floor_projections(df):
     import os
     
     # ONLY use the latest players-list CSV file
-    target_file = 'FanDuel-NFL-2026 EDT-10 EDT-18 EDT-135326-players-list.csv'
+    target_file = 'FanDuel-NFL-2026 EDT-10 EDT-25 EDT-135562-players-list.csv'
     
     # Debug: Show what we're looking for
     st.info(f"🔍 **Looking for CSV file:** {target_file}")
